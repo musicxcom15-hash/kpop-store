@@ -10,16 +10,19 @@
 
 ---
 
-## สถานะตอนนี้
+## สถานะตอนนี้ — ✅ ขึ้นเว็บเรียบร้อยแล้ว
+
+### 🌐 https://web-production-6fbe4.up.railway.app
 
 | รายการ | สถานะ |
 |---|---|
-| ไฟล์สำหรับ deploy (`Dockerfile`, `railway.json`, `docker-entrypoint.sh`) | ✅ พร้อม |
-| `api/config.php` อ่านค่าจาก environment | ✅ พร้อม |
-| `git commit` แรก (57 ไฟล์) | ✅ ทำแล้ว |
-| ฐานข้อมูลบนเครื่องตัวเอง | ✅ import แล้ว (8 ตาราง) |
-| Document Root ใน MAMP PRO | ⬜ ยังต้องตั้งเอง — ดูภาค C |
-| push ขึ้น GitHub + ตั้งค่า Railway | ⬜ เริ่มที่ขั้น A2 |
+| service `web` (php:8.3-apache) | ✅ Online |
+| MySQL + ข้อมูลตั้งต้น (8 ตาราง) | ✅ Online |
+| Volume ที่ `/var/www/html/uploads` | ✅ ติดแล้ว |
+| Domain | ✅ generate แล้ว |
+| รหัสแอดมิน | ✅ เปลี่ยนจาก `admin123` แล้ว |
+| `uploads/` เปิดตรง ๆ | ✅ ได้ `403` |
+| Document Root ใน MAMP PRO (เครื่องตัวเอง) | ⬜ ยังต้องตั้งเอง — ดูภาค C |
 
 ---
 
@@ -33,9 +36,10 @@ project
 └── MySQL   ← ฐานข้อมูล คุยกันผ่าน private network
 ```
 
-> **ทำไมต้องใช้ Dockerfile:** ที่รากโปรเจกต์มี `package.json` อยู่ Railway จึงเดาว่าเป็น Node app
-> แล้วไปรัน `server.js` ซึ่งเสิร์ฟได้แค่ไฟล์ static — `api/*.php` จะถูกส่งกลับไปเป็น text ทั้งไฟล์
-> เว็บเปิดได้แต่ล็อกอินไม่ได้และสินค้าไม่ขึ้น `railway.json` จึงล็อก builder ไว้เป็น `DOCKERFILE`
+> **ทำไมต้องใช้ Dockerfile:** โปรเจกต์นี้เป็น PHP + Apache ถ้าปล่อยให้ Railway เดาเอง
+> มันจะใช้ **Railpack** สร้าง image ของตัวเอง ซึ่งของเวอร์ชันที่เจอมี MPM ของ Apache ชนกัน
+> จน Apache ไม่ยอม start เลย (`AH00534`) — และ `railway.json` **ไม่พอ** ที่จะบังคับ
+> ต้องไปตั้ง **Dockerfile Path** ที่ตัว service ด้วย (อ่านกล่องแดงในขั้น A3)
 
 ## A1 — commit ✅ ทำให้แล้ว
 
@@ -72,6 +76,23 @@ git push -u origin main
 **railway.app → New Project → Deploy from GitHub repo → เลือก repo ที่เพิ่ง push**
 
 Railway จะเริ่ม build ทันที
+
+> ### 🔴 กับดักตัวจริงที่เจอตอนทำ — Railway ไม่ใช้ Dockerfile ให้อัตโนมัติ
+>
+> ตอน deploy จริงพบว่า Railway ตั้ง builder เป็น **`RAILPACK`** และ **ไม่อ่าน `railway.json`**
+> (`railwayConfigFile: null`) Railpack เห็นว่าเป็นโปรเจกต์ PHP แล้วสร้าง image Apache ของตัวเอง
+> ที่มี MPM ชนกัน → Apache ตายด้วย `AH00534: More than one MPM loaded.` วนไม่หยุด
+>
+> อาการหลอกมาก เพราะแก้ `Dockerfile` เท่าไหร่ก็ไม่มีอะไรเปลี่ยน — **ไฟล์นั้นไม่ได้ถูกใช้เลย**
+>
+> **วิธีเช็ก:** build log ที่ใช้ Dockerfile จริงจะขึ้น `[internal] load build definition from Dockerfile`
+> และ `FROM docker.io/library/php:8.3-apache` ถ้าไม่เห็นสองบรรทัดนี้ = ไม่ได้ใช้ Dockerfile
+>
+> **วิธีแก้:** service `web` → **Settings → Build** → ตั้ง **Dockerfile Path** = `Dockerfile`
+> แล้ว Redeploy (ทำผ่าน CLI ก็ได้ ดูหัวข้อ "ทำผ่าน Railway CLI" ท้ายเอกสาร)
+>
+> `railway.json` ยังใช้ได้ถึง **2026-12-01** แต่ Railway แนะนำให้ย้ายไป `.railway/railway.ts`
+> (`railway config migrate`) — ของโปรเจกต์นี้ตั้งค่าที่ตัว service ไปแล้ว จึงไม่ต้องพึ่งไฟล์นั้น
 
 > ⚠️ **deploy รอบแรกจะพัง — เป็นเรื่องปกติ ไม่ต้องไปรื้อ Dockerfile**
 > เพราะยังไม่มี MySQL service ให้ต่อ ตัว image build ผ่านแต่ทุก request จะขึ้น error
@@ -336,3 +357,40 @@ npm test
 | รูปที่อัปโหลด | `preorderkpopweb/uploads/` | Volume ที่ `/var/www/html/uploads` |
 | ข้อความ error | บอกละเอียดเพื่อ debug | ข้อความกลาง ๆ (`APP_ENV=production`) |
 | เขตเวลา | ตาม php.ini ของ MAMP | `Asia/Bangkok` (ตั้งใน Dockerfile) |
+
+
+---
+
+# ภาคผนวก — ทำผ่าน Railway CLI
+
+ทั้งหมดในภาค A ทำผ่าน CLI ได้โดยไม่ต้องกดหน้าเว็บ ยกเว้นการ login ครั้งแรก
+
+```bash
+npm install -g @railway/cli
+railway login                       # หรือ --browserless ถ้าเปิดเบราว์เซอร์เองไม่ได้
+
+railway init --name kpop-store
+railway add --service web --repo <user>/<repo> --branch main
+railway add --database mysql
+
+railway variables --service web   --set 'MYSQLHOST=${{MySQL.MYSQLHOST}}'   --set 'MYSQLPORT=${{MySQL.MYSQLPORT}}'   --set 'MYSQLDATABASE=${{MySQL.MYSQLDATABASE}}'   --set 'MYSQLUSER=${{MySQL.MYSQLUSER}}'   --set 'MYSQLPASSWORD=${{MySQL.MYSQLPASSWORD}}'   --set 'APP_ENV=production'
+
+railway volume --service <SERVICE_ID> add --mount-path /var/www/html/uploads
+railway domain --service web
+railway redeploy --service web --yes
+railway logs --build --service web        # ดู build log
+railway logs --deployment --service web   # ดู runtime log
+```
+
+## กับดักของ CLI ที่เจอมาแล้ว
+
+| อาการ | สาเหตุ / ทางแก้ |
+|---|---|
+| `Builder` enum ไม่มีค่า `DOCKERFILE` | Railway ไม่ได้มองว่า Dockerfile เป็น builder — ตั้งผ่าน `dockerfilePath` ที่ service แทน |
+| `railway volume add --service web` → `unexpected argument` | `--service` ต้องอยู่ **ก่อน** `add` และต้องเป็น **Service ID** ไม่ใช่ชื่อ ไม่งั้น CLI panic |
+| `Mount path must start with a /` ทั้งที่ใส่ `/` แล้ว | Git Bash บน Windows แปลง `/var/...` เป็น Windows path — นำหน้าด้วย `MSYS_NO_PATHCONV=1` |
+| `railway connect --tunnel-only` บอกว่าไม่มี SSH key | ต้องมี key ใน `~/.ssh` — หรือเปิด TCP proxy ให้ MySQL แทนแล้วต่อตรง |
+| import ด้วย mysql client ของ MAMP → `SSL connection error` | client 5.7 คุย TLS กับ MySQL 9 ไม่ได้ — ใช้ Node + `mysql2` แทน ดีกว่าปิด SSL เพราะรหัสผ่านจะไม่วิ่งเป็น plaintext |
+
+> เปิด TCP proxy ให้ MySQL ไว้ชั่วคราวตอน import ได้ **แต่ปิดทิ้งหลังใช้เสร็จ**
+> ไม่งั้น MySQL จะเปิดรับ connection จากอินเทอร์เน็ตด้วยบัญชี root ตลอดเวลา

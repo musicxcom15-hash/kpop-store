@@ -78,14 +78,20 @@ define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 33
 
 ## Deploy ขึ้นเว็บจริง (Railway)
 
+### 🌐 เว็บจริง: https://web-production-6fbe4.up.railway.app
+
+
 **📖 คู่มือฉบับเต็มไล่ทีละขั้น: [`docs/DEPLOY.md`](docs/DEPLOY.md)**
 (ครอบคลุมทั้งขั้นตอน deploy · วิธีใช้เว็บ · วิธีกลับมารันบนเครื่อง)
 
 สรุปสั้น ๆ — deploy ด้วย **Dockerfile** ที่รากโปรเจกต์ ไม่ใช่ `server.js`
 
-> `server.js` เสิร์ฟได้แค่ไฟล์ static — **รัน `api/*.php` ไม่ได้** ถ้าปล่อยให้ Railway
-> เดาเอง มันจะเห็น `package.json` แล้วสร้างเป็น Node app ผลคือเว็บเปิดได้แต่
-> ล็อกอินไม่ได้และสินค้าไม่ขึ้น `railway.json` จึงบังคับ builder ไว้เป็น `DOCKERFILE`
+> `server.js` เสิร์ฟได้แค่ไฟล์ static — **รัน `api/*.php` ไม่ได้**
+>
+> ⚠️ `railway.json` **ไม่พอ** ที่จะบังคับให้ Railway ใช้ Dockerfile — ของจริงมันตั้ง builder
+> เป็น `RAILPACK` แล้วสร้าง image Apache เองที่ MPM ชนกันจน start ไม่ขึ้น (`AH00534`)
+> ต้องไปตั้ง **Settings → Build → Dockerfile Path = `Dockerfile`** ที่ตัว service ด้วย
+> รายละเอียดอยู่ใน [`docs/DEPLOY.md`](docs/DEPLOY.md)
 
 1. push ขึ้น GitHub (`.gitignore` กัน `node_modules/` และ `uploads/` ไว้แล้ว)
 2. railway.app → New Project → Deploy from GitHub repo
