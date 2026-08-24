@@ -124,7 +124,7 @@
                 <form onsubmit="handleLogin(event)">
                     <div class="mb-3">
                         <label class="form-label" style="font-size: 0.9rem; font-weight: 500;">อีเมล</label>
-                        <input type="email" id="loginEmail" class="form-control" placeholder="name@example.com" value="admin@kpopstore.com" required>
+                        <input type="email" id="loginEmail" class="form-control" placeholder="name@example.com" autocomplete="email" required>
                     </div>
                     
                     <div class="mb-4">
@@ -132,23 +132,11 @@
                             <label class="form-label" style="font-size: 0.9rem; font-weight: 500;">รหัสผ่าน</label>
                             <a href="#" class="text-decoration-none" style="font-size: 0.85rem; color: #ff3399;">ลืมรหัสผ่าน?</a>
                         </div>
-                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" value="admin123" required>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
                     </div>
                     
                     <button type="submit" class="btn btn-dark-custom w-100 py-2 mb-3" style="font-size: 1rem;"><i class="fa-solid fa-right-to-bracket me-2"></i>เข้าสู่ระบบ</button>
 
-                    <div class="p-3 bg-light rounded-3 text-start mb-4" style="font-size: 0.82rem;">
-                        <div class="fw-bold text-dark mb-1"><i class="fa-solid fa-circle-info text-primary me-1"></i>ข้อมูลทดสอบเข้าสู่ระบบ:</div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span><strong>Admin:</strong> admin@kpopstore.com</span>
-                            <button type="button" class="btn btn-sm btn-link p-0 text-pink text-decoration-none" onclick="fillQuickAuth('admin@kpopstore.com','admin123')">กรอกทันที</button>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span><strong>Customer:</strong> user@kpopstore.com</span>
-                            <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" onclick="fillQuickAuth('user@kpopstore.com','123456')">กรอกทันที</button>
-                        </div>
-                    </div>
-                    
                     <div class="text-center" style="font-size: 0.9rem;">
                         <span class="text-muted">ยังไม่มีบัญชีใช่ไหม?</span> 
                         <a href="register.html" id="goRegisterLink" class="text-decoration-none" style="color: #ff3399; font-weight: 500;">สมัครสมาชิกเลย</a>
@@ -163,11 +151,6 @@
     <script src="js/store.js"></script>
     <script src="js/ui.js"></script>
     <script>
-        function fillQuickAuth(email, pass) {
-            document.getElementById('loginEmail').value = email;
-            document.getElementById('loginPassword').value = pass;
-        }
-
         // ปุ่มสั่งซื้อ/เพิ่มลงตะกร้า และหน้าที่บังคับล็อกอิน ส่ง ?next= มาเพื่อให้เด้งกลับไปที่เดิม
         // ตัวกรอง path (กัน open redirect) อยู่ที่ KpopStore.getSafeNextUrl() ใน ui.js
         function getSafeNextUrl() {
