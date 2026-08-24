@@ -25,4 +25,16 @@ chown -R www-data:www-data /var/www/html/uploads
 # ส่งต่อให้ entrypoint ของ image ฐาน (มันจะ exec คำสั่งใน CMD คือ apache2-foreground)
 # ห้ามเรียก apache2-foreground ตรง ๆ พร้อม "$@" เพราะ CMD ที่สืบทอดมาคือคำสั่งนั้นอยู่แล้ว
 # จะกลายเป็น `apache2-foreground apache2-foreground` แล้ว Apache จะตายเพราะอาร์กิวเมนต์เกิน
+# --- ตรวจสภาพจริงตอนรัน ---------------------------------------------
+# apache2ctl -t ผ่านตอน build แต่ตายตอน start ด้วย AH00534 แปลว่ามีอะไร
+# เปลี่ยน config ระหว่างทาง พิมพ์ของจริงออกมาดูก่อนปล่อย Apache ทำงาน
+echo "=== RUNTIME mods-enabled (mpm) ==="
+ls -l /etc/apache2/mods-enabled/ | grep -i mpm || echo "  (ไม่มี mpm เลย)"
+echo "=== RUNTIME LoadModule mpm ทั้ง /etc/apache2 ==="
+grep -RIn 'LoadModule .*mpm' /etc/apache2/ || echo "  (ไม่เจอ)"
+echo "=== RUNTIME configtest ==="
+apache2ctl -t 2>&1 || true
+echo "=== PORT=${PORT} ==="
+echo "===================================================================="
+
 exec docker-php-entrypoint "$@"
