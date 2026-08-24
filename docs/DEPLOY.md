@@ -63,6 +63,12 @@ git push -u origin main
 
 ## A3 — สร้าง project บน Railway
 
+> ⚠️ **ทำขั้นนี้หลัง A2 push สำเร็จแล้วเท่านั้น**
+> Railway อ่าน commit ตอนที่เชื่อม repo ถ้าสร้าง project ตอน repo ยังว่าง จะติดค้างที่ข้อความ
+> `Could not find latest commit for repo` หรือ `Branch 'main' not found` ทันที
+> และไม่มีปุ่มไหนในหน้า Railway แก้ได้ ต้อง push ก่อนอย่างเดียว
+> ถ้าเผลอสร้างไปแล้ว ลบทิ้ง (Settings → Danger → Delete Project) แล้วสร้างใหม่หลัง push ง่ายกว่ามานั่งไล่แก้
+
 **railway.app → New Project → Deploy from GitHub repo → เลือก repo ที่เพิ่ง push**
 
 Railway จะเริ่ม build ทันที
@@ -70,12 +76,18 @@ Railway จะเริ่ม build ทันที
 > ⚠️ **deploy รอบแรกจะพัง — เป็นเรื่องปกติ ไม่ต้องไปรื้อ Dockerfile**
 > เพราะยังไม่มี MySQL service ให้ต่อ ตัว image build ผ่านแต่ทุก request จะขึ้น error
 > เดี๋ยวหายเองหลังทำขั้น A4–A5 เสร็จ
+> (คนละเรื่องกับ error ด้านบน — อันนี้แปลว่า Railway เจอโค้ดแล้วและกำลังทำงานอยู่)
 
 ## A4 — เพิ่ม MySQL
 
 ในหน้า project กด **`+ Create` → Database → MySQL**
 
-รอจนขึ้นสถานะเขียว แล้วจะมี service ชื่อ `MySQL` โผล่มาข้าง ๆ `web`
+รอจนขึ้นสถานะเขียว แล้วจะมี service ชื่อ `MySQL` โผล่มาข้าง ๆ service ของเว็บ
+
+> 📌 **เรื่องชื่อ service:** Railway ตั้งชื่อ service ตามชื่อ repo ให้อัตโนมัติ ของโปรเจกต์นี้จึงชื่อ
+> **`kpop-store`** ไม่ใช่ `web` เอกสารนี้เรียกมันว่า `web` เพื่อให้อ่านง่าย —
+> เจอคำว่า `web` ที่ไหนให้หมายถึง **service ที่ชื่อตาม repo ของคุณ** (อีกอันคือ `MySQL`)
+> จะเปลี่ยนชื่อให้เป็น `web` จริง ๆ ก็ได้ที่ Settings → Service Name
 
 ## A5 — ตั้ง Variables ที่ service `web`
 
