@@ -1,7 +1,8 @@
 # KPOP STORE — ระบบรับพรีออเดอร์อัลบั้มเคป็อป
 
 เว็บรับพรีออเดอร์อัลบั้ม K-POP จากเกาหลี
-ข้อมูลทั้งหมดเก็บใน **MySQL** เชื่อมผ่าน **PHP API (PDO + prepared statements)** รันบน **MAMP**
+ข้อมูลทั้งหมดเก็บใน **MySQL** เชื่อมผ่าน **PHP API (PDO + prepared statements)**
+รันบน **MAMP** ตอนพัฒนา และ deploy ขึ้น **Railway** ด้วย Docker (php:8.3-apache)
 
 ## ระบบทำอะไรได้บ้าง
 
@@ -23,8 +24,16 @@
 
 ### 1. ตั้ง Document Root
 
-เปิด MAMP → ตั้ง **Document Root** ให้ชี้มาที่โฟลเดอร์ `preorderkpopweb` ของโปรเจกต์นี้
+ตั้ง **Document Root** ให้ชี้มาที่โฟลเดอร์ `preorderkpopweb` ของโปรเจกต์นี้
 (เช่น `D:\ProjectPreorder\preorderkpopweb`)
+
+- **MAMP ธรรมดา** — ตั้งได้จากหน้าต่างโปรแกรมโดยตรง
+- **MAMP PRO** — ต้องตั้งที่แท็บ **Hosts** → เลือก host `localhost` → ช่อง **Document Root**
+
+> ⚠️ ถ้าใช้ **MAMP PRO** อย่าไปแก้ `C:\MAMP\conf\apache\httpd.conf` เอง
+> MAMP PRO เขียนไฟล์ config ของตัวเองทับใหม่ทุกครั้งที่ Start Servers โดยอ่านค่าจาก
+> หน้าต่างโปรแกรมเท่านั้น แก้ในไฟล์แล้วจะไม่มีผล และอาการที่เห็นคือเปิด `http://localhost`
+> แล้วได้หน้าต้อนรับของ MAMP PRO แทนหน้าร้าน
 
 ### 2. เปิดเซิร์ฟเวอร์
 
@@ -46,11 +55,15 @@
 แก้ค่าเชื่อมต่อได้ที่ [`preorderkpopweb/api/config.php`](preorderkpopweb/api/config.php) ที่เดียว
 
 ```php
-const DB_HOST = '127.0.0.1';
-const DB_PORT = 3306;   // MAMP บางเครื่องใช้ 3307 — ดูเลขจริงที่หน้า MAMP หรือ phpMyAdmin
-const DB_USER = 'root';
-const DB_PASS = 'root';
+define('DB_HOST', getenv('MYSQLHOST') ?: '127.0.0.1');
+define('DB_NAME', getenv('MYSQLDATABASE') ?: 'kpop_store');
+define('DB_USER', getenv('MYSQLUSER') ?: 'root');
+define('DB_PASS', getenv('MYSQLPASSWORD') !== false ? getenv('MYSQLPASSWORD') : 'root');
+define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 3306]);
 ```
+
+ค่าหลัง `?:` คือค่าที่ใช้บนเครื่องตัวเอง ส่วน `getenv('MYSQL*')` มีค่าเฉพาะตอนรันบน Railway
+ถ้าพอร์ตของ MAMP ไม่ใช่ 3307 หรือ 3306 ให้เติมเลขพอร์ตจริงไว้ตัวแรกใน `DB_PORTS`
 
 > หมายเหตุ: ไฟล์ `C:\MAMP\conf\mysql\my.ini` อาจเขียนพอร์ตไว้ไม่ตรงกับที่ MySQL ฟังจริง
 > ถ้าไม่แน่ใจให้ดูเลขพอร์ตจากหน้าต่าง MAMP โดยตรง
@@ -65,97 +78,24 @@ const DB_PASS = 'root';
 
 ## Deploy ขึ้นเว็บจริง (Railway)
 
-โปรเจกต์นี้ deploy ด้วย **Dockerfile** ที่รากโปรเจกต์ ไม่ใช่ `server.js`
+**📖 คู่มือฉบับเต็มไล่ทีละขั้น: [`docs/DEPLOY.md`](docs/DEPLOY.md)**
+(ครอบคลุมทั้งขั้นตอน deploy · วิธีใช้เว็บ · วิธีกลับมารันบนเครื่อง)
+
+สรุปสั้น ๆ — deploy ด้วย **Dockerfile** ที่รากโปรเจกต์ ไม่ใช่ `server.js`
 
 > `server.js` เสิร์ฟได้แค่ไฟล์ static — **รัน `api/*.php` ไม่ได้** ถ้าปล่อยให้ Railway
 > เดาเอง มันจะเห็น `package.json` แล้วสร้างเป็น Node app ผลคือเว็บเปิดได้แต่
-> ล็อกอินไม่ได้และสินค้าไม่ขึ้น เพราะไฟล์ PHP ถูกส่งกลับไปเป็น text
-> `railway.json` จึงบังคับ builder ไว้เป็น `DOCKERFILE`
+> ล็อกอินไม่ได้และสินค้าไม่ขึ้น `railway.json` จึงบังคับ builder ไว้เป็น `DOCKERFILE`
 
-โครงบน Railway มี 2 service คือ `web` (php:8.3-apache) กับ `MySQL`
-
-### 1. ขึ้น GitHub
-
-```
-git init
-git add .
-git commit -m "เตรียม deploy ขึ้น Railway"
-git remote add origin <URL ของ repo>
-git push -u origin main
-```
-
-`.gitignore` กัน `node_modules/` และ **โฟลเดอร์ `uploads/`** ไว้แล้ว
-(สลิปโอนเงินของลูกค้าเป็นข้อมูลส่วนตัว ห้ามขึ้น repo)
-
-### 2. สร้าง service
-
-1. railway.app → **New Project** → **Deploy from GitHub repo** → เลือก repo นี้
-2. ในหน้า project กด **+ Create** → **Database** → **MySQL**
-
-### 3. ตั้ง Variables ที่ service `web`
-
-ใช้ reference syntax ให้ Railway ผูกค่าจาก MySQL service ให้อัตโนมัติ
-
-```
-MYSQLHOST      = ${{MySQL.MYSQLHOST}}
-MYSQLPORT      = ${{MySQL.MYSQLPORT}}
-MYSQLDATABASE  = ${{MySQL.MYSQLDATABASE}}
-MYSQLUSER      = ${{MySQL.MYSQLUSER}}
-MYSQLPASSWORD  = ${{MySQL.MYSQLPASSWORD}}
-APP_ENV        = production
-```
-
-`api/config.php` อ่านค่าพวกนี้ถ้ามี ถ้าไม่มีจะตกไปใช้ค่า MAMP เดิม
-**เครื่องตัวเองจึงยังรันได้เหมือนเดิมโดยไม่ต้องแก้อะไร**
-
-### 4. เพิ่ม Volume (สำคัญ)
-
-`web` → **Settings** → **Volumes** → mount path `/var/www/html/uploads`
-
-ระบบไฟล์ของคอนเทนเนอร์หายทุกครั้งที่ deploy ใหม่ ถ้าไม่ตั้ง volume
-สลิปและรูปสินค้าที่อัปโหลดไว้จะหายหมด (path ใน DB จะชี้ไปที่ไฟล์ที่ไม่มีอยู่)
-
-### 5. เปิด domain
-
-`web` → **Settings** → **Networking** → **Generate Domain**
-
-### 6. Import ฐานข้อมูล (ทำครั้งเดียว)
-
-ใช้ [`database/kpop_store_railway.sql`](database/kpop_store_railway.sql) — ไม่ใช่ไฟล์เดิม
-(ฉบับ Railway ตัด `CREATE DATABASE` ออก เพราะ Railway ให้ database ชื่อ `railway` มาแล้ว)
-
-ค่าเชื่อมต่อดูที่แท็บ **Variables** ของ MySQL service ใช้ค่าฝั่ง **public/proxy**
-
-```
-mysql -h <proxy-host> -P <proxy-port> -u root -p railway < database/kpop_store_railway.sql
-```
-
-บน Windows ใช้ mysql client ที่มากับ MAMP ได้เลย
-`C:\MAMP\bin\mysql\bin\mysql.exe`
-
-> ⚠️ ไฟล์นี้ขึ้นต้นด้วย `DROP TABLE IF EXISTS` ทุกตาราง
-> **รันซ้ำหลังเปิดใช้จริง = ออเดอร์และบัญชีลูกค้าทั้งหมดหายเกลี้ยง**
-
-### 7. เปลี่ยนรหัสแอดมิน
-
-รหัส `admin123` ที่ seed มาใช้บนเว็บสาธารณะไม่ได้
-
-```
-php -r "echo password_hash('รหัสใหม่', PASSWORD_DEFAULT);"
-```
-
-```sql
-UPDATE users SET password_hash = '<hash ที่ได้>' WHERE email = 'admin@kpopstore.com';
-```
-
-### ข้อจำกัดที่ควรรู้
-
-- **session เก็บเป็นไฟล์ในคอนเทนเนอร์** ทุกครั้งที่ deploy ใหม่ ผู้ใช้ทุกคนหลุดล็อกอิน
-  และห้ามเพิ่ม replica เกิน 1 (`railway.json` ล็อก `numReplicas: 1` ไว้แล้ว)
-- **เขตเวลา** ทั้งระบบเดินเป็น `Asia/Bangkok` — ฝั่ง PHP ตั้งใน Dockerfile
-  ฝั่ง MySQL ตั้งด้วย `SET time_zone = '+07:00'` ตอนเปิด connection ใน `api/config.php`
-  ถ้าลืมข้อใดข้อหนึ่ง จุดตัดเรท 22:00 จะเพี้ยนไป 7 ชั่วโมง
-- **Railway ไม่มี free tier** — Trial ให้เครดิต $5 หลังจากนั้น Hobby $5/เดือน
+1. push ขึ้น GitHub (`.gitignore` กัน `node_modules/` และ `uploads/` ไว้แล้ว)
+2. railway.app → New Project → Deploy from GitHub repo
+3. `+ Create` → Database → **MySQL**
+4. ที่ service `web` ตั้ง Variables: `MYSQLHOST` `MYSQLPORT` `MYSQLDATABASE` `MYSQLUSER`
+   `MYSQLPASSWORD` (ใช้ค่า `${{MySQL.*}}`) และ `APP_ENV=production`
+5. **เพิ่ม Volume ที่ `/var/www/html/uploads`** — ไม่งั้นสลิปหายทุกครั้งที่ deploy
+6. Generate Domain แล้ว import [`database/kpop_store_railway.sql`](database/kpop_store_railway.sql)
+   (ฉบับตัด `CREATE DATABASE` ออก — **ไม่ใช่** `kpop_store.sql`)
+7. เปลี่ยนรหัสแอดมินจาก `admin123`
 
 ## ทดสอบ
 
@@ -188,7 +128,7 @@ preorderkpopweb/
   order-history.html   ประวัติคำสั่งซื้อของลูกค้า
   login.html           เข้าสู่ระบบ (รองรับ ?next= เด้งกลับหน้าที่ค้างไว้)
   register.html        สมัครสมาชิก
-  admin.html           หลังบ้าน 7 แท็บ
+  admin.html           หลังบ้าน 8 แท็บ
   api/                 PHP API ทั้งหมด (PDO + prepared statements)
     config.php           ค่าเชื่อมต่อฐานข้อมูล — แก้ที่นี่ที่เดียว
     helpers.php          ตัวช่วยกลาง · ตรวจสิทธิ์ · แปลงแถว DB เป็นรูปทรงฝั่ง JS
@@ -205,6 +145,7 @@ docker-entrypoint.sh   ตั้งพอร์ตตาม PORT ที่ Railw
 railway.json           บังคับให้ Railway build ด้วย Dockerfile ไม่ใช่เดาเป็น Node app
 server.js              express static server (ของเดิม — รัน PHP ไม่ได้ ใช้แค่ตอนเสิร์ฟ static เฉย ๆ)
 tests/                 ชุดทดสอบอัตโนมัติ
+docs/DEPLOY.md         คู่มือ deploy ขึ้น Railway + วิธีใช้เว็บ + วิธีรันบนเครื่อง
 docs/TESTING.md        คู่มือทดสอบฉบับเต็ม
 ```
 
