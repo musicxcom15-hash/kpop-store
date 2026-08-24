@@ -21,15 +21,26 @@ RUN docker-php-ext-install pdo_mysql
 #   AH00534: apache2: Configuration error: More than one MPM loaded.
 # และ mod_php (ซึ่ง image นี้ใช้รัน PHP) ทำงานได้กับ prefork เท่านั้น
 # เดิมไฟล์นี้ปล่อยตามค่าที่ image ให้มาโดยไม่ได้ตรวจ — บังคับให้ชัดเจนไปเลยจะได้ไม่ต้องเดา
-# บรรทัด ls ไว้ให้เห็นใน build log ว่าสุดท้ายเหลือ MPM ตัวไหนจริง ๆ
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true; \
-    a2enmod mpm_prefork; \
-    echo "--- MPM ที่เปิดอยู่ ---" && ls -1 /etc/apache2/mods-enabled/ | grep -i mpm
+# รอบก่อนใช้ a2dismod/a2enmod แล้วเขียน `2>/dev/null || true` ต่อท้าย ซึ่งกลบทั้ง
+# ข้อความ error และ exit code ถ้า a2dismod ไม่ได้ทำงานจริงก็ไม่มีทางรู้ แล้ว a2enmod
+# ต่อท้ายก็ได้ MPM สองตัวเหมือนเดิม — คราวนี้จัดการ symlink ตรง ๆ ไม่ให้ล้มเหลวแบบเงียบ ๆ ได้
+RUN set -eux; \
+    rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf; \
+    ln -sf ../mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load; \
+    ln -sf ../mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf; \
+    echo '=== LoadModule mpm ที่ประกาศอยู่ทั้ง /etc/apache2 ==='; \
+    grep -RIn 'LoadModule .*mpm' /etc/apache2/ || true; \
+    echo '=== mods-enabled ==='; \
+    ls -l /etc/apache2/mods-enabled/ | grep -i mpm
 
 # กัน warning AH00558 ที่ขึ้นทุกครั้งตอน start เพราะเดา FQDN ไม่ได้
 # ไม่ใช่ error แต่ทำให้ log อ่านยากตอนไล่ปัญหาจริง
 RUN printf 'ServerName localhost\n' > /etc/apache2/conf-available/zz-servername.conf \
     && a2enconf zz-servername
+
+# ด่านสุดท้ายตอน build — ถ้า config ผิด (รวมถึง MPM ซ้ำ) ให้ build ล้มตรงนี้เลย
+# ดีกว่าปล่อยผ่านแล้วไปตายตอน start ซึ่งเห็นแค่ AH00534 ลอย ๆ ใน deploy log
+RUN apache2ctl -t
 
 # uploads/.htaccess เป็นด่านกันไม่ให้ Apache รันไฟล์ในโฟลเดอร์อัปโหลด
 # image นี้ default เป็น AllowOverride None ซึ่งแปลว่า .htaccess ถูกมองข้ามทั้งไฟล์
