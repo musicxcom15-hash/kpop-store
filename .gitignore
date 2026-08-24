@@ -1,0 +1,13 @@
+node_modules/
+
+# ค่าเชื่อมต่อจริงอยู่ใน environment ของ Railway ไม่เก็บลง repo
+.env
+
+# สลิปโอนเงินและรูปที่ลูกค้าอัปโหลด — ข้อมูลส่วนตัว ห้ามขึ้น GitHub
+# บน Railway โฟลเดอร์นี้ถูก mount เป็น volume แยกอยู่แล้ว
+preorderkpopweb/uploads/*
+!preorderkpopweb/uploads/.htaccess
+
+# ของเครื่อง
+Thumbs.db
+.DS_Store

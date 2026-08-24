@@ -1,0 +1,43 @@
+{
+  // เรียกใช้: Ctrl+Shift+P → "Tasks: Run Task" → เลือกงานที่ต้องการ
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ติดตั้ง dependencies (npm install)",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "จำเป็นเฉพาะตอนจะรัน express server เท่านั้น (Live Server ไม่ต้องใช้)"
+    },
+    {
+      "label": "npm: start (background)",
+      "type": "shell",
+      "command": "npm start",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Server running on"
+        }
+      },
+      "detail": "รัน express ที่ http://localhost:3000 (ค้างไว้เบื้องหลัง)"
+    }
+  ]
+}

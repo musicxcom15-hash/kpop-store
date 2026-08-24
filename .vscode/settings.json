@@ -1,0 +1,33 @@
+{
+  // ===== Live Server =====
+  // ชี้ root ไปที่โฟลเดอร์เว็บ เพื่อให้ URL เป็น /order-history.html
+  // แทนที่จะเป็น /preorderkpopweb/order-history.html
+  "liveServer.settings.root": "/preorderkpopweb",
+
+  // ล็อกพอร์ตไว้ที่ 5500 เสมอ
+  // สำคัญ: localStorage ผูกกับ origin (host+port) ถ้าพอร์ตเปลี่ยน ข้อมูลออเดอร์ที่ทดสอบไว้จะ "หาย"
+  "liveServer.settings.port": 5500,
+  "liveServer.settings.host": "127.0.0.1",
+
+  // เปิดหน้าประวัติการสั่งซื้อทันทีเมื่อกด Go Live
+  "liveServer.settings.CustomBrowser": "chrome",
+  "liveServer.settings.donotShowInfoMsg": true,
+  "liveServer.settings.donotVerifyTags": true,
+
+  // ===== Editor =====
+  "files.eol": "\n",
+  "[html]": {
+    "editor.tabSize": 4
+  },
+  "[javascript]": {
+    "editor.tabSize": 4
+  },
+  "[json]": {
+    "editor.tabSize": 2
+  },
+
+  // ไม่ต้องค้นหาในโฟลเดอร์เหล่านี้
+  "search.exclude": {
+    "**/node_modules": true
+  }
+}

@@ -1,0 +1,19 @@
+# image ต้องการแค่ preorderkpopweb/ กับ docker-entrypoint.sh เท่านั้น
+node_modules/
+tests/
+docs/
+database/
+.vscode/
+.git/
+.github/
+package.json
+package-lock.json
+server.js
+README.md
+.env
+.env.example
+
+# ไฟล์ที่อัปโหลดตอนทดสอบบนเครื่องตัวเอง ไม่ต้องติดขึ้นไปบน production
+# (แต่ .htaccess ต้องติดไปด้วย เพราะ Dockerfile ก๊อปไปเก็บสำรองไว้ที่ /opt/kpop)
+preorderkpopweb/uploads/*
+!preorderkpopweb/uploads/.htaccess

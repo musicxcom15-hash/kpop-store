@@ -1,0 +1,14 @@
+{
+  "name": "kpop-store",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build required'",
+    "test": "node tests/run-all.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

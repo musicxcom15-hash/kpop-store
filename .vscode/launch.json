@@ -1,0 +1,57 @@
+{
+  // ใช้ debugger ที่ติดมากับ VS Code อยู่แล้ว ไม่ต้องลง extension เพิ่ม
+  // วิธีใช้: กด F5 แล้วเลือก config ที่ต้องการจากเมนูด้านบน
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // ===== ใช้บ่อยที่สุด =====
+      // ต้องกด "Go Live" ที่แถบล่างขวาของ VS Code ให้ Live Server ทำงานก่อน
+      "name": "🌐 ทดสอบหน้าประวัติการสั่งซื้อ (Live Server)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5500/order-history.html",
+      "webRoot": "${workspaceFolder}/preorderkpopweb",
+      "sourceMaps": true,
+      // แยกโปรไฟล์ Chrome ออกมา จะได้ไม่ปนกับ session ที่เปิดใช้งานปกติ
+      "userDataDir": "${workspaceFolder}/.vscode/.chrome-debug-profile"
+    },
+    {
+      // ไล่ flow ทั้งเว็บ: สมัคร → ล็อกอิน → เลือกสินค้า → checkout → ประวัติ → แอดมิน
+      "name": "🏠 ทดสอบทั้งเว็บจากหน้าแรก (Live Server)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5500/index.html",
+      "webRoot": "${workspaceFolder}/preorderkpopweb",
+      "sourceMaps": true,
+      "userDataDir": "${workspaceFolder}/.vscode/.chrome-debug-profile"
+    },
+    {
+      // ทางเลือกแทน Live Server: รัน express แล้วเปิดเบราว์เซอร์ให้อัตโนมัติ
+      // serverReadyAction จะรอจนเห็นข้อความ "Server running on ..." ก่อนค่อยเปิด Chrome
+      // (ต้อง npm install ก่อนใช้ config นี้)
+      "name": "🚀 express server + เปิดเบราว์เซอร์อัตโนมัติ",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "action": "debugWithChrome",
+        "pattern": "Server running on https?://[^:]+:([0-9]+)",
+        "uriFormat": "http://localhost:%s/order-history.html",
+        "webRoot": "${workspaceFolder}/preorderkpopweb"
+      }
+    },
+    {
+      // ดีบักเฉพาะตัว server (ไม่เปิดเบราว์เซอร์)
+      "name": "🖥️ ดีบัก express server.js อย่างเดียว",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

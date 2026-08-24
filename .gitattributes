@@ -1,0 +1,6 @@
+# ไฟล์ที่ต้องเป็น LF เสมอ ไม่ว่าจะ clone บน Windows หรือ Linux
+# docker-entrypoint.sh: ถ้าเป็น CRLF จะรันไม่ได้เลย (kernel อ่าน shebang เป็น "/bin/sh\r")
+*.sh                 text eol=lf
+docker-entrypoint.sh text eol=lf
+Dockerfile           text eol=lf
+.dockerignore        text eol=lf

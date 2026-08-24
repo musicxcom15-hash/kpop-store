@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ชำระเงิน | KPOP STORE</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #fcfcfc;
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
+            padding: 15px 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #333 !important;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: #555 !important;
+            font-weight: 400;
+            font-size: 0.95rem;
+        }
+
+        .btn-dark-custom {
+            background-color: #1a1a24;
+            color: white;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            border: none;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-dark-custom:hover {
+            background-color: #333;
+            color: white;
+        }
+
+        .checkout-card {
+            background-color: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #222;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .summary-item-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .bank-box {
+            background-color: #f8f9fa;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="fa-solid fa-heart me-2" style="color: #ff3399; font-size: 1.5rem;"></i> KPOP STORE
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="me-3 text-muted" style="font-size: 0.9rem;"><i
+                        class="fa-regular fa-circle-user me-2"></i>สวัสดี, คุณลูกค้า</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 mb-5">
+        <h2 class="mb-4" style="font-weight: 600;">ดำเนินการสั่งซื้อ (Checkout)</h2>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+
+                <div class="checkout-card">
+                    <h5 class="section-title"><i
+                            class="fa-solid fa-location-dot me-2 text-danger"></i>ที่อยู่สำหรับจัดส่ง</h5>
+                    <p class="mb-1" style="font-weight: 500;">ชื่อผู้รับ: คุณลูกค้า ทดสอบระบบ</p>
+                    <p class="text-muted mb-1" style="font-size: 0.95rem;">เบอร์โทรศัพท์: 081-234-5678</p>
+                    <p class="text-muted mb-0" style="font-size: 0.95rem;">123/45 หมู่บ้านตัวอย่าง ซ.สุขุมวิท 1
+                        ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110</p>
+                </div>
+
+                <div class="checkout-card">
+                    <h5 class="section-title"><i
+                            class="fa-solid fa-money-bill-wave me-2 text-success"></i>ช่องทางการชำระเงิน</h5>
+                    <p class="text-muted" style="font-size: 0.95rem;">กรุณาโอนเงินเข้าบัญชีด้านล่างนี้
+                        และแนบหลักฐานการโอนเงินเพื่อยืนยันคำสั่งซื้อ</p>
+
+                    <div class="bank-box mb-4">
+                        <!-- ใช้ไอคอนในเครื่องแทนโลโก้จาก Wikipedia เพื่อให้หน้าไม่พังตอนไม่มีเน็ต -->
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2"
+                            style="width: 44px; height: 44px; background: #138f2d;">
+                            <i class="fa-solid fa-building-columns text-white fs-5"></i>
+                        </div>
+                        <h6 class="mb-1">ธนาคารกสิกรไทย</h6>
+                        <h4 class="text-dark mb-1" style="font-weight: 600; letter-spacing: 1px;">123-4-56789-0</h4>
+                        <p class="text-muted mb-0" style="font-size: 0.9rem;">ชื่อบัญชี: บจก. เคป็อป สโตร์ (KPOP STORE)
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 0.9rem; font-weight: 500;">แนบสลิปหลักฐานการโอนเงิน
+                            <span class="text-danger">* (จำเป็นต้องแนบสลิป)</span></label>
+                        <input class="form-control" type="file" id="formFile" accept="image/png, image/jpeg, image/jpg" onchange="previewCheckoutSlip(this)" required>
+                        <div class="form-text" style="font-size: 0.8rem;">รองรับไฟล์รูปภาพ .jpg, .png (ระบบจะบีบอัดไฟล์ให้อัตโนมัติ)</div>
+                        
+                        <!-- Slip Preview Container -->
+                        <div id="slipPreviewBox" class="mt-3 p-2 border rounded-3 bg-light text-center d-none">
+                            <div class="small fw-bold text-success mb-2"><i class="fa-solid fa-circle-check me-1"></i> ตัวอย่างสลิปการโอนเงินที่แนบ</div>
+                            <img id="slipPreviewImg" src="" style="max-height: 220px; max-width: 100%; border-radius: 8px; border: 1px solid #ddd;" alt="Slip Preview">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-5">
+                <div class="checkout-card">
+                    <h5 class="section-title"><i class="fa-solid fa-bag-shopping me-2"></i>สรุปคำสั่งซื้อ</h5>
+
+                    <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                        <div id="checkout-items" class="w-100"></div>
+                    </div>
+
+                    <div id="checkout-round-info" class="p-2 mb-3 rounded-3 text-start"
+                        style="background:#f4f7ff; border:1px solid #d7e2ff; font-size: 0.8rem;"></div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">ยอดรวมสินค้า (ค่าของ Official)</span>
+                        <span id="checkout-subtotal">฿0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.88rem;">
+                        <span class="text-muted"><i class="fa-solid fa-plane text-info me-1"></i>ค่าขนส่งด่วนเกาหลี-ไทย (Air Cargo)</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>รวมแล้ว</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.88rem;">
+                        <span class="text-muted"><i class="fa-solid fa-landmark text-warning me-1"></i>ภาษีศุลกากรนำเข้า & VAT</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>เคลียร์เรียบร้อย</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.88rem;">
+                        <span class="text-muted"><i class="fa-solid fa-box text-secondary me-1"></i>ค่ากล่องพัสดุ & บับเบิ้ลกันกระแทก</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>รวมแล้ว</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom" style="font-size: 0.9rem;">
+                        <span class="text-muted"><i class="fa-solid fa-truck-fast text-primary me-1"></i>ค่าจัดส่งพัสดุในประเทศไทย</span>
+                        <span id="checkout-shipping">฿50</span>
+                    </div>
+                    
+                    <!-- All Inclusive Net Price Guarantee Box -->
+                    <div class="p-2 mb-3 bg-success-subtle text-success border border-success-subtle rounded-3 text-start" style="font-size: 0.8rem;">
+                        <i class="fa-solid fa-shield-circle-check me-1"></i> <strong>การันตีราคาสุทธิ:</strong> ราคานี้รวมค่าของ, ขนส่งเกาหลี, ภาษีนำเข้า และค่าธรรมเนียมทั้งหมดแล้ว <u>ไม่มีการเก็บเงินเพิ่มรอบ 2</u> แน่นอนค่ะ
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-4">
+                        <span style="font-weight: 600; font-size: 1.1rem;">ยอดชำระสุทธิ</span>
+                        <span id="checkout-total" class="text-danger"
+                            style="font-weight: 600; font-size: 1.3rem;">฿0</span>
+                    </div>
+
+                    <div class="mb-3 p-3 bg-light rounded-3 text-start border" style="font-size: 0.82rem; line-height: 1.4;">
+                        <div class="fw-bold text-dark mb-1"><i class="fa-solid fa-shield-halved text-warning me-1"></i> เงื่อนไขและข้อตกลงพรีออเดอร์</div>
+                        <p class="text-muted mb-2">1. ระบบเป็นเพียงตัวกลางในการรับพรีออเดอร์สินค้า ไม่ใช่ผู้ผลิตหรือเจ้าของสินค้าโดยตรง<br>
+                        2. กรณีสินค้าเกิดความชำรุด สูญหาย หรือชำรุดจากการขนส่งระหว่างประเทศ/ในประเทศ อยู่ในเงื่อนไขความรับผิดชอบตามที่กำหนด</p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="acceptTermsCheckbox" required>
+                            <label class="form-check-label fw-bold text-dark" for="acceptTermsCheckbox">
+                                ข้าพเจ้ารับทราบและยอมรับเงื่อนไขความรับผิดชอบทั้งหมด
+                            </label>
+                        </div>
+                    </div>
+
+                    <button id="submitOrderBtn" onclick="submitCheckoutOrder()" class="btn btn-dark-custom w-100 py-3">
+                        ยืนยันการสั่งซื้อและแจ้งชำระเงิน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        // เช็คเอาต์รองรับ 2 ทาง:
+        //   ?round=<roundId>  มาจากตะกร้า — รวมทุกชิ้นในรอบนั้นเป็นออเดอร์เดียว จ่ายค่าส่งครั้งเดียว
+        //   ?id=&qty=         มาจากปุ่ม "สั่งซื้อทันที" ในหน้าสินค้า — ชิ้นเดียว ไม่ผ่านตะกร้า
+        const urlParams = new URLSearchParams(window.location.search);
+        const checkoutRoundId = urlParams.get('round');
+        const productId = urlParams.get('id');
+
+        const shippingFee = 50;
+
+        let checkoutItems = [];   // [{ product, qty }]
+        let checkoutRound = null;
+        let fromCart = false;
+        let subtotalAmount = 0;
+        let totalAmount = 0;
+        // เรทตอนเปิดหน้า ใช้เทียบว่าเรทเปลี่ยนระหว่างที่ลูกค้ากรอกฟอร์มหรือไม่
+        let quotedRate = null;
+
+        // ออเดอร์ผูกกับอีเมลของผู้ใช้ (o.customerEmail) หน้านี้จึงต้องรู้ว่าใครสั่งเสมอ
+        // ของเดิมมี fallback ยัดอีเมลของ "คุณสมชาย" (บัญชีลูกค้าจริง) ให้คนที่ไม่ได้ล็อกอิน
+        // ออเดอร์ของคนแปลกหน้าจึงไปโผล่ในหน้าประวัติของลูกค้าคนนั้นพร้อมชื่อ ที่อยู่ และเบอร์โทร
+        function requireLogin() {
+            return KpopStore.requireLogin(
+                'กรุณาเข้าสู่ระบบก่อนทำรายการสั่งซื้อค่ะ\nระบบจะพากลับมาที่หน้านี้ให้อัตโนมัติหลังเข้าสู่ระบบ'
+            );
+        }
+
+        KpopStore.ready(function () {
+            if (!requireLogin()) return;
+
+            quotedRate = KpopStore.getCurrentRate();
+
+            if (checkoutRoundId) {
+                loadFromCart();
+            } else {
+                loadSingleProduct();
+            }
+
+            if (checkoutItems.length === 0) return;
+
+            checkoutRound = KpopStore.getRoundById(checkoutItems[0].product.roundId);
+            renderCheckoutSummary();
+            renderCheckoutAddress();
+        });
+
+        function loadFromCart() {
+            fromCart = true;
+            const group = KpopStore.getCartGroupedByRound(shippingFee).groups
+                .find(g => g.roundId === checkoutRoundId);
+
+            if (!group || group.items.length === 0) {
+                alert('ไม่พบสินค้าของรอบนี้ในตะกร้าค่ะ');
+                window.location.href = 'cart.html';
+                return;
+            }
+            if (!group.orderable) {
+                alert('รอบนี้ยังสั่งซื้อไม่ได้ค่ะ กรุณาตรวจสอบสถานะรอบและจำนวนในตะกร้าอีกครั้ง');
+                window.location.href = 'cart.html';
+                return;
+            }
+
+            checkoutItems = group.items.map(i => ({ product: i.product, qty: i.qty }));
+        }
+
+        function loadSingleProduct() {
+            const product = productId ? KpopStore.getProductById(productId) : null;
+            if (!product) {
+                alert('ไม่พบสินค้าที่คุณเลือกค่ะ');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const quotaLeft = KpopStore.getRemainingQuota(product.id);
+            const requested = KpopStore.normalizeQty(urlParams.get('qty'));
+
+            if (!KpopStore.isProductSellable(product)) {
+                alert('ขออภัย สินค้านี้ปิดการขายชั่วคราวค่ะ');
+                blockSubmit('สินค้าหมดชั่วคราว');
+                checkoutItems = [{ product, qty: requested }];
+                return;
+            }
+            if (!KpopStore.isRoundOpen(product.roundId)) {
+                blockSubmit('รอบพรีออเดอร์นี้ปิดรับแล้ว');
+                checkoutItems = [{ product, qty: requested }];
+                return;
+            }
+            if (quotaLeft !== null && quotaLeft <= 0) {
+                alert('ขออภัย รอบพรีออเดอร์นี้เต็มโควตาแล้วค่ะ ทางร้านรับหิ้วเพิ่มไม่ไหวในรอบนี้');
+                blockSubmit('ปิดรับพรีออเดอร์รอบนี้ (เต็มโควตา)');
+                checkoutItems = [{ product, qty: requested }];
+                return;
+            }
+
+            const qty = (quotaLeft !== null) ? Math.min(requested, quotaLeft) : requested;
+            if (qty !== requested) {
+                alert(`รอบนี้ทางร้านรับพรีออเดอร์ได้อีก ${qty} ชิ้น ระบบจึงปรับจำนวนในคำสั่งซื้อให้เป็น ${qty} ชิ้นค่ะ`);
+            }
+
+            checkoutItems = [{ product, qty }];
+        }
+
+        function blockSubmit(reason) {
+            const btn = document.getElementById('submitOrderBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.classList.add('btn-secondary');
+            btn.innerHTML = `<i class="fa-solid fa-ban me-2"></i> ${reason}`;
+        }
+
+        function renderCheckoutSummary() {
+            subtotalAmount = 0;
+
+            document.getElementById('checkout-items').innerHTML = checkoutItems.map(entry => {
+                const bd = KpopStore.getPriceBreakdown(entry.product, quotedRate.rate);
+                const lineTotal = bd.total * entry.qty;
+                subtotalAmount += lineTotal;
+
+                return `
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="${entry.product.image}" alt="${entry.product.title}" class="summary-item-img me-3"
+                            onerror="this.onerror=null; this.src='images/mapsoul7.jpg'">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1" style="font-size: 0.95rem;">${entry.product.title}</h6>
+                            <span class="text-muted d-block" style="font-size: 0.85rem;">จำนวน ${entry.qty} x ฿${bd.total.toLocaleString()}</span>
+                            <span class="text-muted" style="font-size: 0.76rem;">
+                                ${bd.legacy ? 'ราคาบาทคงที่' : `₩${bd.krw.toLocaleString()} x ${bd.rate} + ค่าบริการ ฿${bd.serviceFee.toLocaleString()}`}
+                            </span>
+                        </div>
+                        <div style="font-weight: 500;">฿${lineTotal.toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+
+            totalAmount = subtotalAmount + shippingFee;
+
+            document.getElementById('checkout-subtotal').innerText = '฿' + subtotalAmount.toLocaleString();
+            document.getElementById('checkout-shipping').innerText = '฿' + shippingFee.toLocaleString();
+            document.getElementById('checkout-total').innerText = '฿' + totalAmount.toLocaleString();
+
+            document.getElementById('checkout-round-info').innerHTML = `
+                <div class="fw-bold text-dark mb-1"><i class="fa-solid fa-layer-group me-1 text-danger"></i>
+                    ${checkoutRound ? checkoutRound.name : 'รอบพรีออเดอร์'}
+                </div>
+                <div class="text-secondary">
+                    ${checkoutRound ? 'ปิดรับ ' + checkoutRound.closeAt : ''}
+                    ${checkoutRound && checkoutRound.estDelivery ? ' · คาดว่าได้รับ ' + checkoutRound.estDelivery : ''}
+                    <br>คำนวณด้วยเรท <strong>${quotedRate.rate}</strong> (₩1,000 = ฿${(quotedRate.rate * 1000).toFixed(2)})
+                    — ยอดนี้จะถูกล็อกทันทีที่คุณกดยืนยันและแนบสลิป
+                </div>
+            `;
+        }
+
+        function renderCheckoutAddress() {
+            // หน้านี้บังคับล็อกอินตั้งแต่ DOMContentLoaded แล้ว จึงมี currentUser เสมอ
+            const currentUser = KpopStore.getCurrentUser();
+            const addrBox = document.querySelector('.checkout-card');
+            if (addrBox && currentUser) {
+                addrBox.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <h5 class="m-0 fw-bold" style="font-size: 1.1rem;"><i class="fa-solid fa-location-dot me-2 text-danger"></i>ที่อยู่สำหรับจัดส่ง</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="KpopStore.openProfileModal()"><i class="fa-solid fa-user-pen me-1"></i> แก้ไขที่อยู่ / ข้อมูลติดต่อ</button>
+                        </div>
+                        <p class="mb-1" style="font-weight: 500;">ชื่อผู้รับ: ${currentUser.name}</p>
+                        <p class="text-muted mb-1" style="font-size: 0.95rem;">เบอร์โทรศัพท์: ${currentUser.phone || 'ยังไม่ได้ระบุ'}</p>
+                        <p class="text-muted mb-0" style="font-size: 0.95rem;">${currentUser.address || 'ยังไม่ได้ระบุที่อยู่ (คลิกปุ่มแก้ไขที่อยู่ด้านบน)'}</p>
+                    `;
+            }
+        }
+
+        function previewCheckoutSlip(input) {
+            const previewBox = document.getElementById('slipPreviewBox');
+            const previewImg = document.getElementById('slipPreviewImg');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewBox.classList.remove('d-none');
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                previewBox.classList.add('d-none');
+            }
+        }
+
+        function submitCheckoutOrder() {
+            if (checkoutItems.length === 0) return;
+
+            // เช็คซ้ำตอนกดยืนยัน เผื่อ session หมดไประหว่างกรอกฟอร์ม (เช่น ล็อกเอาต์อีกแท็บ)
+            if (!requireLogin()) return;
+
+            // รอบต้องยังเปิดอยู่ ณ วินาทีที่กดยืนยัน ไม่ใช่แค่ตอนเปิดหน้า
+            if (!KpopStore.isRoundOpen(checkoutItems[0].product.roundId)) {
+                alert('รอบพรีออเดอร์นี้ปิดรับไปแล้วค่ะ ไม่สามารถส่งคำสั่งซื้อได้');
+                blockSubmit('รอบนี้ปิดรับแล้ว');
+                return;
+            }
+
+            // สินค้าอาจถูกแอดมินปิดการขายระหว่างที่ลูกค้ากรอกฟอร์ม
+            for (const entry of checkoutItems) {
+                if (!KpopStore.isProductSellable(entry.product)) {
+                    alert(`ขออภัย "${entry.product.title}" ปิดการขายชั่วคราวแล้วค่ะ`);
+                    blockSubmit('สินค้าหมดชั่วคราว');
+                    return;
+                }
+            }
+
+            // ตรวจโควตาทุกชิ้นอีกรอบ เผื่อมีคนอื่นสั่งตัดหน้าระหว่างที่กรอกฟอร์ม
+            for (const entry of checkoutItems) {
+                const remaining = KpopStore.getRemainingQuota(entry.product.id);
+                if (remaining === null) continue;
+                if (remaining <= 0) {
+                    alert(`ขออภัย "${entry.product.title}" เต็มโควตารอบนี้แล้วค่ะ`);
+                    return;
+                }
+                if (entry.qty > remaining) {
+                    alert(`ขออภัย "${entry.product.title}" รอบนี้รับได้อีกเพียง ${remaining} ชิ้น ไม่พอสำหรับจำนวนที่สั่ง (${entry.qty} ชิ้น)`);
+                    return;
+                }
+            }
+
+            // เรทอาจเปลี่ยนไปแล้ว (ผ่าน 22:00 หรือแอดมินตั้งเรทใหม่) ระหว่างที่ลูกค้ากรอกฟอร์ม
+            // ต้องแสดงยอดใหม่ให้เห็นก่อน แล้วให้กดยืนยันอีกครั้ง
+            // ห้ามบันทึกเงียบ ๆ ด้วยยอดที่ลูกค้าไม่เคยเห็น
+            const liveRate = KpopStore.getCurrentRate();
+            if (liveRate.rate !== quotedRate.rate) {
+                const oldTotal = totalAmount;
+                quotedRate = liveRate;
+                renderCheckoutSummary();
+                alert(
+                    `เรทเงินวอนเพิ่งเปลี่ยนเป็น ${liveRate.rate} ระหว่างที่คุณกรอกข้อมูลค่ะ\n\n` +
+                    `ยอดชำระเดิม ฿${oldTotal.toLocaleString()}\n` +
+                    `ยอดชำระใหม่ ฿${totalAmount.toLocaleString()}\n\n` +
+                    `กรุณาตรวจสอบยอดใหม่แล้วกดยืนยันอีกครั้งค่ะ`
+                );
+                return;
+            }
+
+            const fileInput = document.getElementById('formFile');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('กรุณาเลือกและแนบไฟล์สลิปหลักฐานการโอนเงิน (Slip Upload) ก่อนดำเนินการสั่งซื้อค่ะ');
+                fileInput.focus();
+                return;
+            }
+
+            const termsCheck = document.getElementById('acceptTermsCheckbox');
+            if (termsCheck && !termsCheck.checked) {
+                alert('กรุณาทำเครื่องหมายยอมรับเงื่อนไขและข้อตกลงความรับผิดชอบก่อนทำการสั่งซื้อสินค้าค่ะ');
+                return;
+            }
+
+            const btn = document.getElementById('submitOrderBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i> กำลังบีบอัดสลิปและบันทึกการสั่งซื้อ...`;
+
+            // ผ่าน requireLogin() มาแล้วจึงมี currentUser เสมอ
+            const currentUser = KpopStore.getCurrentUser();
+
+            const proceedWithSlip = async (slipDataUrl) => {
+                const orderData = {
+                    customerName: currentUser.name,
+                    customerEmail: currentUser.email,
+                    phone: currentUser.phone || '',
+                    address: currentUser.address || '',
+                    // ส่งเฉพาะ id กับ qty พอ — addOrder จะล็อกเรทแล้วคิดราคาจาก ₩ ให้เอง
+                    // ทำให้ยอดที่บันทึกมาจากแหล่งเดียวเสมอ ไม่มีทางเพี้ยนจากที่หน้าจอคำนวณไว้
+                    items: checkoutItems.map(entry => ({
+                        id: entry.product.id,
+                        title: entry.product.title,
+                        qty: entry.qty,
+                        image: entry.product.image
+                    })),
+                    shippingFee: shippingFee,
+                    slipImage: slipDataUrl
+                };
+
+                const result = await KpopStore.addOrder(orderData);
+
+                // ลูกค้าโอนเงินมาแล้วก่อนถึงจุดนี้ ถ้าบันทึกไม่ลงห้ามบอกว่าสำเร็จเด็ดขาด
+                // และห้ามล้างตะกร้า เพื่อให้ลูกค้ากดยืนยันซ้ำได้
+                if (!result.success) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'ยืนยันการสั่งซื้อและแจ้งชำระเงิน';
+                    alert('บันทึกคำสั่งซื้อไม่สำเร็จค่ะ\n\n' + result.message +
+                        '\n\nยังไม่มีการบันทึกคำสั่งซื้อนี้ กรุณาลองใหม่อีกครั้ง');
+                    return;
+                }
+
+                const createdOrder = result.order;
+
+                // ล้างเฉพาะรอบที่เพิ่งจ่าย ของรอบอื่นในตะกร้าต้องอยู่ต่อ
+                if (fromCart) await KpopStore.clearCartRound(checkoutRoundId);
+
+                alert(
+                    `สั่งซื้อและแนบสลิปแจ้งชำระเงินเรียบร้อยแล้ว!\n` +
+                    `หมายเลขคำสั่งซื้อของคุณคือ #${createdOrder.id}\n` +
+                    `ยอดชำระ ฿${(createdOrder.total || 0).toLocaleString()} (ล็อกที่เรท ${createdOrder.rateUsed})`
+                );
+                window.location.href = 'order-history.html';
+            };
+
+            // Compress slip image to prevent localStorage quota overflow
+            KpopStore.compressSlipImage(fileInput.files[0], function (compressedDataUrl) {
+                if (!compressedDataUrl) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'ยืนยันการสั่งซื้อและแจ้งชำระเงิน';
+                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์สลิป กรุณาลองเลือกรูปภาพใหม่อีกครั้งค่ะ');
+                    return;
+                }
+                proceedWithSlip(compressedDataUrl);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" width="300" height="420" role="img" aria-label="สลิปโอนเงินตัวอย่าง">
+  <rect width="300" height="420" fill="#f4f6f8"/>
+  <rect x="24" y="24" width="252" height="372" rx="10" fill="#ffffff" stroke="#d7dde3" stroke-width="2"/>
+  <rect x="48" y="56" width="120" height="16" rx="8" fill="#1a1a24" opacity="0.75"/>
+  <rect x="48" y="88" width="76" height="12" rx="6" fill="#9aa5b1"/>
+  <line x1="48" y1="118" x2="252" y2="118" stroke="#e3e8ec" stroke-width="2"/>
+  <rect x="48" y="140" width="160" height="22" rx="6" fill="#1a1a24" opacity="0.85"/>
+  <rect x="48" y="176" width="110" height="12" rx="6" fill="#9aa5b1"/>
+  <rect x="48" y="200" width="140" height="12" rx="6" fill="#c3ccd4"/>
+  <line x1="48" y1="232" x2="252" y2="232" stroke="#e3e8ec" stroke-width="2"/>
+  <rect x="48" y="254" width="90" height="12" rx="6" fill="#c3ccd4"/>
+  <rect x="48" y="278" width="130" height="12" rx="6" fill="#c3ccd4"/>
+  <circle cx="150" cy="336" r="26" fill="none" stroke="#28a745" stroke-width="4"/>
+  <path d="M138 336 l9 9 l16 -18" fill="none" stroke="#28a745" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="150" y="382" fill="#6b7680" font-family="Kanit, sans-serif" font-size="13" text-anchor="middle">สลิปตัวอย่าง (ข้อมูลทดสอบ)</text>
+</svg>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตะกร้าพรีออเดอร์ | KPOP STORE</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #fcfcfc;
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
+            padding: 15px 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #333 !important;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: #555 !important;
+            font-weight: 400;
+            font-size: 0.95rem;
+        }
+
+        .btn-dark-custom {
+            background-color: #1a1a24;
+            color: white;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            border: none;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-dark-custom:hover {
+            background-color: #333;
+            color: white;
+        }
+
+        .btn-outline-dark-custom {
+            border: 1px solid #1a1a24;
+            color: #1a1a24;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 0.9rem;
+            background: transparent;
+            font-weight: 500;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: -6px;
+            right: -10px;
+            background: #ff3399;
+            color: #fff;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            padding: 1px 6px;
+            font-weight: 600;
+        }
+
+        .round-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            margin-bottom: 22px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        }
+
+        .round-card.is-blocked {
+            opacity: 0.75;
+            background: #fafafa;
+        }
+
+        .round-head {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fbfbfd;
+        }
+
+        .cart-item-img {
+            width: 66px;
+            height: 66px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .qty-input {
+            width: 78px;
+            text-align: center;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 6px;
+        }
+
+        .rate-banner {
+            background: #fff8ec;
+            border: 1px solid #ffe0a3;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 0.87rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- expand-md ให้ตรงกับแถบล่างมือถือและหน้าอื่น (เมนูใช้ d-none d-md-flex อยู่แล้ว) -->
+    <nav class="navbar navbar-expand-md sticky-top">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="fa-solid fa-heart me-2" style="color: #ff3399; font-size: 1.5rem;"></i> KPOP STORE
+            </a>
+            <div class="d-none d-md-flex align-items-center gap-3">
+                <a class="nav-link text-decoration-none" href="index.html">หน้าแรก</a>
+                <a class="nav-link text-decoration-none" href="#" onclick="KpopStore.goToAllProducts(); return false;">สินค้าทั้งหมด</a>
+                <a class="nav-link text-decoration-none" href="#" onclick="KpopStore.openHowToOrderModal(); return false;">วิธีการสั่งซื้อ</a>
+                <a class="nav-link text-decoration-none" href="order-history.html">ประวัติคำสั่งซื้อ</a>
+            </div>
+            <div class="d-flex align-items-center"></div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h3 class="m-0" style="font-weight: 600;"><i class="fa-solid fa-cart-shopping me-2" style="color:#ff3399;"></i>ตะกร้าพรีออเดอร์</h3>
+            <a href="index.html" class="btn btn-outline-dark-custom text-decoration-none"><i class="fa-solid fa-arrow-left me-1"></i> เลือกสินค้าเพิ่ม</a>
+        </div>
+
+        <div id="cartRateBanner" class="rate-banner mb-4"></div>
+
+        <div id="cartContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        const FALLBACK_IMAGE = 'images/mapsoul7.jpg';
+
+        const ROUND_STATE_META = {
+            open: { badge: 'success', text: 'เปิดรับอยู่' },
+            upcoming: { badge: 'secondary', text: 'ยังไม่เปิดรับ' },
+            closed: { badge: 'dark', text: 'ปิดรับแล้ว' },
+            ordered: { badge: 'primary', text: 'ร้านกดสั่งกับเกาหลีแล้ว' },
+            arrived: { badge: 'info', text: 'ของถึงไทยแล้ว' },
+            shipped: { badge: 'success', text: 'ส่งครบแล้ว' }
+        };
+
+        KpopStore.ready(function () {
+            // guest เพิ่มของลงตะกร้าไม่ได้แล้ว (กันที่ปุ่มในหน้ารายละเอียดสินค้า) ตะกร้าจึงว่างเสมอ
+            // กันตั้งแต่เปิดหน้าชัดกว่าปล่อยให้เห็นตะกร้าว่างแล้วค่อยไปเจอกำแพงตอน checkout
+            if (!KpopStore.requireLogin('กรุณาเข้าสู่ระบบก่อนดูตะกร้าพรีออเดอร์ค่ะ')) return;
+            renderCart();
+        });
+
+        // ใช้ตัวกลางจาก ui.js ตัวเดียวทั้งระบบ
+        const esc = KpopStore.esc;
+        const escArg = KpopStore.escArg;
+
+        function baht(value) {
+            return '฿' + (Number(value) || 0).toLocaleString('th-TH');
+        }
+
+        function renderCart() {
+            const { rate, groups } = KpopStore.getCartGroupedByRound();
+
+            document.getElementById('cartRateBanner').innerHTML = `
+                <div class="fw-bold mb-1"><i class="fa-solid fa-money-bill-transfer me-1 text-warning"></i>
+                    ราคาในตะกร้าคำนวณจากเรทปัจจุบัน ₩1,000 = ฿${(rate.rate * 1000).toFixed(2)}
+                </div>
+                <div class="text-secondary">
+                    เรทมีผลตั้งแต่ ${esc(rate.effectiveFrom)} และจะเปลี่ยนรอบถัดไปเวลา
+                    <strong>${esc(KpopStore.getNextRateCutoff())}</strong> —
+                    หากชำระหลังจากนั้น ยอดจะถูกคำนวณใหม่ตามเรทใหม่
+                    <strong>ยอดของคุณจะถูกล็อกเมื่อแนบสลิป</strong>
+                </div>
+            `;
+
+            const container = document.getElementById('cartContainer');
+
+            if (groups.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 bg-white rounded-4 border p-5">
+                        <i class="fa-solid fa-cart-shopping fs-1 text-muted opacity-50 d-block mb-3"></i>
+                        <h5 class="fw-bold">ตะกร้ายังว่างอยู่</h5>
+                        <p class="text-muted">เลือกอัลบั้มที่อยากได้แล้วกด "เพิ่มลงตะกร้า" ได้เลยค่ะ</p>
+                        <a href="index.html" class="btn btn-dark-custom text-decoration-none">เลือกชมสินค้า</a>
+                    </div>
+                `;
+                KpopStore.renderNavbarAuth();
+                return;
+            }
+
+            container.innerHTML = groups.map(renderRoundGroup).join('') + `
+                <div class="alert alert-light border small text-muted mt-2">
+                    <i class="fa-solid fa-circle-info me-1 text-primary"></i>
+                    สินค้าคนละรอบต้องชำระเงินแยกกัน เพราะของแต่ละรอบมาถึงไทยคนละเวลา
+                    จึงรวมพัสดุส่งครั้งเดียวไม่ได้ (ค่าส่งจึงคิดแยกรอบละ ฿50)
+                </div>
+            `;
+
+            KpopStore.renderNavbarAuth();
+        }
+
+        function renderRoundGroup(group) {
+            const meta = ROUND_STATE_META[group.state] || ROUND_STATE_META.closed;
+            const round = group.round;
+
+            return `
+                <div class="round-card ${group.orderable ? '' : 'is-blocked'}">
+                    <div class="round-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="fw-bold">
+                                <i class="fa-solid fa-layer-group me-2 text-danger"></i>${esc(round ? round.name : 'ไม่ระบุรอบ')}
+                                <span class="badge bg-${meta.badge} rounded-pill ms-1" style="font-size:0.72rem;">${meta.text}</span>
+                            </div>
+                            <div class="text-muted mt-1" style="font-size: 0.82rem;">
+                                ${round ? `เปิดรับ ${esc(round.openAt)} ถึง ${esc(round.closeAt)}` : ''}
+                                ${round && round.estDelivery ? ` · คาดว่าได้รับ ${esc(round.estDelivery)}` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3">
+                        ${group.items.map(item => renderCartItem(item)).join('')}
+
+                        <div class="border-top pt-3 mt-2">
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 0.92rem;">
+                                <span class="text-muted">ค่าสินค้ารวม</span>
+                                <span>${baht(group.subtotal)}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2" style="font-size: 0.92rem;">
+                                <span class="text-muted">ค่าจัดส่งในไทย (รอบนี้)</span>
+                                <span>${baht(group.shippingFee)}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-2">
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.82rem;">ยอดชำระประมาณการรอบนี้</div>
+                                    <div class="fw-bold fs-4 text-danger">${baht(group.total)}</div>
+                                </div>
+                                ${group.orderable
+                                    ? `<button class="btn btn-dark-custom" onclick="checkoutRound('${escArg(group.roundId)}')">
+                                           <i class="fa-solid fa-credit-card me-2"></i>ชำระเงินรอบนี้
+                                       </button>`
+                                    : `<button class="btn btn-secondary" disabled>
+                                           <i class="fa-solid fa-ban me-2"></i>${group.state === 'open' ? 'มีรายการเกินโควตา' : meta.text}
+                                       </button>`}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCartItem(item) {
+            const p = item.product;
+            const bd = item.breakdown;
+
+            return `
+                <div class="d-flex align-items-center gap-3 py-3 border-bottom flex-wrap">
+                    <img src="${esc(p.image)}" class="cart-item-img" alt="${esc(p.title)}"
+                        onerror="this.onerror=null; this.src='${FALLBACK_IMAGE}'">
+
+                    <div class="flex-grow-1" style="min-width: 180px;">
+                        <div class="fw-bold" style="font-size: 0.95rem;">${esc(p.title)}</div>
+                        <div class="text-muted" style="font-size: 0.8rem;">
+                            ${bd.legacy
+                                ? 'ราคาบาทคงที่'
+                                : `₩${bd.krw.toLocaleString()} x ${bd.rate} = ฿${bd.converted.toLocaleString()} + ค่าบริการ ฿${bd.serviceFee.toLocaleString()}`}
+                        </div>
+                        <div class="mt-1" style="font-size: 0.8rem;">
+                            ${item.remaining === null
+                                ? '<span class="text-muted">รับไม่จำกัด</span>'
+                                : (item.overQuota
+                                    ? `<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i>รอบนี้เหลือรับได้แค่ ${item.remaining} ชิ้น กรุณาลดจำนวน</span>`
+                                    : `<span class="text-muted">รอบนี้รับได้อีก ${item.remaining} ชิ้น</span>`)}
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <label class="text-muted d-block" style="font-size: 0.75rem;" for="qty_${esc(p.id)}">จำนวน</label>
+                        <input type="number" class="qty-input" id="qty_${esc(p.id)}" value="${item.qty}" min="1" step="1"
+                            onchange="changeQty('${escArg(p.id)}', this.value)">
+                    </div>
+
+                    <div class="text-end" style="min-width: 110px;">
+                        <div class="fw-bold text-danger">${baht(item.lineTotal)}</div>
+                        <button class="btn btn-sm btn-link text-decoration-none text-muted p-0 mt-1"
+                            onclick="removeItem('${escArg(p.id)}')" style="font-size: 0.8rem;">
+                            <i class="fa-regular fa-trash-can me-1"></i>ลบ
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function changeQty(productId, value) {
+            const res = await KpopStore.updateCartQty(productId, value);
+            if (!res.success) {
+                alert(res.message);
+                renderCart();
+                return;
+            }
+            if (res.adjusted) {
+                alert('จำนวนเกินโควตาที่รอบนี้รับได้ ระบบปรับให้เป็น ' + res.qty + ' ชิ้นค่ะ');
+            }
+            renderCart();
+        }
+
+        async function removeItem(productId) {
+            await KpopStore.removeFromCart(productId);
+            renderCart();
+        }
+
+        // ส่งไปหน้า checkout พร้อมบอกว่าเป็นการเช็คเอาต์ "ทั้งรอบ" ไม่ใช่สินค้าเดี่ยว
+        function checkoutRound(roundId) {
+            window.location.href = 'checkout.html?round=' + encodeURIComponent(roundId);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบผู้ดูแลระบบ (Admin) | KPOP STORE</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-pink: #ff3399;
+            --dark-bg: #111827;
+            --card-radius: 16px;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        /* Top Admin Navbar */
+        .admin-navbar {
+            background-color: #1a1a24;
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-navbar .navbar-brand {
+            color: white !important;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* Admin Sidebar / Nav Tabs */
+        .admin-sidebar {
+            background: white;
+            border-radius: var(--card-radius);
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        }
+
+        .admin-sidebar .nav-link {
+            color: #555;
+            font-weight: 500;
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .admin-sidebar .nav-link:hover {
+            background-color: #f8f9fa;
+            color: var(--primary-pink);
+        }
+
+        .admin-sidebar .nav-link.active {
+            background-color: #fff0f6;
+            color: var(--primary-pink);
+            font-weight: 600;
+        }
+
+        /* Metric KPI Cards */
+        .kpi-card {
+            background: white;
+            border-radius: var(--card-radius);
+            padding: 22px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f0f0f0;
+            transition: transform 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .kpi-icon-box {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        /* Tables & Content Cards */
+        .admin-card {
+            background: white;
+            border-radius: var(--card-radius);
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid #eee;
+            margin-bottom: 25px;
+        }
+
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .custom-table th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.88rem;
+            text-transform: uppercase;
+            padding: 14px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .custom-table td {
+            padding: 14px;
+            vertical-align: middle;
+            font-size: 0.92rem;
+        }
+
+        .product-thumb {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+
+        .slip-preview-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid var(--primary-pink);
+            transition: transform 0.2s;
+        }
+
+        .slip-preview-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Status Badges */
+        .badge-status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-status-processing {
+            background-color: #cce5ff;
+            color: #004085;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-status-shipping {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-status-success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* กลุ่มคืนเงินต้องไม่ใช้สีแดงของ "ถูกปฏิเสธ"
+           เพราะลูกค้าจ่ายเงินถูกต้องทุกอย่าง เป็นฝั่งร้านที่กดของไม่ได้เอง */
+        .badge-status-refund {
+            background-color: #fff3cd;
+            color: #7a5b00;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .btn-pink {
+            background-color: var(--primary-pink);
+            color: white;
+            border-radius: 10px;
+            padding: 8px 18px;
+            font-weight: 500;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-pink:hover {
+            background-color: #e02484;
+            color: white;
+        }
+
+        /* Modal Slip Zoom */
+        .slip-modal-img {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Responsive Mobile Drawer */
+        @media (max-width: 991.98px) {
+            .admin-sidebar {
+                margin-bottom: 20px;
+            }
+
+            .admin-sidebar .nav {
+                flex-direction: row;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 5px;
+            }
+
+            .admin-sidebar .nav-link {
+                white-space: nowrap;
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Admin Top Navbar -->
+    <nav class="navbar navbar-expand-lg admin-navbar sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
+                <i class="fa-solid fa-shield-halved text-pink fs-4" style="color: #ff3399;"></i>
+                <span>KPOP STORE <small class="text-white-50 fw-normal fs-6">| Administrator Backoffice</small></span>
+            </a>
+
+            <div class="d-flex align-items-center gap-3">
+                <a href="index.html" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <i class="fa-solid fa-store me-1"></i> หน้าร้านค้า
+                </a>
+                <div class="dropdown">
+                    <button class="btn btn-dark btn-sm dropdown-toggle rounded-pill px-3 bg-dark border-secondary"
+                        type="button" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-user-gear me-2 text-danger"></i>
+                        <span id="adminNameDisplay">แอดมิน</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="adminUserDropdown">
+                        <li><a class="dropdown-item py-2" href="order-history.html"><i
+                                    class="fa-solid fa-clock-rotate-left me-2 text-muted"></i>ประวัติคำสั่งซื้อหน้าร้าน</a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><button class="dropdown-item py-2 text-danger" onclick="KpopStore.logout()"><i
+                                    class="fa-solid fa-right-from-bracket me-2"></i>ออกจากระบบ</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Admin Guard / Login Prompt if non-admin -->
+    <div id="adminGuardContainer" class="container mt-5" style="display: none;">
+        <div class="card border-0 shadow-lg p-5 mx-auto text-center"
+            style="max-width: 500px; border-radius: 20px; background: white;">
+            <div class="mb-4">
+                <i class="fa-solid fa-lock text-danger" style="font-size: 3.5rem;"></i>
+            </div>
+            <h4 class="fw-bold mb-2">ต้องใช้สิทธิ์ผู้ดูแลระบบ (Admin)</h4>
+            <p class="text-muted mb-4">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบเพื่อใช้งานส่วนนี้</p>
+            <div class="bg-light p-3 rounded-3 text-start mb-4" style="font-size: 0.88rem;">
+                <div class="fw-bold text-dark mb-1"><i class="fa-solid fa-key me-2 text-warning"></i>บัญชีแอดมินทดสอบ
+                    (Default Admin)</div>
+                <div><strong>Email:</strong> admin@kpopstore.com</div>
+                <div><strong>Password:</strong> admin123</div>
+            </div>
+            <a href="login.html" class="btn btn-pink py-2 px-4 mb-3 text-decoration-none"><i
+                    class="fa-solid fa-shield-halved me-2"></i>ไปหน้าเข้าสู่ระบบ</a>
+        </div>
+    </div>
+
+    <!-- Main Admin Workspace -->
+    <div id="adminMainContainer" class="container-fluid px-4 py-4">
+        <div class="row g-4">
+
+            <!-- Navigation Sidebar / Tabs -->
+            <div class="col-lg-3 col-xl-2">
+                <div class="admin-sidebar sticky-top" style="top: 80px;">
+                    <div class="d-none d-lg-block pb-3 mb-2 border-bottom">
+                        <small class="text-uppercase text-muted fw-bold"
+                            style="font-size: 0.75rem; letter-spacing: 1px;">เมนูหลัก</small>
+                    </div>
+                    <div class="nav flex-column nav-pills" id="adminTab" role="tablist">
+                        <button class="nav-link active" id="tab-dashboard-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-dashboard" type="button" role="tab"><i
+                                class="fa-solid fa-chart-pie me-2 text-primary"></i> ภาพรวมระบบ</button>
+
+                        <button class="nav-link position-relative" id="tab-slips-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-slips" type="button" role="tab"><i
+                                class="fa-solid fa-receipt me-2 text-warning"></i> ตรวจสอบสลิป <span
+                                id="badgePendingSlips" class="badge bg-warning text-dark rounded-pill ms-auto"
+                                style="font-size: 0.7rem;">0</span></button>
+
+                        <button class="nav-link" id="tab-orders-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-orders" type="button" role="tab"><i
+                                class="fa-solid fa-box-archive me-2 text-info"></i> คำสั่งซื้อทั้งหมด</button>
+
+                        <button class="nav-link" id="tab-products-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-products" type="button" role="tab"><i
+                                class="fa-solid fa-compact-disc me-2 text-pink" style="color: #ff3399;"></i>
+                            จัดการสินค้า</button>
+
+                        <button class="nav-link" id="tab-rounds-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-rounds" type="button" role="tab"><i
+                                class="fa-solid fa-calendar-days me-2 text-danger"></i> จัดการรอบพรีออเดอร์</button>
+
+                        <button class="nav-link" id="tab-rates-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-rates" type="button" role="tab"><i
+                                class="fa-solid fa-money-bill-transfer me-2 text-warning"></i> เรทเงินวอน</button>
+
+                        <button class="nav-link" id="tab-users-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-users" type="button" role="tab"><i
+                                class="fa-solid fa-users-gear me-2 text-success"></i> จัดการผู้ใช้งาน</button>
+
+                        <button class="nav-link" id="tab-notifications-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-notifications" type="button" role="tab"><i
+                                class="fa-solid fa-paper-plane me-2 text-secondary"></i> แจ้งเตือนลูกค้า</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="col-lg-9 col-xl-10">
+                <div class="tab-content" id="adminTabContent">
+
+                    <!-- ================= TAB 1: DASHBOARD OVERVIEW ================= -->
+                    <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h4 class="fw-bold mb-1">ภาพรวมและสรุปผลการสั่งซื้อ</h4>
+                                <p class="text-muted m-0" style="font-size: 0.9rem;">ข้อมูลสรุปยอดขาย สถิติคำสั่งซื้อ
+                                    และการแจ้งเตือนล่าสุดในระบบ</p>
+                            </div>
+                            <button class="btn btn-light border btn-sm rounded-pill" onclick="renderAdminDashboard()"><i
+                                    class="fa-solid fa-rotate me-1"></i> รีเฟรชข้อมูล</button>
+                        </div>
+
+                        <!-- Metric KPI Grid -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="kpi-card d-flex align-items-center gap-3">
+                                    <div class="kpi-icon-box bg-success-subtle text-success">
+                                        <i class="fa-solid fa-baht-sign"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted" style="font-size: 0.85rem;">ยอดขายรวมทั้งหมด</div>
+                                        <h3 class="fw-bold m-0" id="kpiTotalSales">฿0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="kpi-card d-flex align-items-center gap-3">
+                                    <div class="kpi-icon-box bg-info-subtle text-info">
+                                        <i class="fa-solid fa-cart-shopping"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted" style="font-size: 0.85rem;">คำสั่งซื้อทั้งหมด</div>
+                                        <h3 class="fw-bold m-0" id="kpiTotalOrders">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="kpi-card d-flex align-items-center gap-3">
+                                    <div class="kpi-icon-box bg-warning-subtle text-warning">
+                                        <i class="fa-solid fa-hourglass-half"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted" style="font-size: 0.85rem;">รอตรวจสอบสลิป</div>
+                                        <h3 class="fw-bold m-0 text-warning" id="kpiPendingSlips">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="kpi-card d-flex align-items-center gap-3">
+                                    <div class="kpi-icon-box bg-danger-subtle text-danger">
+                                        <i class="fa-solid fa-compact-disc"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted" style="font-size: 0.85rem;">สินค้าพรีออเดอร์</div>
+                                        <h3 class="fw-bold m-0" id="kpiTotalProducts">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- เรทและรอบที่กำลังเปิด — 2 อย่างที่ต้องเห็นทุกวันก่อนเริ่มงาน -->
+                        <div class="admin-card mb-4">
+                            <div class="row g-4 align-items-center">
+                                <div class="col-md-4 border-end">
+                                    <div class="text-muted" style="font-size: 0.85rem;"><i class="fa-solid fa-money-bill-transfer me-1 text-warning"></i>เรทเงินวอนที่ใช้อยู่</div>
+                                    <div class="fw-bold fs-4 text-dark" id="dashRateValue">-</div>
+                                    <div class="text-muted" id="dashRateMeta" style="font-size: 0.78rem;"></div>
+                                    <button class="btn btn-sm btn-link text-decoration-none p-0 mt-1" onclick="switchTab('tab-rates-tab')">ตั้งเรทใหม่</button>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="text-muted mb-2" style="font-size: 0.85rem;"><i class="fa-solid fa-calendar-days me-1 text-danger"></i>รอบที่กำลังเปิดรับ</div>
+                                    <div id="dashOpenRounds" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Feed & Status Overview -->
+                        <div class="row g-4">
+                            <div class="col-lg-7">
+                                <div class="admin-card h-100">
+                                    <h5 class="fw-bold mb-3 d-flex justify-content-between align-items-center">
+                                        <span><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>คำสั่งซื้อล่าสุด</span>
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0 text-pink"
+                                            onclick="switchTab('tab-orders-tab')">ดูทั้งหมด</button>
+                                    </h5>
+                                    <div class="table-responsive">
+                                        <table class="table custom-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>เลขที่คำสั่งซื้อ</th>
+                                                    <th>ลูกค้า</th>
+                                                    <th>ยอดชำระ</th>
+                                                    <th>สถานะ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="dashRecentOrdersTable">
+                                                <!-- Dynamic JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="admin-card h-100">
+                                    <h5 class="fw-bold mb-3"><i
+                                            class="fa-solid fa-chart-column me-2 text-success"></i>สรุปสถานะพัสดุ</h5>
+                                    <div id="statusBreakdownContainer" class="d-flex flex-column gap-3">
+                                        <!-- Dynamic JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB 2: SLIP VERIFICATION ================= -->
+                    <div class="tab-pane fade" id="tab-slips" role="tabpanel">
+                        <div class="admin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1"><i
+                                            class="fa-solid fa-receipt me-2 text-warning"></i>ตรวจสอบสลิปการโอนเงินของลูกค้า
+                                    </h4>
+                                    <p class="text-muted m-0" style="font-size: 0.9rem;">
+                                        ตรวจสอบรูปหลักฐานการโอนเงินจากลูกค้า กดอนุมัติหรือปฏิเสธพร้อมระบุเหตุผล</p>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table custom-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>คำสั่งซื้อ</th>
+                                            <th>ลูกค้า</th>
+                                            <th>ยอดเงิน</th>
+                                            <th>สลิปโอนเงิน</th>
+                                            <th>วัน-เวลาแจ้งโอน</th>
+                                            <th class="text-end">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="slipsTableBody">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB 3: ORDER MANAGEMENT ================= -->
+                    <div class="tab-pane fade" id="tab-orders" role="tabpanel">
+                        <div class="admin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                                <div>
+                                    <h4 class="fw-bold mb-1"><i
+                                            class="fa-solid fa-box-archive me-2 text-info"></i>จัดการคำสั่งซื้อทั้งหมด
+                                    </h4>
+                                    <p class="text-muted m-0" style="font-size: 0.9rem;">
+                                        ปรับเปลี่ยนสถานะคำสั่งซื้อในแต่ละขั้นตอน พร้อมใส่หมายเลขติดตามพัสดุ</p>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <input type="text" id="orderSearchInput" class="form-control form-control-sm"
+                                        placeholder="ค้นหาเลขคำสั่งซื้อ/ชื่อลูกค้า..." onkeyup="filterOrdersTable()"
+                                        style="max-width: 250px;">
+                                    <!-- ตัวเลือกสถานะถูกเติมจาก KpopStore.listStatuses() ใน populateStatusSelects() -->
+                                    <select id="orderStatusFilter" class="form-select form-select-sm"
+                                        onchange="filterOrdersTable()" style="width: 180px;">
+                                        <option value="ALL">สถานะทั้งหมด</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table custom-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>เลขที่สั่งซื้อ</th>
+                                            <th>วันที่</th>
+                                            <th>ลูกค้า</th>
+                                            <th>รายการสินค้า</th>
+                                            <th>ยอดรวม</th>
+                                            <th>สถานะปัจจุบัน</th>
+                                            <th>เลขพัสดุ</th>
+                                            <th class="text-end">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ordersMasterTableBody">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB 4: PRODUCT MANAGEMENT ================= -->
+                    <div class="tab-pane fade" id="tab-products" role="tabpanel">
+                        <div class="admin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1"><i
+                                            class="fa-solid fa-compact-disc me-2 text-pink" style="color: #ff3399;"></i>จัดการข้อมูลสินค้าพรีออเดอร์
+                                    </h4>
+                                    <p class="text-muted m-0" style="font-size: 0.9rem;">เพิ่ม แก้ไข
+                                        และลบรายการสินค้าเคป็อปในระบบ</p>
+                                </div>
+                                <button class="btn btn-pink" onclick="openAddProductModal()"><i
+                                        class="fa-solid fa-plus me-1"></i> เพิ่มสินค้าใหม่</button>
+                            </div>
+
+                            <div id="storageUsageBox" class="mb-4"></div>
+
+                            <div class="table-responsive">
+                                <table class="table custom-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>รูป</th>
+                                            <th>ศิลปิน</th>
+                                            <th>ชื่ออัลบั้ม/สินค้า</th>
+                                            <th>ราคา</th>
+                                            <th>โควตารับ/รอบ</th>
+                                            <th>สถานะ</th>
+                                            <th class="text-end">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productsTableBody">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB: PRE-ORDER ROUNDS ================= -->
+                    <div class="tab-pane fade" id="tab-rounds" role="tabpanel">
+                        <div class="admin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1"><i class="fa-solid fa-calendar-days me-2 text-danger"></i>จัดการรอบพรีออเดอร์</h4>
+                                    <p class="text-muted m-0" style="font-size: 0.9rem;">
+                                        รอบคือหน้าต่างรับสั่งที่ผูกกับรอบของเว็บเกาหลีหรือรอบชิปรวมของร้าน
+                                        ระบบจะปิดรับสั่งเองเมื่อเลยวันปิดรอบ
+                                    </p>
+                                </div>
+                                <button class="btn btn-pink" onclick="openAddRoundModal()"><i class="fa-solid fa-plus me-1"></i> สร้างรอบใหม่</button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table custom-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อรอบ</th>
+                                            <th>ประเภท</th>
+                                            <th>ช่วงเปิดรับ</th>
+                                            <th>สถานะ</th>
+                                            <th>สินค้า</th>
+                                            <th>ยอดที่ต้องไปกด</th>
+                                            <th class="text-end">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="roundsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="admin-card mt-4" id="roundSummaryCard" style="display:none;">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <div>
+                                    <h5 class="fw-bold mb-1"><i class="fa-solid fa-clipboard-list me-2 text-primary"></i>ใบสรุปรอบ (เอาไปกดสั่งที่เกาหลี)</h5>
+                                    <p class="text-muted m-0" id="roundSummarySubtitle" style="font-size: 0.88rem;"></p>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="closeRoundSummary()">ปิด</button>
+                            </div>
+                            <div id="roundSummaryBody"></div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB: EXCHANGE RATE ================= -->
+                    <div class="tab-pane fade" id="tab-rates" role="tabpanel">
+                        <div class="row g-4">
+                            <div class="col-lg-5">
+                                <div class="admin-card h-100">
+                                    <h4 class="fw-bold mb-1"><i class="fa-solid fa-money-bill-transfer me-2 text-warning"></i>ตั้งเรทเงินวอน</h4>
+                                    <p class="text-muted" style="font-size: 0.9rem;">
+                                        ราคาบาทของทุกสินค้าคำนวณจากเรทนี้อัตโนมัติ ตั้งครั้งเดียวราคาขยับทั้งเว็บ
+                                    </p>
+
+                                    <div class="p-3 rounded-3 mb-3" style="background:#fff6e5; border:1px solid #ffe0a3;">
+                                        <div class="text-muted" style="font-size: 0.8rem;">เรทที่ใช้อยู่ตอนนี้</div>
+                                        <div class="fw-bold fs-3 text-dark" id="currentRateDisplay">-</div>
+                                        <div class="text-muted" id="currentRateMeta" style="font-size: 0.8rem;"></div>
+                                    </div>
+
+                                    <form onsubmit="saveNewRate(event)">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" for="rateValueInput">เรทใหม่ (บาทต่อ 1 วอน)</label>
+                                            <input type="number" step="0.0001" min="0.0001" id="rateValueInput" class="form-control" placeholder="เช่น 0.0272" required>
+                                            <div class="form-text" style="font-size: 0.78rem;">ตัวอย่าง 0.0272 หมายถึง ₩1,000 = ฿27.20</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" for="rateEffectiveInput">เริ่มมีผลเมื่อ</label>
+                                            <input type="datetime-local" id="rateEffectiveInput" class="form-control" required>
+                                            <div class="d-flex gap-2 mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="fillRateEffective('now')">มีผลทันที</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="fillRateEffective('cutoff')">รอบ 22:00 ถัดไป</button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" for="rateNoteInput">หมายเหตุ</label>
+                                            <input type="text" id="rateNoteInput" class="form-control" placeholder="เช่น เรทประจำวันที่ 12 ส.ค.">
+                                        </div>
+                                        <button type="submit" class="btn btn-pink w-100 rounded-pill fw-bold"><i class="fa-solid fa-save me-2"></i>บันทึกเรทใหม่</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-7">
+                                <div class="admin-card mb-4">
+                                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-tags me-2 text-pink" style="color:#ff3399;"></i>ราคาสินค้าที่เรทปัจจุบัน</h5>
+                                    <div class="table-responsive">
+                                        <table class="table custom-table align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>สินค้า</th>
+                                                    <th class="text-end">ราคาวอน</th>
+                                                    <th class="text-end">แปลงเป็นบาท</th>
+                                                    <th class="text-end">ค่าบริการ</th>
+                                                    <th class="text-end">ราคาขาย</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ratePreviewTableBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="admin-card">
+                                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-secondary"></i>ประวัติการตั้งเรท</h5>
+                                    <div class="table-responsive">
+                                        <table class="table custom-table align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>เรท</th>
+                                                    <th>เริ่มมีผล</th>
+                                                    <th>ตั้งโดย</th>
+                                                    <th>หมายเหตุ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ratesHistoryTableBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB 5: USER MANAGEMENT ================= -->
+                    <div class="tab-pane fade" id="tab-users" role="tabpanel">
+                        <div class="admin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1"><i
+                                            class="fa-solid fa-users-gear me-2 text-success"></i>จัดการข้อมูลผู้ใช้งานในระบบ
+                                    </h4>
+                                    <p class="text-muted m-0" style="font-size: 0.9rem;">ดูข้อมูลลูกค้า เพิ่ม
+                                        แก้ไขข้อมูล และกำหนดสิทธิ์ผู้ใช้งาน (Admin/Customer)</p>
+                                </div>
+                                <button class="btn btn-success rounded-pill px-3" onclick="openAddUserModal()"><i
+                                        class="fa-solid fa-user-plus me-1"></i> เพิ่มผู้ใช้งาน</button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table custom-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อ-นามสกุล</th>
+                                            <th>อีเมล</th>
+                                            <th>เบอร์โทรศัพท์</th>
+                                            <th>ที่อยู่จัดส่ง</th>
+                                            <th>สิทธิ์ในระบบ</th>
+                                            <th class="text-end">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= TAB 6: NOTIFICATIONS DISPATCHER ================= -->
+                    <div class="tab-pane fade" id="tab-notifications" role="tabpanel">
+                        <div class="admin-card">
+                            <h4 class="fw-bold mb-1"><i
+                                    class="fa-solid fa-paper-plane me-2 text-secondary"></i>ส่งข่าวสาร/แจ้งเตือนไปยังลูกค้า
+                            </h4>
+                            <p class="text-muted mb-4" style="font-size: 0.9rem;">
+                                แจ้งเตือนการอัปเดตสถานะพรีออเดอร์ สินค้าเข้าโกดัง หรือข่าวสารพิเศษไปยังกล่องแจ้งเตือนของลูกค้า
+                            </p>
+
+                            <form id="broadcastForm" onsubmit="sendBroadcastNotification(event)">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold" style="font-size: 0.9rem;">ส่งถึง</label>
+                                        <select id="notiTargetUser" class="form-select">
+                                            <option value="ALL">ลูกค้าทุกคนในระบบ (Broadcast All)</option>
+                                            <!-- Dynamic JS User options -->
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold"
+                                            style="font-size: 0.9rem;">หัวข้อการแจ้งเตือน</label>
+                                        <input type="text" id="notiTitleInput" class="form-control"
+                                            placeholder="เช่น อัลบั้ม NewJeans ถึงโกดังไทยเรียบร้อยแล้ว!" required>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold"
+                                        style="font-size: 0.9rem;">ข้อความแจ้งเตือน</label>
+                                    <textarea id="notiMessageInput" class="form-control" rows="3"
+                                        placeholder="ระบุรายละเอียดข้อความเพิ่มเติม..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-pink px-4"><i
+                                        class="fa-solid fa-paper-plane me-2"></i> ส่งการแจ้งเตือนทันที</button>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Slip Inspection Modal -->
+    <div class="modal fade" id="slipModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-header-title fw-bold m-0"><i
+                            class="fa-solid fa-magnifying-glass-dollar me-2 text-warning"></i>ตรวจสอบสลิปการชำระเงิน
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6 text-center bg-dark rounded-3 p-3 d-flex align-items-center justify-content-center">
+                            <img id="modalSlipImage" src="" alt="Payment Slip" class="slip-modal-img">
+                            <div id="slipMissingWarning" class="d-none text-center text-white-50 py-4">
+                                <i class="fa-solid fa-triangle-exclamation fs-1 text-warning d-block mb-3"></i>
+                                <div class="fw-bold text-warning mb-1">คำสั่งซื้อนี้ยังไม่มีหลักฐานการโอนเงิน</div>
+                                <div style="font-size: 0.85rem;">อนุมัติไม่ได้จนกว่าลูกค้าจะแนบสลิปเข้ามา</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="badge bg-primary-subtle text-primary mb-2 px-3 py-1 rounded-pill" id="modalSlipOrderId">#ORD-0000</div>
+                            <h5 id="modalSlipCustomer" class="fw-bold mb-1">ชื่อลูกค้า</h5>
+                            <p class="text-muted mb-3" id="modalSlipDate">วันที่โอนเงิน</p>
+                            
+                            <div class="p-3 bg-light rounded-3 mb-3" style="font-size: 0.9rem;">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">ยอดที่ต้องชำระสุทธิ:</span>
+                                    <strong class="text-danger fs-5" id="modalSlipTotal">฿0</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">ช่องทางที่โอน:</span>
+                                    <span>ธนาคารกสิกรไทย (123-4-56789-0)</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">โทรศัพท์ผู้สั่ง:</span>
+                                    <span id="modalSlipPhone">-</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold" style="font-size: 0.88rem;">หมายเหตุ/เหตุผลปฏิเสธ (ถ้ามี)</label>
+                                <input type="text" id="slipDecisionNotes" class="form-control form-control-sm" placeholder="เช่น อนุมัติสลิป หรือ ยอดโอนไม่ตรงกับบิล">
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button id="slipApproveBtn" class="btn btn-success py-2 fw-bold" onclick="executeApprovePayment()"><i class="fa-solid fa-circle-check me-2"></i> อนุมัติการชำระเงิน</button>
+                                <button class="btn btn-outline-danger py-2" onclick="executeRejectPayment()"><i class="fa-solid fa-circle-xmark me-2"></i> ปฏิเสธสลิป / แจ้งโอนไม่ถูกต้อง</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Order Status Modal -->
+    <div class="modal fade" id="orderEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2 text-info"></i>อัปเดตสถานะคำสั่งซื้อ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editOrderIdHidden">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">หมายเลขคำสั่งซื้อ</label>
+                        <input type="text" id="displayEditOrderId" class="form-control bg-light" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ขั้นตอนสถานะพัสดุ</label>
+                        <!-- ตัวเลือกถูกเติมจาก KpopStore.listStatuses() ใน populateStatusSelects() -->
+                        <select id="editOrderStatusSelect" class="form-select fw-bold"></select>
+                    </div>
+                    <!-- ทางลัดสำหรับเคสที่ร้านกดของไม่ได้ ซึ่งไม่ใช่ความผิดลูกค้าและต้องคืนเงิน -->
+                    <div class="p-3 mb-3 rounded-3" style="background:#fff5f5; border:1px solid #ffd6d6;">
+                        <div class="fw-bold text-danger mb-1" style="font-size: 0.9rem;">
+                            <i class="fa-solid fa-circle-exclamation me-1"></i>กรณีร้านกดของที่เกาหลีไม่สำเร็จ
+                        </div>
+                        <p class="text-muted mb-2" style="font-size: 0.8rem;">
+                            ลูกค้าจ่ายเงินถูกต้องแล้วแต่ของหมด/เว็บล่ม — อย่าใช้ "ปฏิเสธสลิป" เพราะลูกค้าจะเข้าใจผิดว่าสลิปตัวเองมีปัญหา
+                        </p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="markOrderPurchaseFailed()">
+                                <i class="fa-solid fa-xmark me-1"></i>กดของไม่สำเร็จ → รอคืนเงิน
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="markOrderRefunded()">
+                                <i class="fa-solid fa-rotate-left me-1"></i>คืนเงินให้ลูกค้าแล้ว
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">หมายเลขติดตามพัสดุ (Tracking No.)</label>
+                        <input type="text" id="editOrderTrackingInput" class="form-control" placeholder="เช่น TH0192837465TH, KERRY-889912">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">หมายเหตุถึงลูกค้า</label>
+                        <textarea id="editOrderNotesInput" class="form-control" rows="2" placeholder="เช่น สินค้าจัดส่งด้วย Kerry Express คาดว่าถึงภายใน 1-2 วัน"></textarea>
+                    </div>
+
+                    <!-- Purchase Confirmation Proof Section -->
+                    <div class="mb-4 p-3 bg-light rounded-3 border">
+                        <label class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
+                            <span><i class="fa-solid fa-receipt me-2 text-pink" style="color:#ff3399;"></i>หลักฐานการกดสั่งซื้อ / การหิ้วสินค้า (Admin Purchase Proof)</span>
+                            <span class="badge bg-secondary font-monospace">เพื่อสร้างความเชื่อมั่น</span>
+                        </label>
+                        <p class="text-muted small mb-2">อัปโหลดภาพใบเสร็จ/แคปหน้าจอการกดสั่งซื้อสำเร็จ หรือรูปถ่ายการไปหิ้วสินค้าเพื่อยืนยันว่าได้นำเงินลูกค้าไปสั่งของแล้ว</p>
+                        
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold text-secondary mb-1">รายละเอียดหลักฐาน (เช่น เว็บที่กด / หมายเลขออเดอร์ Official / ช็อปที่ไปหิ้ว)</label>
+                            <input type="text" id="editOrderProofNoteInput" class="form-control form-control-sm" placeholder="เช่น กดสั่งซื้อเรียบร้อยจาก Weverse Shop Korea Order #WV-991823">
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold text-secondary mb-1">แนบไฟล์รูปหลักฐาน (ภาพใบเสร็จ / หลักฐานการสั่งซื้อ)</label>
+                            <input type="file" id="editOrderProofFileInput" class="form-control form-control-sm" accept="image/png, image/jpeg, image/jpg">
+                        </div>
+
+                        <div id="proofPreviewContainer" class="mt-2 p-2 bg-white rounded border d-none">
+                            <div class="d-flex align-items-center gap-3">
+                                <img id="editOrderProofPreviewImg" src="" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;">
+                                <div class="flex-grow-1">
+                                    <span class="badge bg-success mb-1"><i class="fa-solid fa-circle-check me-1"></i>มีรูปหลักฐานในระบบแล้ว</span>
+                                    <div id="displayProofNoteText" class="small text-muted text-truncate" style="max-width:220px;"></div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeOrderProofImage()"><i class="fa-solid fa-trash me-1"></i>ลบรูป</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-pink w-100 py-2 fw-bold" onclick="saveOrderStatusChanges()"><i class="fa-solid fa-floppy-disk me-2"></i> บันทึกและแจ้งเตือนลูกค้า</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal (Add/Edit) -->
+    <div class="modal fade" id="productFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="productModalTitle"><i class="fa-solid fa-compact-disc me-2 text-pink"></i>เพิ่มสินค้าใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form onsubmit="saveProductForm(event)">
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="pId">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">ชื่อศิลปิน / ศิลปินกลุ่ม</label>
+                                <input type="text" id="pArtist" class="form-control" placeholder="เช่น BTS, NEWJEANS, BLACKPINK" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">ชื่ออัลบั้ม / สินค้า</label>
+                                <input type="text" id="pTitle" class="form-control" placeholder="เช่น Map of the Soul: 7" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="pPriceKRW">ราคาป้ายจากเกาหลี (₩)</label>
+                                <input type="number" id="pPriceKRW" class="form-control" min="0" step="100" oninput="updateProductPricePreview()" required>
+                                <div class="form-text" style="font-size: 0.78rem;">ราคาที่เห็นบนเว็บ Official เป็นเงินวอน</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="pServiceFee">ค่าบริการหิ้ว/ชิ้น (฿)</label>
+                                <input type="number" id="pServiceFee" class="form-control" min="0" step="1" value="0" oninput="updateProductPricePreview()" required>
+                                <div class="form-text" style="font-size: 0.78rem;">รวมค่าส่งเกาหลี ภาษี และกำไรร้าน</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">ราคาขายที่ลูกค้าเห็น</label>
+                                <div class="form-control bg-light fw-bold text-danger d-flex align-items-center" id="pPricePreview" style="height: 38px;">฿0</div>
+                                <div class="form-text" style="font-size: 0.78rem;" id="pPricePreviewNote">คำนวณจากเรทปัจจุบันอัตโนมัติ</div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="pRoundId">รอบพรีออเดอร์</label>
+                                <select id="pRoundId" class="form-select"></select>
+                                <div class="form-text" style="font-size: 0.78rem;">สินค้าคนละรอบจะถูกแยกเช็คเอาต์และคิดค่าส่งแยกกัน</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="pQuota">โควตารับต่อรอบ</label>
+                                <input type="number" id="pQuota" class="form-control" min="0" step="1" placeholder="เว้นว่าง = รับไม่จำกัด">
+                                <div class="form-text" style="font-size: 0.78rem;">เพดานที่ร้านรับไหวในรอบนี้ ระบบนับจากออเดอร์จริงและรีเซ็ตเองเมื่อขึ้นรอบใหม่</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">ป้ายสถานะ</label>
+                                <select id="pStatus" class="form-select">
+                                    <option value="PRE-ORDER">PRE-ORDER</option>
+                                    <option value="IN-STOCK">พร้อมส่ง (IN-STOCK)</option>
+                                    <option value="OUT OF STOCK">หมดชั่วคราว</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-light border rounded-3 mb-3">
+                            <label class="form-label fw-bold text-dark mb-2"><i class="fa-regular fa-image me-2" style="color:#ff3399;"></i>รูปภาพสินค้า</label>
+
+                            <div class="d-flex gap-3 align-items-start flex-wrap">
+                                <div class="text-center">
+                                    <img id="pImagePreview" src="images/mapsoul7.jpg" alt="ตัวอย่างรูปสินค้า"
+                                        style="width: 110px; height: 110px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; background: #fff;"
+                                        onerror="this.onerror=null; this.src='images/mapsoul7.jpg';">
+                                    <div id="pImageSizeHint" class="text-muted mt-1" style="font-size: 0.72rem;"></div>
+                                </div>
+
+                                <div class="flex-grow-1" style="min-width: 260px;">
+                                    <label class="form-label small fw-semibold text-secondary mb-1" for="pImageFile">อัปโหลดจากเครื่อง</label>
+                                    <input type="file" id="pImageFile" class="form-control form-control-sm mb-1"
+                                        accept="image/*" onchange="handleProductImageUpload(this)">
+                                    <div class="form-text mb-2" style="font-size: 0.75rem;">
+                                        ระบบจะย่อรูปให้อัตโนมัติก่อนบันทึก (สูงสุด 800x800)
+                                    </div>
+
+                                    <label class="form-label small fw-semibold text-secondary mb-1" for="pImage">หรือใส่ URL รูปภาพ</label>
+                                    <input type="text" id="pImage" class="form-control form-control-sm"
+                                        placeholder="images/mapsoul7.jpg หรือ https://..."
+                                        oninput="onProductImageUrlInput()">
+
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 mt-2"
+                                        onclick="clearProductImage()">
+                                        <i class="fa-regular fa-trash-can me-1"></i>ลบรูป (ใช้รูปสำรอง)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size: 0.76rem;">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                รูปที่อัปโหลดจะถูกเก็บเป็นไฟล์จริงบน<strong>เซิร์ฟเวอร์</strong> ในโฟลเดอร์ uploads/
+                                ลูกค้าทุกคนจึงเห็นเหมือนกัน — ถ้ามีที่ฝากรูปอยู่แล้ว การใส่ URL ก็ยังใช้ได้
+                            </div>
+                        </div>
+
+                        <!-- ช่วงเวลาเปิด-ปิดรับย้ายไปอยู่ที่ "รอบ" แล้ว เพราะเป็นข้อมูลของรอบไม่ใช่ของสินค้า
+                             เหลือไว้เฉพาะกำหนดส่งที่อาจต่างจากรอบเป็นรายสินค้า -->
+                        <div class="p-3 bg-light border rounded-3 mb-3">
+                            <label class="form-label fw-bold text-dark mb-2" for="pEstDelivery"><i class="fa-regular fa-calendar me-2" style="color:#ff3399;"></i>คาดการณ์จัดส่ง (เฉพาะสินค้านี้)</label>
+                            <input type="text" id="pEstDelivery" class="form-control form-control-sm" placeholder="เว้นว่างเพื่อใช้กำหนดส่งของรอบที่เลือกไว้">
+                            <div class="form-text" style="font-size: 0.78rem;">
+                                ช่วงเวลาเปิด-ปิดรับพรีออเดอร์กำหนดที่แท็บ "จัดการรอบพรีออเดอร์" แล้ว
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">รายละเอียดสินค้าเพิ่มเติม</label>
+                            <textarea id="pDesc" class="form-control" rows="3" placeholder="ระบุของแถม รายละเอียดแถม Photobook CD..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-pink rounded-pill px-4"><i class="fa-solid fa-save me-2"></i>บันทึกข้อมูลสินค้า</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Round Modal (Add/Edit) -->
+    <div class="modal fade" id="roundFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="roundModalTitle"><i class="fa-solid fa-calendar-plus me-2 text-danger"></i>สร้างรอบพรีออเดอร์ใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form onsubmit="saveRoundForm(event)">
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="rId">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="rName">ชื่อรอบ</label>
+                            <input type="text" id="rName" class="form-control" placeholder="เช่น รอบ Weverse Pre-order ตุลาคม" required>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="rType">ประเภทรอบ</label>
+                                <select id="rType" class="form-select">
+                                    <option value="korean-site">รอบเว็บเกาหลี (กดสั่งออนไลน์)</option>
+                                    <option value="shipping">รอบหิ้วหน้าร้าน / ชิปรวม</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="rOpenAt">วันเปิดรับ</label>
+                                <input type="date" id="rOpenAt" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold" for="rCloseAt">วันปิดรับ</label>
+                                <input type="date" id="rCloseAt" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="rStatus">สถานะรอบ</label>
+                                <select id="rStatus" class="form-select">
+                                    <option value="open">เปิดตามช่วงวันที่ (ปกติ)</option>
+                                    <option value="closed">ปิดรับแล้ว (ปิดก่อนกำหนด)</option>
+                                    <option value="ordered">กดสั่งกับเกาหลีแล้ว</option>
+                                    <option value="arrived">ของถึงไทยแล้ว</option>
+                                    <option value="shipped">ส่งให้ลูกค้าครบแล้ว</option>
+                                </select>
+                                <div class="form-text" style="font-size: 0.78rem;">เลือก "เปิดตามช่วงวันที่" แล้วระบบจะปิดรับเองเมื่อเลยวันปิด</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="rEstDelivery">คาดการณ์ของถึงมือลูกค้า</label>
+                                <input type="text" id="rEstDelivery" class="form-control" placeholder="เช่น ประมาณ 3-5 สัปดาห์หลังปิดรอบ">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="rNote">หมายเหตุ</label>
+                            <textarea id="rNote" class="form-control" rows="2" placeholder="รายละเอียดเพิ่มเติมของรอบนี้"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-pink rounded-pill px-4"><i class="fa-solid fa-save me-2"></i>บันทึกรอบ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Modal (Add/Edit) -->
+    <div class="modal fade" id="userFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="userModalTitle"><i class="fa-solid fa-user-plus me-2 text-success"></i>เพิ่มผู้ใช้งานใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form onsubmit="saveUserForm(event)">
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="uId">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ชื่อ - นามสกุล</label>
+                            <input type="text" id="uName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">อีเมล</label>
+                            <input type="email" id="uEmail" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">เบอร์โทรศัพท์</label>
+                            <input type="tel" id="uPhone" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ที่อยู่จัดส่ง</label>
+                            <textarea id="uAddress" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ระดับสิทธิ์ (Role)</label>
+                            <select id="uRole" class="form-select">
+                                <option value="customer">ลูกค้าทั่วไป (Customer)</option>
+                                <option value="admin">ผู้ดูแลระบบ (Administrator)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4"><i class="fa-solid fa-save me-2"></i>บันทึกข้อมูลผู้ใช้งาน</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/ui.js"></script>
+
+    <script>
+        let currentActiveSlipOrderId = null;
+
+        // ใช้ตัวกลางจาก ui.js ตัวเดียวทั้งระบบ
+        // (เดิมแต่ละหน้านิยามเอง และ escArg ของหน้านี้ทำไม่ครบ — ค่าที่มี " ทำ attribute แตกได้)
+        const esc = KpopStore.esc;
+        const escArg = KpopStore.escArg;
+
+        KpopStore.ready(function () {
+            checkAdminAuth();
+        });
+
+        function checkAdminAuth() {
+            const user = KpopStore.getCurrentUser();
+            if (!user || user.role !== 'admin') {
+                document.getElementById('adminGuardContainer').style.display = 'block';
+                document.getElementById('adminMainContainer').style.display = 'none';
+            } else {
+                document.getElementById('adminGuardContainer').style.display = 'none';
+                document.getElementById('adminMainContainer').style.display = 'block';
+                document.getElementById('adminNameDisplay').innerText = user.name;
+                
+                // Render initial data
+                populateStatusSelects();
+                renderAdminDashboard();
+                renderSlipsTable();
+                renderOrdersTable();
+                renderProductsTable();
+                renderStorageUsage();
+                renderRoundsTable();
+                renderRatesTab();
+                renderUsersTable();
+                populateNotificationUserSelect();
+            }
+        }
+
+        // เติม dropdown สถานะทั้ง 2 ตัวจากตารางกลาง เพิ่มสถานะใหม่ในอนาคตแล้วโผล่เองทั้งคู่
+        function populateStatusSelects() {
+            const statuses = KpopStore.listStatuses();
+
+            const filterSelect = document.getElementById('orderStatusFilter');
+            filterSelect.innerHTML = `<option value="ALL">สถานะทั้งหมด</option>` +
+                statuses.map(s => `<option value="${s.code}">${s.text}</option>`).join('');
+
+            const editSelect = document.getElementById('editOrderStatusSelect');
+            editSelect.innerHTML = statuses
+                .map((s, i) => `<option value="${s.code}">${i + 1}. ${s.text}</option>`)
+                .join('');
+        }
+
+        function switchTab(tabId) {
+            const tabBtn = document.getElementById(tabId);
+            if (tabBtn) {
+                const bsTab = new bootstrap.Tab(tabBtn);
+                bsTab.show();
+            }
+        }
+
+        // --- DASHBOARD RENDERER ---
+        function renderAdminDashboard() {
+            const orders = KpopStore.getOrders();
+            const products = KpopStore.getProducts();
+
+            // ยอดขายรวม — นับเฉพาะสถานะที่ flag revenue = true ในตาราง KpopStore.ORDER_STATUS
+            // เดิมกรองออกด้วยข้อความไทย 2 ตัวตายตัว สถานะยกเลิกแบบอื่นจึงหลุดเข้ามาเป็นรายได้
+            const totalSales = orders
+                .filter(o => KpopStore.countsAsRevenue(o))
+                .reduce((sum, o) => sum + (o.total || 0), 0);
+
+            const pendingSlips = orders.filter(o => KpopStore.getStatusMeta(o).group === 'pending').length;
+
+            document.getElementById('kpiTotalSales').innerText = '฿' + totalSales.toLocaleString();
+            document.getElementById('kpiTotalOrders').innerText = orders.length;
+            document.getElementById('kpiPendingSlips').innerText = pendingSlips;
+            document.getElementById('kpiTotalProducts').innerText = products.length;
+            document.getElementById('badgePendingSlips').innerText = pendingSlips;
+
+            // เรทและรอบที่เปิดอยู่
+            const rate = KpopStore.getCurrentRate();
+            document.getElementById('dashRateValue').innerText = `${rate.rate}  (₩1,000 = ฿${(rate.rate * 1000).toFixed(2)})`;
+            document.getElementById('dashRateMeta').innerText = `มีผลตั้งแต่ ${rate.effectiveFrom}`;
+
+            const openRounds = KpopStore.getRounds().filter(r => KpopStore.getRoundState(r) === 'open');
+            document.getElementById('dashOpenRounds').innerHTML = openRounds.length === 0
+                ? '<span class="text-muted" style="font-size:0.88rem;">ไม่มีรอบที่เปิดรับอยู่ — ลูกค้าสั่งซื้อไม่ได้จนกว่าจะเปิดรอบใหม่</span>'
+                : openRounds.map(r => `
+                    <button class="btn btn-sm btn-outline-dark rounded-pill px-3 text-start" onclick="switchTab('tab-rounds-tab')">
+                        <i class="fa-solid fa-circle text-success me-1" style="font-size:0.55rem;"></i>
+                        ${esc(r.name)}
+                        <span class="text-muted ms-1" style="font-size:0.78rem;">ปิดรับ ${esc(r.closeAt)}</span>
+                    </button>
+                `).join('');
+
+            // Render Recent 5 Orders Table
+            const recentOrders = orders.slice(0, 5);
+            const tbody = document.getElementById('dashRecentOrdersTable');
+            tbody.innerHTML = recentOrders.map(o => `
+                <tr>
+                    <td class="fw-bold">${esc(o.id)}</td>
+                    <td>${esc(o.customerName)}</td>
+                    <td class="fw-bold text-danger">฿${(o.total || 0).toLocaleString()}</td>
+                    <td>${renderStatusBadge(o)}</td>
+                </tr>
+            `).join('');
+
+            // แผงสัดส่วนสถานะ — สร้างจากตารางสถานะ ไม่ hardcode รายชื่ออีก
+            // ซ่อนสถานะที่ยังไม่มีออเดอร์ เพื่อไม่ให้แถบรกเมื่อสถานะเยอะขึ้น
+            const total = orders.length || 1;
+            const breakdown = KpopStore.listStatuses()
+                .map(s => Object.assign({}, s, {
+                    count: orders.filter(o => KpopStore.getStatusMeta(o).text === s.text).length
+                }))
+                .filter(s => s.count > 0);
+
+            document.getElementById('statusBreakdownContainer').innerHTML = breakdown.length === 0
+                ? '<div class="text-muted" style="font-size: 0.9rem;">ยังไม่มีคำสั่งซื้อในระบบ</div>'
+                : breakdown.map(s => `
+                    <div>
+                        <div class="d-flex justify-content-between text-muted fs-6 mb-1">
+                            <span><i class="fa-solid ${s.icon} me-1"></i>${s.text}</span>
+                            <strong>${s.count} รายการ</strong>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-${s.badge}" style="width: ${(s.count / total) * 100}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        // รับได้ทั้ง order object และข้อความสถานะ — สี/ไอคอน/ข้อความย่อมาจากตารางกลาง
+        function renderStatusBadge(order) {
+            const meta = KpopStore.getStatusMeta(order);
+            const cssByGroup = {
+                pending: 'badge-status-pending',
+                processing: 'badge-status-processing',
+                shipped: meta.badge === 'success' ? 'badge-status-success' : 'badge-status-shipping',
+                cancelled: 'badge-status-rejected',
+                refund: 'badge-status-refund'
+            };
+            const css = cssByGroup[meta.group] || 'badge-status-rejected';
+            return `<span class="${css}"><i class="fa-solid ${meta.icon} me-1"></i>${meta.short}</span>`;
+        }
+
+        // --- SLIPS TABLE RENDERER ---
+        function renderSlipsTable() {
+            const pendingOrders = KpopStore.getOrders().filter(o => KpopStore.getStatusMeta(o).group === 'pending');
+            const tbody = document.getElementById('slipsTableBody');
+
+            if (pendingOrders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5"><i class="fa-solid fa-circle-check fs-1 d-block mb-2 text-success opacity-50"></i>ไม่มีรายการสลิปที่ค้างตรวจสอบในขณะนี้</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pendingOrders.map(o => `
+                <tr>
+                    <td class="fw-bold text-primary">${esc(o.id)}</td>
+                    <td>
+                        <div class="fw-bold">${esc(o.customerName)}</div>
+                        <small class="text-muted">${esc(o.customerEmail)}</small>
+                    </td>
+                    <td class="fw-bold text-danger">฿${(o.total || 0).toLocaleString()}</td>
+                    <td>
+                        ${o.slipImage
+                            ? `<img src="${esc(o.slipImage)}" class="slip-preview-thumb" onclick="inspectSlip('${escArg(o.id)}')" title="คลิกเพื่อขยายสลิป">`
+                            : `<span class="badge bg-secondary">ยังไม่แนบสลิป</span>`}
+                    </td>
+                    <td class="text-muted" style="font-size:0.85rem;">${esc(o.date)}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-warning rounded-pill px-3 fw-bold me-1" onclick="inspectSlip('${escArg(o.id)}')"><i class="fa-solid fa-magnifying-glass me-1"></i> ตรวจสอบสลิป</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function inspectSlip(orderId) {
+            const order = KpopStore.getOrderById(orderId);
+            if (!order) return;
+
+            currentActiveSlipOrderId = orderId;
+
+            // ออเดอร์ที่ไม่มีสลิปต้องไม่ถูกอนุมัติ
+            // ของเดิมใส่รูปสำรองจาก Unsplash ทำให้แอดมินเห็น "สลิป" ที่ไม่มีอยู่จริง
+            // แล้วกดอนุมัติยอดเงินทั้งที่ไม่เคยมีหลักฐานการโอนเลย
+            const slipImg = document.getElementById('modalSlipImage');
+            const approveBtn = document.getElementById('slipApproveBtn');
+            const noSlipWarn = document.getElementById('slipMissingWarning');
+
+            if (order.slipImage) {
+                slipImg.src = order.slipImage;
+                slipImg.classList.remove('d-none');
+                if (noSlipWarn) noSlipWarn.classList.add('d-none');
+                if (approveBtn) approveBtn.disabled = false;
+            } else {
+                slipImg.removeAttribute('src');
+                slipImg.classList.add('d-none');
+                if (noSlipWarn) noSlipWarn.classList.remove('d-none');
+                if (approveBtn) approveBtn.disabled = true;
+            }
+
+            document.getElementById('modalSlipOrderId').innerText = '#' + order.id;
+            document.getElementById('modalSlipCustomer').innerText = order.customerName;
+            document.getElementById('modalSlipDate').innerText = 'วันที่สั่งซื้อ: ' + order.date;
+            document.getElementById('modalSlipTotal').innerText = '฿' + (order.total || 0).toLocaleString();
+            document.getElementById('modalSlipPhone').innerText = order.phone || '-';
+            document.getElementById('slipDecisionNotes').value = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('slipModal'));
+            modal.show();
+        }
+
+        async function executeApprovePayment() {
+            if (!currentActiveSlipOrderId) return;
+
+            // กันการอนุมัติออเดอร์ที่ไม่มีสลิป แม้ปุ่มจะถูก disable ไว้แล้ว
+            const target = KpopStore.getOrderById(currentActiveSlipOrderId);
+            if (target && !target.slipImage) {
+                alert('อนุมัติไม่ได้ค่ะ คำสั่งซื้อนี้ยังไม่มีหลักฐานการโอนเงินแนบมา');
+                return;
+            }
+
+            const notes = document.getElementById('slipDecisionNotes').value || 'อนุมัติสลิปและยืนยันยอดเงินเรียบร้อย';
+            if (!await KpopStore.approvePayment(currentActiveSlipOrderId, notes)) {
+                alert('บันทึกไม่สำเร็จค่ะ ติดต่อฐานข้อมูลไม่ได้หรือคำสั่งซื้อถูกลบไปแล้ว กรุณารีเฟรชแล้วลองใหม่');
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('slipModal')).hide();
+            renderAdminDashboard();
+            renderSlipsTable();
+            renderOrdersTable();
+            alert('อนุมัติการชำระเงินเรียบร้อยแล้ว! ระบบได้ส่งการแจ้งเตือนไปยังลูกค้าเรียบร้อยแล้วค่ะ');
+        }
+
+        async function executeRejectPayment() {
+            if (!currentActiveSlipOrderId) return;
+            const notes = document.getElementById('slipDecisionNotes').value || 'สลิปโอนเงินไม่ถูกต้อง หรือยอดเงินไม่ตรงกับคำสั่งซื้อ';
+            if (!await KpopStore.rejectPayment(currentActiveSlipOrderId, notes)) {
+                alert('บันทึกไม่สำเร็จค่ะ ติดต่อฐานข้อมูลไม่ได้หรือคำสั่งซื้อถูกลบไปแล้ว กรุณารีเฟรชแล้วลองใหม่');
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('slipModal')).hide();
+            renderAdminDashboard();
+            renderSlipsTable();
+            renderOrdersTable();
+            alert('ปฏิเสธการชำระเงินเรียบร้อยแล้วค่ะ');
+        }
+
+        // --- ORDER MANAGEMENT RENDERER ---
+        function renderOrdersTable() {
+            const orders = KpopStore.getOrders();
+            const tbody = document.getElementById('ordersMasterTableBody');
+
+            if (orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">ยังไม่มีรายการสั่งซื้อในระบบ</td></tr>`;
+                return;
+            }
+
+            // เก็บ statusCode ไว้บนแถวเพื่อให้การกรองไม่ต้องเดาจากข้อความที่แสดง
+            tbody.innerHTML = orders.map(o => `
+                <tr data-status-code="${KpopStore.getStatusCode(o)}">
+                    <td class="fw-bold">${esc(o.id)}</td>
+                    <td class="text-muted" style="font-size:0.85rem;">${esc(o.date)}</td>
+                    <td>
+                        <div class="fw-bold">${esc(o.customerName)}</div>
+                        <small class="text-muted">${esc(o.phone)}</small>
+                    </td>
+                    <td style="font-size:0.85rem;">${(o.items || []).map(i => `${esc(i.title)} (x${Number(i.qty) || 0})`).join(', ')}</td>
+                    <td class="fw-bold text-danger">฿${(o.total || 0).toLocaleString()}</td>
+                    <td>${renderStatusBadge(o)}</td>
+                    <td><small class="font-monospace text-primary fw-bold">${esc(o.trackingNumber) || '-'}</small></td>
+                    <td class="text-end text-nowrap">
+                        <button class="btn btn-sm btn-outline-dark rounded-pill px-3 me-1" onclick="openOrderEditModal('${escArg(o.id)}')"><i class="fa-solid fa-pen me-1"></i> ปรับสถานะ</button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="removeOrder('${escArg(o.id)}')" title="ลบคำสั่งซื้อถาวร"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ลบออเดอร์ถาวร — ใช้ล้างข้อมูลเก่าเพื่อคืนพื้นที่ localStorage
+        async function removeOrder(orderId) {
+            const order = KpopStore.getOrderById(orderId);
+            if (!order) return;
+
+            const meta = KpopStore.getStatusMeta(order);
+            // ออเดอร์ที่ยังกินโควตา = ลูกค้าจ่ายเงินแล้วและกระบวนการยังไม่จบ
+            // ลบทิ้งตอนนี้แปลว่าลบหลักฐานการซื้อของลูกค้าไปด้วย ต้องเตือนให้หนักกว่าปกติ
+            const stillActive = KpopStore.isQuotaConsuming(order);
+
+            let message =
+                `ลบคำสั่งซื้อนี้ถาวร?\n\n` +
+                `เลขที่: ${order.id}\n` +
+                `ลูกค้า: ${order.customerName}\n` +
+                `ยอดเงิน: ฿${(order.total || 0).toLocaleString()}\n` +
+                `สถานะ: ${meta.text}\n\n`;
+
+            message += stillActive
+                ? '⚠️ คำสั่งซื้อนี้ยังไม่จบกระบวนการ ลูกค้าชำระเงินไว้แล้วและยังรออยู่\n' +
+                  'ถ้าลบ ลูกค้าจะไม่เห็นคำสั่งซื้อนี้ในหน้าประวัติอีก และโควตาของรอบจะถูกคืนกลับ\n' +
+                  'ถ้าตั้งใจจะยกเลิกหรือคืนเงิน ให้ใช้ปุ่ม "ปรับสถานะ" แทนการลบ'
+                : 'คำสั่งซื้อนี้จบกระบวนการแล้ว การลบจะคืนพื้นที่เก็บข้อมูล (รวมรูปสลิปที่แนบไว้)';
+
+            if (!confirm(message)) return;
+
+            const res = await KpopStore.deleteOrder(orderId);
+            if (!res.success) {
+                alert('ลบไม่สำเร็จค่ะ\n\n' + res.message);
+                return;
+            }
+
+            // โควตา ยอดขาย และใบสรุปรอบ คำนวณจากออเดอร์ทั้งนั้น จึงต้องวาดใหม่ทุกส่วน
+            renderOrdersTable();
+            renderSlipsTable();
+            renderAdminDashboard();
+            renderProductsTable();
+            renderRoundsTable();
+            renderStorageUsage();
+            alert('ลบคำสั่งซื้อเรียบร้อยแล้วค่ะ');
+        }
+
+        function filterOrdersTable() {
+            const search = document.getElementById('orderSearchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('orderStatusFilter').value;
+            const rows = document.querySelectorAll('#ordersMasterTableBody tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const matchSearch = !search || text.includes(search);
+                // กรองจาก statusCode บนแถว ไม่ใช่ข้อความที่แสดง
+                // (เดิมเทียบข้อความในแถว ซึ่งพังทันทีที่ป้ายสถานะใช้คำย่อไม่ตรงกับค่าใน dropdown)
+                const matchStatus = statusFilter === 'ALL' || row.dataset.statusCode === statusFilter;
+
+                if (matchSearch && matchStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        let currentModalProofImg = null;
+
+        function openOrderEditModal(orderId) {
+            const order = KpopStore.getOrderById(orderId);
+            if (!order) return;
+
+            document.getElementById('editOrderIdHidden').value = order.id;
+            document.getElementById('displayEditOrderId').value = order.id + ' (' + order.customerName + ')';
+            document.getElementById('editOrderStatusSelect').value = KpopStore.getStatusCode(order);
+            document.getElementById('editOrderTrackingInput').value = order.trackingNumber || '';
+            document.getElementById('editOrderNotesInput').value = order.adminNotes || '';
+            document.getElementById('editOrderProofNoteInput').value = order.purchaseProofNote || '';
+            document.getElementById('editOrderProofFileInput').value = '';
+
+            currentModalProofImg = order.purchaseProofImage || null;
+            const container = document.getElementById('proofPreviewContainer');
+            if (currentModalProofImg) {
+                document.getElementById('editOrderProofPreviewImg').src = currentModalProofImg;
+                document.getElementById('displayProofNoteText').innerText = order.purchaseProofNote || 'รูปหลักฐานการสั่งซื้อ';
+                container.classList.remove('d-none');
+                container.classList.add('d-flex');
+            } else {
+                container.classList.add('d-none');
+                container.classList.remove('d-flex');
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('orderEditModal'));
+            modal.show();
+        }
+
+        function removeOrderProofImage() {
+            currentModalProofImg = null;
+            const container = document.getElementById('proofPreviewContainer');
+            container.classList.add('d-none');
+            container.classList.remove('d-flex');
+        }
+
+        async function markOrderPurchaseFailed() {
+            const orderId = document.getElementById('editOrderIdHidden').value;
+            const order = KpopStore.getOrderById(orderId);
+            if (!order) return;
+
+            const reason = prompt(
+                'ระบุสาเหตุที่กดสั่งไม่สำเร็จ (ลูกค้าจะเห็นข้อความนี้)',
+                'สินค้าหมดจากเว็บ Official ก่อนร้านกดสั่งสำเร็จ'
+            );
+            if (reason === null) return;
+
+            if (!confirm(`ยืนยันว่าคำสั่งซื้อ #${orderId} กดของไม่สำเร็จ?\n\nระบบจะเปลี่ยนสถานะเป็น "รอคืนเงิน" คืนโควตาเข้ารอบ และแจ้งลูกค้าว่าจะคืนเงินเต็มจำนวน ฿${(order.total || 0).toLocaleString()}`)) {
+                return;
+            }
+
+            if (!await KpopStore.markPurchaseFailed(orderId, reason.trim() || undefined)) {
+                alert('บันทึกไม่สำเร็จค่ะ ติดต่อฐานข้อมูลไม่ได้ สถานะยังไม่ถูกเปลี่ยน');
+                return;
+            }
+
+            refreshOrderViews();
+            alert('บันทึกเรียบร้อยแล้วค่ะ ออเดอร์นี้อยู่ในสถานะรอคืนเงิน');
+        }
+
+        async function markOrderRefunded() {
+            const orderId = document.getElementById('editOrderIdHidden').value;
+            const order = KpopStore.getOrderById(orderId);
+            if (!order) return;
+
+            const note = prompt(
+                `ยืนยันว่าคืนเงิน ฿${(order.total || 0).toLocaleString()} ให้ลูกค้าแล้ว\nระบุหมายเหตุ (เช่น ช่องทางและเวลาที่โอนคืน)`,
+                'โอนคืนเข้าบัญชีเดิมของลูกค้าเรียบร้อยแล้ว'
+            );
+            if (note === null) return;
+
+            if (!await KpopStore.markRefunded(orderId, note.trim())) {
+                alert('บันทึกไม่สำเร็จค่ะ ติดต่อฐานข้อมูลไม่ได้ สถานะยังไม่ถูกเปลี่ยน');
+                return;
+            }
+
+            refreshOrderViews();
+            alert('บันทึกการคืนเงินเรียบร้อยแล้วค่ะ');
+        }
+
+        function refreshOrderViews() {
+            bootstrap.Modal.getInstance(document.getElementById('orderEditModal')).hide();
+            renderAdminDashboard();
+            renderSlipsTable();
+            renderOrdersTable();
+            renderRoundsTable();
+            renderProductsTable();
+        }
+
+        function saveOrderStatusChanges() {
+            const orderId = document.getElementById('editOrderIdHidden').value;
+            const status = document.getElementById('editOrderStatusSelect').value;
+            const tracking = document.getElementById('editOrderTrackingInput').value;
+            const notes = document.getElementById('editOrderNotesInput').value;
+            const proofNote = document.getElementById('editOrderProofNoteInput').value;
+            const fileInput = document.getElementById('editOrderProofFileInput');
+
+            const applyChanges = async (finalProofImg) => {
+                // ค่าว่างจากฟอร์ม = ตั้งใจล้าง (เช่น พิมพ์เลขพัสดุผิดแล้วอยากลบทิ้ง)
+                // store แยกกรณี undefined (ไม่ได้ส่งมา) กับ '' (ล้างค่า) ให้แล้ว
+                if (!await KpopStore.updateOrderStatus(orderId, status, tracking, notes, finalProofImg, proofNote)) {
+                    alert('บันทึกไม่สำเร็จค่ะ\n\nอาจติดต่อฐานข้อมูลไม่ได้ หรืออัปโหลดรูปหลักฐานไม่สำเร็จ\n' +
+                        'กรุณาตรวจสอบการเชื่อมต่อ แล้วบันทึกใหม่อีกครั้ง');
+                    renderStorageUsage();
+                    return;
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('orderEditModal')).hide();
+                renderAdminDashboard();
+                renderSlipsTable();
+                renderOrdersTable();
+                renderStorageUsage();
+                alert('อัปเดตสถานะคำสั่งซื้อและแนบหลักฐานการสั่งซื้อเรียบร้อยแล้วค่ะ!');
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                // หลักฐานการกดสั่งเป็นสกรีนช็อตแนวนอน ไม่ใช่สลิปแนวตั้ง จึงใช้ตัวย่อของรูปสินค้า
+                KpopStore.compressProductImage(fileInput.files[0], async function (compressedDataUrl) {
+                    if (!compressedDataUrl) {
+                        alert('อ่านไฟล์รูปหลักฐานไม่สำเร็จค่ะ ไฟล์อาจเสียหายหรือไม่ใช่รูปภาพ\nระบบจะบันทึกส่วนอื่นโดยใช้รูปเดิมไว้ก่อน');
+                    }
+                    await applyChanges(compressedDataUrl || currentModalProofImg);
+                });
+            } else {
+                applyChanges(currentModalProofImg);
+            }
+        }
+
+        // --- PRODUCTS MANAGEMENT RENDERER ---
+        function renderProductsTable() {
+            const products = KpopStore.getProducts();
+            const tbody = document.getElementById('productsTableBody');
+
+            if (products.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">ยังไม่มีสินค้าในระบบ — กด "เพิ่มสินค้าใหม่" เพื่อเริ่มต้น</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = products.map(p => {
+                const bd = KpopStore.getPriceBreakdown(p);
+                const remaining = KpopStore.getRemainingQuota(p.id);
+                const used = KpopStore.getUsedQuota(p.id);
+                const round = KpopStore.getRoundById(p.roundId);
+                const state = KpopStore.getRoundState(round);
+
+                // จองเกินเพดานได้จริงถ้าแอดมินลดโควตาทีหลัง — ต้องบอกให้เห็น
+                // ไม่ใช่ขึ้นแค่ "เหลือ 0" ซึ่งดูเหมือนขายพอดีเป๊ะ
+                const overBooked = remaining !== null && used > Number(p.quotaPerRound);
+                const quotaCell = remaining === null
+                    ? '<span class="badge bg-light text-dark border">ไม่จำกัด</span>'
+                    : (overBooked
+                        ? `<span class="badge bg-danger">เกินโควตา</span>
+                           <div class="small text-danger mt-1">จองแล้ว ${used} / เพดาน ${p.quotaPerRound} ชิ้น</div>`
+                        : `เหลือ <strong>${remaining}</strong> / ${p.quotaPerRound} ชิ้น`);
+
+                return `
+                <tr>
+                    <td><img src="${esc(p.image || PRODUCT_IMAGE_FALLBACK)}" class="product-thumb" alt="${esc(p.title)}"
+                             onerror="this.onerror=null; this.src='${PRODUCT_IMAGE_FALLBACK}';"></td>
+                    <td><span class="badge bg-secondary">${esc(p.artist)}</span></td>
+                    <td>
+                        <div class="fw-bold">${esc(p.title)}</div>
+                        <small class="text-muted">${round ? esc(round.name) : 'ยังไม่ผูกรอบ'} ${renderRoundStateBadge(state)}</small>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-danger">฿${bd.total.toLocaleString()}</div>
+                        <small class="text-muted">${bd.legacy ? 'ราคาบาทคงที่ (ยังไม่ได้กรอกราคาวอน)' : '₩' + bd.krw.toLocaleString() + ' + ค่าบริการ ฿' + bd.serviceFee}</small>
+                    </td>
+                    <td>${quotaCell}</td>
+                    <td><span class="badge bg-pink text-white" style="background:#ff3399;">${esc(p.status)}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill me-1 px-3" onclick="openEditProductModal('${escArg(p.id)}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="deleteProduct('${escArg(p.id)}')"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // ---- รูปสินค้า ----
+        const PRODUCT_IMAGE_FALLBACK = 'images/mapsoul7.jpg';
+
+        function formatBytes(n) {
+            if (n < 1024) return n + ' B';
+            if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+            return (n / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function setProductImagePreview(src, sizeHint) {
+            document.getElementById('pImagePreview').src = src || PRODUCT_IMAGE_FALLBACK;
+            document.getElementById('pImageSizeHint').innerText = sizeHint || '';
+        }
+
+        function handleProductImageUpload(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            if (!/^image\//.test(file.type)) {
+                alert('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG หรือ WebP) เท่านั้นค่ะ');
+                input.value = '';
+                return;
+            }
+
+            document.getElementById('pImageSizeHint').innerText = 'กำลังย่อรูป...';
+
+            KpopStore.compressProductImage(file, function (dataUrl) {
+                if (!dataUrl) {
+                    alert('อ่านไฟล์รูปไม่สำเร็จค่ะ ไฟล์อาจเสียหายหรือไม่ใช่รูปภาพ กรุณาลองไฟล์อื่น');
+                    input.value = '';
+                    setProductImagePreview(document.getElementById('pImage').value, '');
+                    return;
+                }
+
+                // ไฟล์ที่อัปโหลดทับค่าใน URL เพราะเป็นสิ่งที่แอดมินเพิ่งเลือกล่าสุด
+                document.getElementById('pImage').value = dataUrl;
+                setProductImagePreview(dataUrl, 'ประมาณ ' + formatBytes(dataUrl.length));
+            });
+        }
+
+        function onProductImageUrlInput() {
+            const url = document.getElementById('pImage').value.trim();
+            // พิมพ์ URL เองแปลว่าไม่ได้ใช้ไฟล์ที่เลือกไว้แล้ว
+            document.getElementById('pImageFile').value = '';
+            setProductImagePreview(url, '');
+        }
+
+        function clearProductImage() {
+            document.getElementById('pImage').value = '';
+            document.getElementById('pImageFile').value = '';
+            setProductImagePreview(PRODUCT_IMAGE_FALLBACK, 'ใช้รูปสำรองของระบบ');
+        }
+
+        // ---- พื้นที่เก็บข้อมูล ----
+        // แสดงให้แอดมินเห็นก่อนที่จะเต็มจนบันทึกไม่ได้ ไม่ใช่ให้รู้ตอนพังไปแล้ว
+        function renderStorageUsage() {
+            const box = document.getElementById('storageUsageBox');
+            if (!box) return;
+
+            const usage = KpopStore.getStorageUsage();
+            const tone = usage.percent >= 90 ? 'danger' : (usage.percent >= 70 ? 'warning' : 'secondary');
+            const warn = usage.percent >= 90
+                ? ' — ใกล้เต็มแล้ว ควรใช้ URL รูปภาพแทนการอัปโหลด หรือลบข้อมูลเก่าออก'
+                : (usage.percent >= 70 ? ' — เริ่มใช้พื้นที่เยอะ ระวังอัปโหลดรูปเพิ่ม' : '');
+
+            box.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 0.78rem;">
+                    <span class="text-muted"><i class="fa-solid fa-database me-1"></i>พื้นที่เก็บข้อมูลในเบราว์เซอร์</span>
+                    <span class="text-${tone} fw-bold">${formatBytes(usage.bytes)} / ${formatBytes(usage.limit)} (${usage.percent}%)${warn}</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-${tone}" style="width: ${usage.percent}%"></div>
+                </div>
+            `;
+        }
+
+        // เติม dropdown รอบในฟอร์มสินค้า พร้อมบอกสถานะรอบให้แอดมินเห็นตอนเลือก
+        function populateRoundSelect(selectedId) {
+            const select = document.getElementById('pRoundId');
+            const rounds = KpopStore.getRounds();
+            select.innerHTML = rounds.map(r => {
+                const state = KpopStore.getRoundState(r);
+                return `<option value="${esc(r.id)}">${esc(r.name)} — ${roundStateLabel(state)}</option>`;
+            }).join('');
+            if (selectedId) select.value = selectedId;
+        }
+
+        // แสดงราคาขายแบบสดขณะแอดมินพิมพ์ เพื่อไม่ต้องเปิดเครื่องคิดเลขเอง
+        function updateProductPricePreview() {
+            const krw = parseFloat(document.getElementById('pPriceKRW').value) || 0;
+            const fee = parseFloat(document.getElementById('pServiceFee').value) || 0;
+            const rate = KpopStore.getCurrentRate();
+            const bd = KpopStore.getPriceBreakdown({ priceKRW: krw, serviceFee: fee, price: 0 }, rate.rate);
+
+            document.getElementById('pPricePreview').innerText = '฿' + bd.total.toLocaleString();
+            document.getElementById('pPricePreviewNote').innerText =
+                `₩${krw.toLocaleString()} x ${rate.rate} = ฿${bd.converted.toLocaleString()} บวกค่าบริการ ฿${fee.toLocaleString()}`;
+        }
+
+        function openAddProductModal() {
+            document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-plus me-2 text-pink"></i>เพิ่มสินค้าใหม่';
+            document.getElementById('pId').value = '';
+            document.getElementById('pArtist').value = '';
+            document.getElementById('pTitle').value = '';
+            document.getElementById('pPriceKRW').value = '25000';
+            document.getElementById('pServiceFee').value = '170';
+            document.getElementById('pQuota').value = '50';
+            document.getElementById('pStatus').value = 'PRE-ORDER';
+            document.getElementById('pImage').value = PRODUCT_IMAGE_FALLBACK;
+            document.getElementById('pImageFile').value = '';
+            setProductImagePreview(PRODUCT_IMAGE_FALLBACK, '');
+            document.getElementById('pEstDelivery').value = '';
+            document.getElementById('pDesc').value = '';
+            populateRoundSelect();
+            updateProductPricePreview();
+
+            const modal = new bootstrap.Modal(document.getElementById('productFormModal'));
+            modal.show();
+        }
+
+        function openEditProductModal(productId) {
+            const p = KpopStore.getProductById(productId);
+            if (!p) return;
+
+            document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-pen me-2 text-pink"></i>แก้ไขสินค้า';
+            document.getElementById('pId').value = p.id;
+            document.getElementById('pArtist').value = p.artist;
+            document.getElementById('pTitle').value = p.title;
+            document.getElementById('pPriceKRW').value = p.priceKRW || '';
+            document.getElementById('pServiceFee').value = p.serviceFee || 0;
+            // ว่าง = รับไม่จำกัด จึงต้องแยก null ออกจาก 0 ให้ชัด
+            document.getElementById('pQuota').value = (p.quotaPerRound === null || p.quotaPerRound === undefined) ? '' : p.quotaPerRound;
+            document.getElementById('pStatus').value = p.status || 'PRE-ORDER';
+            document.getElementById('pImage').value = p.image || '';
+            document.getElementById('pImageFile').value = '';
+            // รูปที่อัปโหลดไว้จะเป็น data URI ยาวมาก บอกขนาดให้เห็นว่ากินพื้นที่เท่าไหร่
+            setProductImagePreview(
+                p.image,
+                (p.image && p.image.indexOf('data:') === 0) ? 'รูปที่อัปโหลด ประมาณ ' + formatBytes(p.image.length) : ''
+            );
+            document.getElementById('pEstDelivery').value = p.estDelivery || '';
+            document.getElementById('pDesc').value = p.desc || '';
+            populateRoundSelect(p.roundId);
+            updateProductPricePreview();
+
+            const modal = new bootstrap.Modal(document.getElementById('productFormModal'));
+            modal.show();
+        }
+
+        async function saveProductForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('pId').value || ('prod-' + Date.now());
+            const quotaRaw = document.getElementById('pQuota').value.trim();
+
+            const product = {
+                id: id,
+                artist: document.getElementById('pArtist').value,
+                title: document.getElementById('pTitle').value,
+                priceKRW: parseFloat(document.getElementById('pPriceKRW').value) || 0,
+                serviceFee: parseFloat(document.getElementById('pServiceFee').value) || 0,
+                roundId: document.getElementById('pRoundId').value,
+                // ช่องว่าง = รับไม่จำกัด (null) ไม่ใช่ 0 ซึ่งแปลว่าเต็มโควตา
+                quotaPerRound: quotaRaw === '' ? null : (parseInt(quotaRaw, 10) || 0),
+                status: document.getElementById('pStatus').value,
+                // เว้นว่างได้ ระบบจะใช้รูปสำรองแทน ไม่ปล่อยให้รูปแตก
+                image: document.getElementById('pImage').value.trim() || PRODUCT_IMAGE_FALLBACK,
+                estDelivery: document.getElementById('pEstDelivery').value,
+                desc: document.getElementById('pDesc').value
+            };
+
+            // ตอนแก้ของเดิม การเปลี่ยน 2 ค่านี้กระทบออเดอร์ที่ลูกค้าสั่งค้างไว้แล้ว จึงต้องเตือนก่อน
+            const isEditing = !!document.getElementById('pId').value;
+            if (isEditing) {
+                const existing = KpopStore.getProductById(id);
+                const activeOrders = KpopStore.getActiveOrdersForProduct(id);
+
+                // โควตานับจากออเดอร์ "ในรอบเดียวกับสินค้า" พอย้ายรอบ ออเดอร์เดิมจึงหลุดจากการนับ
+                // ตัวเลขคงเหลือจะเด้งกลับเต็มทั้งที่ของยังไม่ได้ส่ง = ขายเกินได้โดยไม่รู้ตัว
+                if (existing && activeOrders.length > 0 && existing.roundId !== product.roundId) {
+                    const ok = confirm(
+                        `สินค้านี้มีคำสั่งซื้อค้างอยู่ ${activeOrders.length} รายการในรอบเดิม\n\n` +
+                        'ถ้าย้ายไปรอบใหม่ ออเดอร์เหล่านั้นจะไม่ถูกนับในโควตาของรอบใหม่\n' +
+                        'ทำให้ยอดคงเหลือดูเหมือนว่างมากกว่าความเป็นจริง\n\nยืนยันจะย้ายรอบหรือไม่?'
+                    );
+                    if (!ok) return;
+                }
+
+                // เพดานที่ต่ำกว่ายอดจองจริงทำให้ตารางขึ้น "เกินโควตา" ซึ่งอาจไม่ใช่สิ่งที่ตั้งใจ
+                const used = KpopStore.getUsedQuota(id);
+                if (product.quotaPerRound !== null && product.quotaPerRound < used) {
+                    const ok = confirm(
+                        `ตอนนี้มีลูกค้าจองไปแล้ว ${used} ชิ้น แต่กำลังตั้งเพดานเป็น ${product.quotaPerRound} ชิ้น\n\n` +
+                        'ระบบจะไม่ยกเลิกออเดอร์ที่รับไปแล้ว แต่จะแสดงว่าสินค้านี้รับเกินโควตา\n\nยืนยันหรือไม่?'
+                    );
+                    if (!ok) return;
+                }
+            }
+
+            // ต้องเช็คก่อนแจ้งว่าสำเร็จ — รูปที่อัปโหลดอาจทำให้ localStorage เต็มจนเขียนไม่ลง
+            const result = await KpopStore.saveProduct(product);
+            if (!result.success) {
+                alert('บันทึกไม่สำเร็จค่ะ\n\n' + result.message);
+                renderStorageUsage();
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('productFormModal')).hide();
+            renderProductsTable();
+            renderRoundsTable();
+            renderRatesTab();
+            renderAdminDashboard();
+            renderStorageUsage();
+            alert('บันทึกข้อมูลสินค้าเรียบร้อยแล้วค่ะ!');
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('คุณแน่ใจหรือไม่ที่จะลบรายการสินค้านี้ออกจากระบบ?')) return;
+
+            // ต้องเช็คก่อนแจ้ง — ลบไม่สำเร็จได้ 2 กรณี: ยังมีออเดอร์ค้าง หรือพื้นที่เก็บข้อมูลเต็ม
+            const result = await KpopStore.deleteProduct(id);
+            if (!result.success) {
+                alert('ลบไม่สำเร็จค่ะ\n\n' + result.message);
+                return;
+            }
+
+            renderProductsTable();
+            renderAdminDashboard();
+            renderStorageUsage();
+            alert('ลบสินค้าเรียบร้อยแล้วค่ะ');
+        }
+
+        // --- ROUNDS ---
+        const ROUND_STATE_LABEL = {
+            upcoming: { text: 'ยังไม่เปิดรับ', badge: 'secondary' },
+            open: { text: 'เปิดรับอยู่', badge: 'success' },
+            closed: { text: 'ปิดรับแล้ว', badge: 'dark' },
+            ordered: { text: 'กดสั่งกับเกาหลีแล้ว', badge: 'primary' },
+            arrived: { text: 'ของถึงไทยแล้ว', badge: 'info' },
+            shipped: { text: 'ส่งครบแล้ว', badge: 'success' }
+        };
+
+        function roundStateLabel(state) {
+            return (ROUND_STATE_LABEL[state] || ROUND_STATE_LABEL.closed).text;
+        }
+
+        function renderRoundStateBadge(state) {
+            const meta = ROUND_STATE_LABEL[state] || ROUND_STATE_LABEL.closed;
+            return `<span class="badge bg-${meta.badge} rounded-pill" style="font-size:0.72rem;">${meta.text}</span>`;
+        }
+
+        function renderRoundsTable() {
+            const rounds = KpopStore.getRounds();
+            const products = KpopStore.getProducts();
+            const tbody = document.getElementById('roundsTableBody');
+
+            if (rounds.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">ยังไม่มีรอบในระบบ</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rounds.map(r => {
+                const state = KpopStore.getRoundState(r);
+                const productCount = products.filter(p => p.roundId === r.id).length;
+                const summary = KpopStore.getRoundSummary(r.id);
+                const totalQty = summary.items.reduce((s, i) => s + i.qty, 0);
+
+                return `
+                <tr>
+                    <td>
+                        <div class="fw-bold">${esc(r.name)}</div>
+                        <small class="text-muted">${esc(r.estDelivery) || '-'}</small>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${r.type === 'shipping' ? 'หิ้ว/ชิปรวม' : 'เว็บเกาหลี'}</span></td>
+                    <td style="font-size:0.85rem;">${esc(r.openAt)} ถึง ${esc(r.closeAt)}</td>
+                    <td>${renderRoundStateBadge(state)}</td>
+                    <td>${productCount} รายการ</td>
+                    <td>
+                        <div class="fw-bold">${totalQty} ชิ้น</div>
+                        <small class="text-muted">${summary.orderCount} ออเดอร์ · ฿${summary.grandTotal.toLocaleString()}</small>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill me-1 px-3" onclick="showRoundSummary('${escArg(r.id)}')" title="ใบสรุปรอบ"><i class="fa-solid fa-clipboard-list"></i></button>
+                        <button class="btn btn-sm btn-outline-dark rounded-pill me-1 px-3" onclick="openEditRoundModal('${escArg(r.id)}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="deleteRound('${escArg(r.id)}')"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function openAddRoundModal() {
+            const today = new Date().toISOString().split('T')[0];
+            const inTwoWeeks = new Date();
+            inTwoWeeks.setDate(inTwoWeeks.getDate() + 14);
+
+            document.getElementById('roundModalTitle').innerHTML = '<i class="fa-solid fa-calendar-plus me-2 text-danger"></i>สร้างรอบพรีออเดอร์ใหม่';
+            document.getElementById('rId').value = '';
+            document.getElementById('rName').value = '';
+            document.getElementById('rType').value = 'korean-site';
+            document.getElementById('rOpenAt').value = today;
+            document.getElementById('rCloseAt').value = inTwoWeeks.toISOString().split('T')[0];
+            document.getElementById('rStatus').value = 'open';
+            document.getElementById('rEstDelivery').value = '';
+            document.getElementById('rNote').value = '';
+
+            new bootstrap.Modal(document.getElementById('roundFormModal')).show();
+        }
+
+        function openEditRoundModal(roundId) {
+            const r = KpopStore.getRoundById(roundId);
+            if (!r) return;
+
+            document.getElementById('roundModalTitle').innerHTML = '<i class="fa-solid fa-pen me-2 text-danger"></i>แก้ไขรอบพรีออเดอร์';
+            document.getElementById('rId').value = r.id;
+            document.getElementById('rName').value = r.name || '';
+            document.getElementById('rType').value = r.type || 'korean-site';
+            document.getElementById('rOpenAt').value = r.openAt || '';
+            document.getElementById('rCloseAt').value = r.closeAt || '';
+            document.getElementById('rStatus').value = r.status || 'open';
+            document.getElementById('rEstDelivery').value = r.estDelivery || '';
+            document.getElementById('rNote').value = r.note || '';
+
+            new bootstrap.Modal(document.getElementById('roundFormModal')).show();
+        }
+
+        async function saveRoundForm(e) {
+            e.preventDefault();
+            const openAt = document.getElementById('rOpenAt').value;
+            const closeAt = document.getElementById('rCloseAt').value;
+
+            if (closeAt < openAt) {
+                alert('วันปิดรับต้องไม่มาก่อนวันเปิดรับค่ะ');
+                return;
+            }
+
+            const result = await KpopStore.saveRound({
+                id: document.getElementById('rId').value || ('round-' + Date.now()),
+                name: document.getElementById('rName').value,
+                type: document.getElementById('rType').value,
+                openAt: openAt,
+                closeAt: closeAt,
+                status: document.getElementById('rStatus').value,
+                estDelivery: document.getElementById('rEstDelivery').value,
+                note: document.getElementById('rNote').value
+            });
+
+            if (!result.success) {
+                alert('บันทึกไม่สำเร็จค่ะ\n\n' + result.message);
+                renderStorageUsage();
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('roundFormModal')).hide();
+            renderRoundsTable();
+            renderProductsTable();
+            renderAdminDashboard();
+            alert('บันทึกรอบพรีออเดอร์เรียบร้อยแล้วค่ะ!');
+        }
+
+        async function deleteRound(roundId) {
+            const attached = KpopStore.getProducts().filter(p => p.roundId === roundId);
+            if (attached.length > 0) {
+                alert(`ลบไม่ได้ค่ะ ยังมีสินค้า ${attached.length} รายการผูกอยู่กับรอบนี้\nกรุณาย้ายสินค้าไปรอบอื่นก่อน`);
+                return;
+            }
+            if (confirm('ยืนยันลบรอบนี้ออกจากระบบ?')) {
+                const result = await KpopStore.deleteRound(roundId);
+                if (!result.success) {
+                    alert('ลบไม่สำเร็จค่ะ\n\n' + result.message);
+                    return;
+                }
+                renderRoundsTable();
+                renderProductsTable();
+            }
+        }
+
+        // ใบสรุปรอบ = สิ่งที่แอดมินถือไปกดสั่งที่เว็บเกาหลี รวมจำนวนต่อสินค้าให้แล้ว
+        function showRoundSummary(roundId) {
+            const round = KpopStore.getRoundById(roundId);
+            const summary = KpopStore.getRoundSummary(roundId);
+            const card = document.getElementById('roundSummaryCard');
+
+            document.getElementById('roundSummarySubtitle').innerText =
+                `${round ? round.name : roundId} · ${summary.orderCount} ออเดอร์ที่ยังไม่ถูกยกเลิก · ยอดรับจากลูกค้ารวม ฿${summary.grandTotal.toLocaleString()}`;
+
+            document.getElementById('roundSummaryBody').innerHTML = summary.items.length === 0
+                ? '<div class="text-muted">ยังไม่มีออเดอร์ในรอบนี้</div>'
+                : `
+                    <div class="table-responsive">
+                        <table class="table custom-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>สินค้าที่ต้องกดสั่ง</th>
+                                    <th class="text-end">จำนวนรวม</th>
+                                    <th class="text-end">ราคาวอน/ชิ้น</th>
+                                    <th class="text-end">รวมวอนที่ต้องจ่าย</th>
+                                    <th class="text-end">ยอดที่รับจากลูกค้า</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${summary.items.map(i => `
+                                    <tr>
+                                        <td class="fw-bold">${esc(i.title)}</td>
+                                        <td class="text-end fw-bold fs-5 text-danger">${i.qty}</td>
+                                        <td class="text-end">${i.priceKRW ? '₩' + i.priceKRW.toLocaleString() : '-'}</td>
+                                        <td class="text-end fw-bold">${i.priceKRW ? '₩' + (i.priceKRW * i.qty).toLocaleString() : '-'}</td>
+                                        <td class="text-end">฿${i.amountTHB.toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+            card.style.display = 'block';
+            card.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeRoundSummary() {
+            document.getElementById('roundSummaryCard').style.display = 'none';
+        }
+
+        // --- EXCHANGE RATE ---
+        // 'YYYY-MM-DD HH:mm' ตามเวลาเครื่อง เทียบกับ effectiveFrom ได้ตรง ๆ แบบสตริง
+        function localStampNow() {
+            return new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 16).replace('T', ' ');
+        }
+
+        function renderRatesTab() {
+            const current = KpopStore.getCurrentRate();
+
+            document.getElementById('currentRateDisplay').innerText =
+                `${current.rate} บาท / ₩1  (₩1,000 = ฿${(current.rate * 1000).toFixed(2)})`;
+            document.getElementById('currentRateMeta').innerText =
+                `มีผลตั้งแต่ ${current.effectiveFrom} · ตั้งโดย ${current.setBy || '-'}${current.note ? ' · ' + current.note : ''}`;
+
+            document.getElementById('ratePreviewTableBody').innerHTML = KpopStore.getProducts().map(p => {
+                const bd = KpopStore.getPriceBreakdown(p, current.rate);
+                return `
+                    <tr>
+                        <td class="fw-bold" style="font-size:0.88rem;">${esc(p.title)}</td>
+                        <td class="text-end">${bd.krw ? '₩' + bd.krw.toLocaleString() : '<span class="text-muted">-</span>'}</td>
+                        <td class="text-end">฿${bd.converted.toLocaleString()}</td>
+                        <td class="text-end">฿${bd.serviceFee.toLocaleString()}</td>
+                        <td class="text-end fw-bold text-danger">฿${bd.total.toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const nowStamp = localStampNow();
+            document.getElementById('ratesHistoryTableBody').innerHTML = KpopStore.getRates().map(r => {
+                const upcoming = String(r.effectiveFrom) > nowStamp;
+                const active = !upcoming && r.effectiveFrom === current.effectiveFrom && r.rate === current.rate;
+                return `
+                    <tr>
+                        <td class="fw-bold">${r.rate}
+                            ${active ? '<span class="badge bg-success ms-1" style="font-size:0.68rem;">ใช้อยู่</span>' : ''}
+                            ${upcoming ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.68rem;">รอมีผล</span>' : ''}
+                        </td>
+                        <td style="font-size:0.85rem;">${esc(r.effectiveFrom)}</td>
+                        <td style="font-size:0.85rem;">${esc(r.setBy) || '-'}</td>
+                        <td class="text-muted" style="font-size:0.85rem;">${esc(r.note) || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (!document.getElementById('rateEffectiveInput').value) fillRateEffective('cutoff');
+        }
+
+        // input datetime-local ใช้รูปแบบ 'YYYY-MM-DDTHH:mm' ส่วน store ใช้ 'YYYY-MM-DD HH:mm'
+        function fillRateEffective(mode) {
+            const value = (mode === 'now')
+                ? new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                : KpopStore.getNextRateCutoff().replace(' ', 'T');
+            document.getElementById('rateEffectiveInput').value = value;
+        }
+
+        async function saveNewRate(e) {
+            e.preventDefault();
+            const rate = parseFloat(document.getElementById('rateValueInput').value);
+            const effective = document.getElementById('rateEffectiveInput').value.replace('T', ' ');
+            const note = document.getElementById('rateNoteInput').value;
+            const admin = KpopStore.getCurrentUser();
+
+            const res = await KpopStore.setRate(rate, effective, admin ? admin.email : 'admin', note);
+            if (!res.success) {
+                alert(res.message);
+                return;
+            }
+
+            document.getElementById('rateValueInput').value = '';
+            document.getElementById('rateNoteInput').value = '';
+            renderRatesTab();
+            renderProductsTable();
+            renderAdminDashboard();
+            alert(`บันทึกเรทใหม่เรียบร้อยแล้วค่ะ (เริ่มมีผล ${res.rate.effectiveFrom})`);
+        }
+
+        // --- USER MANAGEMENT RENDERER ---
+        function renderUsersTable() {
+            const users = KpopStore.getUsers();
+            const tbody = document.getElementById('usersTableBody');
+
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td class="fw-bold">${esc(u.name)}</td>
+                    <td>${esc(u.email)}</td>
+                    <td>${esc(u.phone) || '-'}</td>
+                    <td style="font-size:0.85rem; max-width: 250px;">${esc(u.address) || '-'}</td>
+                    <td>
+                        <span class="badge ${u.role === 'admin' ? 'bg-danger' : 'bg-primary'}">${esc(String(u.role || '').toUpperCase())}</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill me-1 px-3" onclick="openEditUserModal('${escArg(u.id)}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="deleteUser('${escArg(u.id)}')"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateNotificationUserSelect() {
+            const users = KpopStore.getUsers();
+            const select = document.getElementById('notiTargetUser');
+            select.innerHTML = `<option value="ALL">ลูกค้าทุกคนในระบบ (Broadcast All)</option>` +
+                users.map(u => `<option value="${esc(u.email)}">${esc(u.name)} (${esc(u.email)})</option>`).join('');
+        }
+
+        function openAddUserModal() {
+            document.getElementById('userModalTitle').innerHTML = '<i class="fa-solid fa-user-plus me-2 text-success"></i>เพิ่มผู้ใช้งานใหม่';
+            document.getElementById('uId').value = '';
+            document.getElementById('uName').value = '';
+            document.getElementById('uEmail').value = '';
+            document.getElementById('uPhone').value = '';
+            document.getElementById('uAddress').value = '';
+            document.getElementById('uRole').value = 'customer';
+
+            const modal = new bootstrap.Modal(document.getElementById('userFormModal'));
+            modal.show();
+        }
+
+        function openEditUserModal(userId) {
+            const u = KpopStore.getUsers().find(x => x.id === userId);
+            if (!u) return;
+
+            document.getElementById('userModalTitle').innerHTML = '<i class="fa-solid fa-pen me-2 text-success"></i>แก้ไขข้อมูลผู้ใช้งาน';
+            document.getElementById('uId').value = u.id;
+            document.getElementById('uName').value = u.name;
+            document.getElementById('uEmail').value = u.email;
+            document.getElementById('uPhone').value = u.phone || '';
+            document.getElementById('uAddress').value = u.address || '';
+            document.getElementById('uRole').value = u.role || 'customer';
+
+            const modal = new bootstrap.Modal(document.getElementById('userFormModal'));
+            modal.show();
+        }
+
+        async function saveUserForm(e) {
+            e.preventDefault();
+            const user = {
+                id: document.getElementById('uId').value || ('u-' + Date.now()),
+                name: document.getElementById('uName').value,
+                email: document.getElementById('uEmail').value,
+                phone: document.getElementById('uPhone').value,
+                address: document.getElementById('uAddress').value,
+                role: document.getElementById('uRole').value
+            };
+
+            const result = await KpopStore.saveUser(user);
+            if (!result.success) {
+                alert('บันทึกไม่สำเร็จค่ะ\n\n' + result.message);
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('userFormModal')).hide();
+            renderUsersTable();
+            populateNotificationUserSelect();
+            alert('บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้วค่ะ!');
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานนี้?')) return;
+
+            const result = await KpopStore.deleteUser(id);
+            if (!result.success) {
+                alert('ลบไม่สำเร็จค่ะ\n\n' + result.message);
+                return;
+            }
+
+            renderUsersTable();
+            populateNotificationUserSelect();
+
+            // ถ้าเผลอลบบัญชีตัวเอง store จะเคลียร์ session ให้ หน้านี้จึงต้องกลับไปด่านตรวจสิทธิ์
+            checkAdminAuth();
+        }
+
+        // --- BROADCAST NOTIFICATION DISPATCHER ---
+        async function sendBroadcastNotification(e) {
+            e.preventDefault();
+            const target = document.getElementById('notiTargetUser').value;
+            const title = document.getElementById('notiTitleInput').value;
+            const message = document.getElementById('notiMessageInput').value;
+
+            // ส่ง 'ALL' ไปครั้งเดียวแล้วให้ฝั่งเซิร์ฟเวอร์ insert รวดเดียวใน transaction
+            // ของเดิมวนเรียกทีละคน = ยิงคำขอเท่าจำนวนผู้ใช้ทั้งระบบ
+            const res = await KpopStore.addNotification({
+                userEmail: target,
+                title: title,
+                message: message
+            });
+
+            if (!res) {
+                alert('ส่งการแจ้งเตือนไม่สำเร็จค่ะ กรุณาลองใหม่อีกครั้ง');
+                return;
+            }
+
+            alert(target === 'ALL'
+                ? 'ส่งการแจ้งเตือนไปยังผู้ใช้งานทุกคนเรียบร้อยแล้วค่ะ!'
+                : `ส่งการแจ้งเตือนไปยัง ${target} เรียบร้อยแล้วค่ะ!`);
+
+            document.getElementById('broadcastForm').reset();
+        }
+    </script>
+</body>
+
+</html>

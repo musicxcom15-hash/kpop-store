@@ -1,0 +1,23 @@
+# โฟลเดอร์นี้เก็บไฟล์ที่ผู้ใช้อัปโหลด (สลิปโอนเงิน รูปสินค้า หลักฐานการกดสั่ง)
+# ถึงฝั่ง PHP จะตรวจแล้วว่าเป็นรูปจริง แต่ต้องกันอีกชั้นไม่ให้ Apache
+# เอาอะไรในนี้ไปรันเป็นสคริปต์เด็ดขาด ถ้ามีช่องโหว่ที่ทำให้ไฟล์แปลกปลอมหลุดเข้ามาได้
+
+# ปิดการรัน PHP ทุกรูปแบบในโฟลเดอร์นี้
+<FilesMatch "\.(?i:php|php3|php4|php5|php7|php8|phtml|phar|cgi|pl|py|asp|aspx|jsp|sh)$">
+    Require all denied
+</FilesMatch>
+
+php_flag engine off
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+
+# ไม่ให้ไล่ดูรายชื่อไฟล์ในโฟลเดอร์ (สลิปของลูกค้าคนอื่นไม่ควรถูกไล่เปิดเจอ)
+Options -Indexes -ExecCGI
+
+# ปิดไม่ให้ดาวน์โหลดไฟล์ตั้งค่านี้เอง
+# ปกติ Apache กัน .ht* ให้อยู่แล้ว แต่ httpd.conf ของ MAMP กลับตั้งเป็น
+# <FilesMatch "^\.ht"> Require all granted </FilesMatch> ซึ่งเปิดให้โหลดได้
+# จึงต้องกันเองตรงนี้ ไม่งั้นคนนอกจะอ่านกฎความปลอดภัยของเราได้ทั้งหมด
+<Files ".htaccess">
+    Require all denied
+</Files>
