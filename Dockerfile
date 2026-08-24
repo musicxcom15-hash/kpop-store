@@ -17,6 +17,20 @@ FROM php:8.3-apache
 # และคุย MySQL ผ่าน PDO เท่านั้น
 RUN docker-php-ext-install pdo_mysql
 
+# Apache บน Debian ยอมให้เปิด MPM ได้ "ทีละตัวเดียว" ถ้ามีสองตัวจะตายตอน start ด้วย
+#   AH00534: apache2: Configuration error: More than one MPM loaded.
+# และ mod_php (ซึ่ง image นี้ใช้รัน PHP) ทำงานได้กับ prefork เท่านั้น
+# เดิมไฟล์นี้ปล่อยตามค่าที่ image ให้มาโดยไม่ได้ตรวจ — บังคับให้ชัดเจนไปเลยจะได้ไม่ต้องเดา
+# บรรทัด ls ไว้ให้เห็นใน build log ว่าสุดท้ายเหลือ MPM ตัวไหนจริง ๆ
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true; \
+    a2enmod mpm_prefork; \
+    echo "--- MPM ที่เปิดอยู่ ---" && ls -1 /etc/apache2/mods-enabled/ | grep -i mpm
+
+# กัน warning AH00558 ที่ขึ้นทุกครั้งตอน start เพราะเดา FQDN ไม่ได้
+# ไม่ใช่ error แต่ทำให้ log อ่านยากตอนไล่ปัญหาจริง
+RUN printf 'ServerName localhost\n' > /etc/apache2/conf-available/zz-servername.conf \
+    && a2enconf zz-servername
+
 # uploads/.htaccess เป็นด่านกันไม่ให้ Apache รันไฟล์ในโฟลเดอร์อัปโหลด
 # image นี้ default เป็น AllowOverride None ซึ่งแปลว่า .htaccess ถูกมองข้ามทั้งไฟล์
 RUN printf '%s\n' \
