@@ -17,6 +17,8 @@
 
 require_once __DIR__ . '/helpers.php';
 
+refresh_rate_if_stale();
+
 $user = current_user();
 $isAdmin = $user && $user['role'] === 'admin';
 

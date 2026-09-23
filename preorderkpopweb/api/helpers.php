@@ -441,9 +441,60 @@ function remaining_quota(string $productId): ?int
     return max(0, (int) $p['quota_per_round'] - (int) $st->fetchColumn());
 }
 
+/**
+ * ดึงเรทจริงจาก API ภายนอก แล้วบวก margin ที่ตั้งไว้ใน config.php
+ * คืน null เงียบ ๆ ถ้าเรียกไม่สำเร็จ/parse ไม่ได้ — ห้าม throw เพราะเรียกจากทุก page load
+ */
+function fetch_live_rate(): ?float
+{
+    $ctx  = stream_context_create(['http' => ['timeout' => 4, 'ignore_errors' => true]]);
+    $body = @file_get_contents(FX_API_URL, false, $ctx);
+    if ($body === false) {
+        error_log('[kpop-api] ดึงเรทวอนจาก API ไม่สำเร็จ: ' . FX_API_URL);
+        return null;
+    }
+
+    $json = json_decode($body, true);
+    $thb  = $json['rates']['THB'] ?? null;
+    if (!is_numeric($thb) || $thb <= 0) {
+        error_log('[kpop-api] ตอบกลับจาก API เรทวอนอ่านไม่ได้: ' . substr($body, 0, 200));
+        return null;
+    }
+
+    return round(((float) $thb) * (1 + FX_RATE_MARGIN_PERCENT / 100), 6);
+}
+
+/**
+ * ถ้าเรทล่าสุดใน DB เก่าเกิน FX_RATE_STALE_HOURS ให้ลองดึงเรทใหม่จาก API มาบันทึกเป็นแถวใหม่
+ * ดึงไม่ได้ก็ปล่อยผ่าน — current_rate() จะยังคืนแถวล่าสุดที่มีอยู่เดิมตามปกติ
+ */
+function refresh_rate_if_stale(): void
+{
+    $latest  = db()->query('SELECT * FROM rates ORDER BY effective_from DESC, id DESC LIMIT 1')->fetch();
+    $isStale = !$latest || strtotime($latest['effective_from']) < strtotime('-' . FX_RATE_STALE_HOURS . ' hours');
+    if (!$isStale) {
+        return;
+    }
+
+    $newRate = fetch_live_rate();
+    if ($newRate === null) {
+        return;
+    }
+
+    $st = db()->prepare('INSERT INTO rates (rate, effective_from, set_by, note) VALUES (?,?,?,?)');
+    $st->execute([
+        $newRate,
+        date('Y-m-d H:i:s'),
+        'ระบบ (auto)',
+        sprintf('ดึงอัตโนมัติจาก %s บวก margin %s%%', parse_url(FX_API_URL, PHP_URL_HOST), FX_RATE_MARGIN_PERCENT),
+    ]);
+}
+
 /** เรทที่มีผลบังคับใช้อยู่ ณ ตอนนี้ */
 function current_rate(): array
 {
+    refresh_rate_if_stale();
+
     $st = db()->query(
         'SELECT * FROM rates WHERE effective_from <= NOW() ORDER BY effective_from DESC, id DESC LIMIT 1'
     );
