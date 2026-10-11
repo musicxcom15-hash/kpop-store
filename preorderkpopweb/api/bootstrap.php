@@ -17,16 +17,12 @@
 
 require_once __DIR__ . '/helpers.php';
 
-refresh_rate_if_stale();
-
 $user = current_user();
 $isAdmin = $user && $user['role'] === 'admin';
 
-/* --- สินค้า / รอบ / เรท : ข้อมูลสาธารณะ ทุกคนเห็นเหมือนกัน --- */
+/* --- สินค้า / รอบ : ข้อมูลสาธารณะ ทุกคนเห็นเหมือนกัน --- */
 $products = array_map('map_product', db()->query('SELECT * FROM products ORDER BY id')->fetchAll());
 $rounds   = array_map('map_round',   db()->query('SELECT * FROM rounds ORDER BY open_at')->fetchAll());
-$rates    = array_map('map_rate',
-    db()->query('SELECT * FROM rates ORDER BY effective_from DESC, id DESC')->fetchAll());
 
 /* --- ออเดอร์ --- */
 $orderRows = db()->query('SELECT * FROM orders ORDER BY order_date DESC')->fetchAll();
@@ -71,7 +67,6 @@ ok([
     'currentUser'   => $user ? map_user($user) : null,
     'products'      => $products,
     'rounds'        => $rounds,
-    'rates'         => $rates,
     'orders'        => $orders,
     'notifications' => $notifications,
     'cart'          => $cart,

@@ -88,7 +88,7 @@ console.log('\n[7] ลบทุกออเดอร์แล้วระบบ�
   eq('ยังสั่งซื้อใหม่ได้', (await K.addOrder({
     customerName: 'ก', customerEmail: 'a@b.c',
     items: [{ id: 'bts', title: 'BTS', qty: 1 }], shippingFee: 50
-  })).order.total, 940);
+  })).order.total, 980);
 }
 
 report();

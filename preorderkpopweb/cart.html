@@ -185,12 +185,9 @@
 
             document.getElementById('cartRateBanner').innerHTML = `
                 <div class="fw-bold mb-1"><i class="fa-solid fa-money-bill-transfer me-1 text-warning"></i>
-                    ราคาในตะกร้าคำนวณจากเรทปัจจุบัน ₩1,000 = ฿${(rate.rate * 1000).toFixed(2)}
+                    ราคาในตะกร้าคำนวณจากเรทกลางของร้าน ₩1,000 = ฿${(rate.rate * 1000).toFixed(2)}
                 </div>
                 <div class="text-secondary">
-                    เรทมีผลตั้งแต่ ${esc(rate.effectiveFrom)} และจะเปลี่ยนรอบถัดไปเวลา
-                    <strong>${esc(KpopStore.getNextRateCutoff())}</strong> —
-                    หากชำระหลังจากนั้น ยอดจะถูกคำนวณใหม่ตามเรทใหม่
                     <strong>ยอดของคุณจะถูกล็อกเมื่อแนบสลิป</strong>
                 </div>
             `;

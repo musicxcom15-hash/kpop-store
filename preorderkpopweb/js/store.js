@@ -9,12 +9,11 @@
         NOTIFICATIONS: 'kpop_notifications',
         CURRENT_USER: 'kpop_current_user',
         CART: 'kpop_cart',
-        ROUNDS: 'kpop_rounds',
-        RATES: 'kpop_rates'
+        ROUNDS: 'kpop_rounds'
     };
 
-    // เวลาที่เรทเงินวอนเปลี่ยนรอบ (ร้านประกาศเรทใหม่ทุกวันตอน 22:00)
-    const RATE_CUTOFF_HOUR = 22;
+    // เรทเงินวอนกลางของร้าน (บาทต่อ 1 วอน) — ค่าคงที่ ไม่มีหน้าแอดมินให้ตั้งเองแล้ว
+    const CENTRAL_RATE = 0.028;
 
     // รูปแบบวันเวลาทั้งระบบใช้ 'YYYY-MM-DD HH:mm' เพื่อให้เทียบเป็นสตริงได้ตรง ๆ
     function pad2(n) { return String(n).padStart(2, '0'); }
@@ -228,17 +227,6 @@
             status: 'open',
             estDelivery: '7 - 14 วัน',
             note: 'รอบสำรองสำหรับสินค้า/ออเดอร์ที่สร้างไว้ก่อนระบบรอบจะมี'
-        }
-    ];
-
-    // ประวัติเรทเงินวอน เก็บเป็นรายการที่มี effectiveFrom เพื่อย้อนดูได้ว่าออเดอร์ไหนใช้เรทอะไร
-    // getCurrentRate() หยิบรายการล่าสุดที่ถึงเวลาแล้ว จุดตัด 22:00 จึงเกิดขึ้นเองโดยไม่ต้องมี cron
-    const DEFAULT_RATES = [
-        {
-            rate: 0.0265,
-            effectiveFrom: dayOffset(-7) + ' ' + pad2(RATE_CUTOFF_HOUR) + ':00',
-            setBy: 'admin@kpopstore.com',
-            note: 'เรทตั้งต้นของระบบ'
         }
     ];
 
@@ -460,7 +448,6 @@
 
         CACHE[STORAGE_KEYS.PRODUCTS]      = res.products      || [];
         CACHE[STORAGE_KEYS.ROUNDS]        = res.rounds        || [];
-        CACHE[STORAGE_KEYS.RATES]         = res.rates         || [];
         CACHE[STORAGE_KEYS.ORDERS]        = res.orders        || [];
         CACHE[STORAGE_KEYS.USERS]         = res.users         || [];
         CACHE[STORAGE_KEYS.NOTIFICATIONS] = res.notifications || [];
@@ -532,9 +519,6 @@
         }
         if (!localStorage.getItem(STORAGE_KEYS.ROUNDS)) {
             setJSON(STORAGE_KEYS.ROUNDS, DEFAULT_ROUNDS);
-        }
-        if (!localStorage.getItem(STORAGE_KEYS.RATES)) {
-            setJSON(STORAGE_KEYS.RATES, DEFAULT_RATES);
         }
         // ผู้เข้าเว็บครั้งแรกต้อง "ยังไม่ล็อกอิน" เสมอ
         // ของเดิมล็อกอินให้เป็นคุณสมชาย (บัญชีลูกค้าจริงในระบบ) โดยอัตโนมัติ
@@ -863,60 +847,58 @@
             };
         },
 
-        // --- Exchange rate ---
-        getRates() {
-            const rates = getJSON(STORAGE_KEYS.RATES, DEFAULT_RATES);
-            return rates.slice().sort((a, b) => String(b.effectiveFrom).localeCompare(String(a.effectiveFrom)));
-        },
-        // เรทที่มีผล ณ เวลาหนึ่ง = รายการล่าสุดที่ effectiveFrom ไม่เกินเวลานั้น
-        // (รูปแบบ 'YYYY-MM-DD HH:mm' เทียบเป็นสตริงได้ตรง ๆ)
-        getRateAt(stamp) {
-            const at = stamp || formatStamp();
-            const rates = this.getRates();
-            return rates.find(r => String(r.effectiveFrom) <= at) || rates[rates.length - 1] || DEFAULT_RATES[0];
-        },
-        getCurrentRate() {
-            return this.getRateAt(formatStamp());
-        },
-        async setRate(rate, effectiveFrom, setBy, note) {
-            const value = Number(rate);
-            if (!isFinite(value) || value <= 0) {
-                return { success: false, message: 'เรทต้องเป็นตัวเลขมากกว่า 0' };
-            }
-
-            if (HAS_API) {
-                const res = await apiWrite('rates.php?action=add', {
-                    rate: value,
-                    effectiveFrom: effectiveFrom || this.getNextRateCutoff(),
-                    setBy: setBy,
-                    note: note || ''
+        // รายชื่อคำสั่งซื้อทั้งหมดที่มีสินค้าชิ้นนี้อยู่ (ทุกรอบ ทุกสถานะ) เรียงใหม่สุดก่อน
+        // ใช้ตอบคำถาม "สินค้านี้มีใครสั่งไปบ้าง จำนวนเท่าไหร่ รอบไหน" แยกเป็นรายออเดอร์ ไม่ใช่ยอดรวม
+        getOrdersForProduct(productId) {
+            const rows = [];
+            this.getOrders().forEach(o => {
+                (o.items || []).forEach(i => {
+                    if (String(i.id) !== String(productId)) return;
+                    const round = this.getRoundById(o.roundId);
+                    rows.push({
+                        order: o,
+                        orderId: o.id,
+                        customerName: o.customerName,
+                        qty: Number(i.qty) || 0,
+                        amount: (Number(i.price) || 0) * (Number(i.qty) || 0),
+                        roundId: o.roundId,
+                        roundName: round ? round.name : '-',
+                        date: o.date
+                    });
                 });
-                return res.success
-                    ? { success: true, rate: this.getRates()[0] }
-                    : { success: false, message: res.message || 'บันทึกเรทไม่สำเร็จ' };
-            }
-
-            const rates = getJSON(STORAGE_KEYS.RATES, DEFAULT_RATES);
-            const record = {
-                rate: value,
-                effectiveFrom: effectiveFrom || this.getNextRateCutoff(),
-                setBy: setBy || 'admin',
-                note: note || ''
-            };
-            rates.push(record);
-            if (!setJSON(STORAGE_KEYS.RATES, rates)) {
-                return { success: false, message: STORAGE_FULL_MESSAGE };
-            }
-
-            return { success: true, rate: record };
+            });
+            return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
         },
-        // จุดตัด 22:00 ถัดไป — ถ้าตอนนี้ยังไม่ถึง 22:00 ก็คือ 22:00 ของวันนี้
-        getNextRateCutoff() {
-            const now = new Date();
-            const cutoff = new Date();
-            cutoff.setHours(RATE_CUTOFF_HOUR, 0, 0, 0);
-            if (cutoff <= now) cutoff.setDate(cutoff.getDate() + 1);
-            return formatStamp(cutoff);
+
+        // ยอดสั่งของสินค้าชิ้นนี้แยกรายวัน (เก่า→ใหม่) พร้อมยอดสะสม
+        // นับเฉพาะออเดอร์ที่สถานะมี flag quota (ยกเลิก/คืนเงินไม่นับ) ไม่ branch ตามข้อความสถานะ
+        getDailyOrdersForProduct(productId) {
+            const byDay = {};
+            this.getOrdersForProduct(productId).forEach(r => {
+                if (!this.getStatusMeta(r.order).quota) return;
+                const day = String(r.date || '').slice(0, 10);
+                if (!day) return;
+                const d = byDay[day] || (byDay[day] = { day: day, qty: 0, orders: 0, amount: 0 });
+                d.qty += r.qty;
+                d.orders += 1;
+                d.amount += r.amount;
+            });
+            let cumulative = 0;
+            return Object.keys(byDay).sort().map(k => {
+                cumulative += byDay[k].qty;
+                return Object.assign({}, byDay[k], { cumulativeQty: cumulative });
+            });
+        },
+
+        // --- Exchange rate ---
+        // เรทกลางคงที่ของร้าน ไม่มีประวัติ ไม่มีหน้าแอดมินให้ตั้งใหม่แล้ว (แก้ได้ที่ CENTRAL_RATE ด้านบนไฟล์นี้)
+        getCurrentRate() {
+            return {
+                rate: CENTRAL_RATE,
+                effectiveFrom: formatStamp(),
+                setBy: 'ระบบ',
+                note: 'เรทกลางคงที่ของร้าน'
+            };
         },
 
         // --- Pricing ---

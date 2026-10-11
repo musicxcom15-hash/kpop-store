@@ -18,6 +18,7 @@ const FILES = [
     'refund-flow.test.mjs',
     'product-image.test.mjs',
     'delete-order.test.mjs',
+    'daily-orders.test.mjs',
     'save-failure.test.mjs',
     'admin-product.test.mjs',
     'auth-gate.test.mjs'

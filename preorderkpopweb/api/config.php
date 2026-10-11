@@ -33,12 +33,10 @@ define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 33
 define('IS_PRODUCTION', getenv('APP_ENV') === 'production');
 
 /**
- * เรทวอนอัตโนมัติ (ดึงจาก API ภายนอกตอนเรทเก่าเกินกำหนด — ดู refresh_rate_if_stale() ใน helpers.php)
- * ปรับได้ผ่าน environment variable บน Railway โดยไม่ต้องแก้โค้ด/deploy ใหม่
+ * เรทเงินวอนกลางของร้าน (บาทต่อ 1 วอน) — ค่าคงที่ ไม่มีหน้าแอดมินให้ตั้งเองแล้ว
+ * ต้องการเปลี่ยนเรทให้แก้ค่านี้แล้ว deploy ใหม่
  */
-define('FX_API_URL', getenv('FX_API_URL') ?: 'https://open.er-api.com/v6/latest/KRW');
-define('FX_RATE_MARGIN_PERCENT', (float) (getenv('FX_RATE_MARGIN_PERCENT') ?: 5));
-define('FX_RATE_STALE_HOURS', (float) (getenv('FX_RATE_STALE_HOURS') ?: 12));
+define('CENTRAL_RATE', 0.028);
 
 /**
  * คืน PDO ตัวเดิมเสมอ (สร้างครั้งเดียวต่อ 1 request)

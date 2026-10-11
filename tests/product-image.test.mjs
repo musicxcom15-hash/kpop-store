@@ -60,7 +60,7 @@ console.log('\n[4] สินค้าที่บันทึกด้วยร�
   });
   eq('บันทึกสำเร็จ', res.success, true);
   eq('รูปถูกเก็บครบไม่ถูกตัด', K.getProductById('up1').image, dataUri);
-  eq('ราคายังคำนวณได้ตามปกติ', K.getPriceTHB('up1'), Math.ceil(20000 * 0.0265) + 100);
+  eq('ราคายังคำนวณได้ตามปกติ', K.getPriceTHB('up1'), Math.ceil(20000 * 0.028) + 100);
 }
 
 report();

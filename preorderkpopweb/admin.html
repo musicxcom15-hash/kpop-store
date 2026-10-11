@@ -328,13 +328,13 @@
                                 class="fa-solid fa-compact-disc me-2 text-pink" style="color: #ff3399;"></i>
                             จัดการสินค้า</button>
 
+                        <button class="nav-link" id="tab-report-tab" data-bs-toggle="pill"
+                            data-bs-target="#tab-report" type="button" role="tab"><i
+                                class="fa-solid fa-list-ul me-2 text-primary"></i> รายงานคำสั่งซื้อ</button>
+
                         <button class="nav-link" id="tab-rounds-tab" data-bs-toggle="pill"
                             data-bs-target="#tab-rounds" type="button" role="tab"><i
                                 class="fa-solid fa-calendar-days me-2 text-danger"></i> จัดการรอบพรีออเดอร์</button>
-
-                        <button class="nav-link" id="tab-rates-tab" data-bs-toggle="pill"
-                            data-bs-target="#tab-rates" type="button" role="tab"><i
-                                class="fa-solid fa-money-bill-transfer me-2 text-warning"></i> เรทเงินวอน</button>
 
                         <button class="nav-link" id="tab-users-tab" data-bs-toggle="pill"
                             data-bs-target="#tab-users" type="button" role="tab"><i
@@ -418,12 +418,41 @@
                                     <div class="text-muted" style="font-size: 0.85rem;"><i class="fa-solid fa-money-bill-transfer me-1 text-warning"></i>เรทเงินวอนที่ใช้อยู่</div>
                                     <div class="fw-bold fs-4 text-dark" id="dashRateValue">-</div>
                                     <div class="text-muted" id="dashRateMeta" style="font-size: 0.78rem;"></div>
-                                    <button class="btn btn-sm btn-link text-decoration-none p-0 mt-1" onclick="switchTab('tab-rates-tab')">ตั้งเรทใหม่</button>
                                 </div>
                                 <div class="col-md-8">
                                     <div class="text-muted mb-2" style="font-size: 0.85rem;"><i class="fa-solid fa-calendar-days me-1 text-danger"></i>รอบที่กำลังเปิดรับ</div>
                                     <div id="dashOpenRounds" class="d-flex flex-wrap gap-2"></div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- ยอดสั่งรายวันต่อสินค้า -->
+                        <div class="admin-card mb-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <h5 class="fw-bold m-0"><i class="fa-solid fa-calendar-week me-2 text-info"></i>ยอดสั่งรายวันต่อสินค้า</h5>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <select id="dailyProductSelect" class="form-select form-select-sm" style="min-width:200px;" onchange="renderDailyProductOrders()"></select>
+                                    <select id="dailyRangeSelect" class="form-select form-select-sm" style="width:auto;" onchange="renderDailyProductOrders()">
+                                        <option value="7">7 วันล่าสุด</option>
+                                        <option value="30" selected>30 วันล่าสุด</option>
+                                        <option value="0">ทั้งหมด</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="dailyProductSummary" class="text-muted mb-2" style="font-size:0.88rem;"></div>
+                            <div class="table-responsive">
+                                <table class="table custom-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>วันที่</th>
+                                            <th style="min-width:160px;">ชิ้นที่สั่ง</th>
+                                            <th>ออเดอร์</th>
+                                            <th>ยอดเงิน</th>
+                                            <th>สะสม (ชิ้น)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dailyProductTable"></tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -442,6 +471,7 @@
                                                 <tr>
                                                     <th>เลขที่คำสั่งซื้อ</th>
                                                     <th>ลูกค้า</th>
+                                                    <th>สินค้า</th>
                                                     <th>ยอดชำระ</th>
                                                     <th>สถานะ</th>
                                                 </tr>
@@ -579,6 +609,36 @@
                                 </table>
                             </div>
                         </div>
+
+                    </div>
+
+                    <!-- ================= TAB: ORDER REPORT BY PRODUCT ================= -->
+                    <div class="tab-pane fade" id="tab-report" role="tabpanel">
+                        <div class="admin-card">
+                            <h4 class="fw-bold mb-1"><i class="fa-solid fa-list-ul me-2 text-primary"></i>รายงานคำสั่งซื้อแยกตามสินค้า</h4>
+                            <p class="text-muted" style="font-size: 0.9rem;">
+                                เลือกสินค้าเพื่อดูว่ามีใครสั่งไปบ้าง จำนวนเท่าไหร่ รอบไหน — ใช้รีเช็คของก่อนแพ็ก/กดสั่ง หรือดาวน์โหลดเป็น Excel เก็บไว้ได้
+                            </p>
+                            <div class="mb-0" style="max-width: 420px;">
+                                <label class="form-label fw-bold" for="reportProductSelect">สินค้า</label>
+                                <select id="reportProductSelect" class="form-select" onchange="showProductOrders(this.value)">
+                                    <option value="">-- เลือกสินค้า --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="admin-card mt-4" id="productOrdersCard" style="display:none;">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <div>
+                                    <h5 class="fw-bold mb-1"><i class="fa-solid fa-receipt me-2 text-primary"></i>รายละเอียด</h5>
+                                    <p class="text-muted m-0" id="productOrdersSubtitle" style="font-size: 0.88rem;"></p>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="exportProductOrdersExcel()"><i class="fa-solid fa-file-excel me-1"></i>ดาวน์โหลด Excel</button>
+                                </div>
+                            </div>
+                            <div id="productOrdersBody"></div>
+                        </div>
                     </div>
 
                     <!-- ================= TAB: PRE-ORDER ROUNDS ================= -->
@@ -622,84 +682,6 @@
                                 <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="closeRoundSummary()">ปิด</button>
                             </div>
                             <div id="roundSummaryBody"></div>
-                        </div>
-                    </div>
-
-                    <!-- ================= TAB: EXCHANGE RATE ================= -->
-                    <div class="tab-pane fade" id="tab-rates" role="tabpanel">
-                        <div class="row g-4">
-                            <div class="col-lg-5">
-                                <div class="admin-card h-100">
-                                    <h4 class="fw-bold mb-1"><i class="fa-solid fa-money-bill-transfer me-2 text-warning"></i>ตั้งเรทเงินวอน</h4>
-                                    <p class="text-muted" style="font-size: 0.9rem;">
-                                        ราคาบาทของทุกสินค้าคำนวณจากเรทนี้อัตโนมัติ ตั้งครั้งเดียวราคาขยับทั้งเว็บ
-                                    </p>
-
-                                    <div class="p-3 rounded-3 mb-3" style="background:#fff6e5; border:1px solid #ffe0a3;">
-                                        <div class="text-muted" style="font-size: 0.8rem;">เรทที่ใช้อยู่ตอนนี้</div>
-                                        <div class="fw-bold fs-3 text-dark" id="currentRateDisplay">-</div>
-                                        <div class="text-muted" id="currentRateMeta" style="font-size: 0.8rem;"></div>
-                                    </div>
-
-                                    <form onsubmit="saveNewRate(event)">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold" for="rateValueInput">เรทใหม่ (บาทต่อ 1 วอน)</label>
-                                            <input type="number" step="0.0001" min="0.0001" id="rateValueInput" class="form-control" placeholder="เช่น 0.0272" required>
-                                            <div class="form-text" style="font-size: 0.78rem;">ตัวอย่าง 0.0272 หมายถึง ₩1,000 = ฿27.20</div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold" for="rateEffectiveInput">เริ่มมีผลเมื่อ</label>
-                                            <input type="datetime-local" id="rateEffectiveInput" class="form-control" required>
-                                            <div class="d-flex gap-2 mt-2">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="fillRateEffective('now')">มีผลทันที</button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="fillRateEffective('cutoff')">รอบ 22:00 ถัดไป</button>
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold" for="rateNoteInput">หมายเหตุ</label>
-                                            <input type="text" id="rateNoteInput" class="form-control" placeholder="เช่น เรทประจำวันที่ 12 ส.ค.">
-                                        </div>
-                                        <button type="submit" class="btn btn-pink w-100 rounded-pill fw-bold"><i class="fa-solid fa-save me-2"></i>บันทึกเรทใหม่</button>
-                                    </form>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-7">
-                                <div class="admin-card mb-4">
-                                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-tags me-2 text-pink" style="color:#ff3399;"></i>ราคาสินค้าที่เรทปัจจุบัน</h5>
-                                    <div class="table-responsive">
-                                        <table class="table custom-table align-middle">
-                                            <thead>
-                                                <tr>
-                                                    <th>สินค้า</th>
-                                                    <th class="text-end">ราคาวอน</th>
-                                                    <th class="text-end">แปลงเป็นบาท</th>
-                                                    <th class="text-end">ค่าบริการ</th>
-                                                    <th class="text-end">ราคาขาย</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="ratePreviewTableBody"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <div class="admin-card">
-                                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-secondary"></i>ประวัติการตั้งเรท</h5>
-                                    <div class="table-responsive">
-                                        <table class="table custom-table align-middle">
-                                            <thead>
-                                                <tr>
-                                                    <th>เรท</th>
-                                                    <th>เริ่มมีผล</th>
-                                                    <th>ตั้งโดย</th>
-                                                    <th>หมายเหตุ</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="ratesHistoryTableBody"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -1150,6 +1132,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="js/api.js"></script>
     <script src="js/store.js"></script>
     <script src="js/ui.js"></script>
@@ -1184,9 +1167,9 @@
                 renderProductsTable();
                 renderStorageUsage();
                 renderRoundsTable();
-                renderRatesTab();
                 renderUsersTable();
                 populateNotificationUserSelect();
+                populateReportProductSelect();
             }
         }
 
@@ -1234,7 +1217,7 @@
             // เรทและรอบที่เปิดอยู่
             const rate = KpopStore.getCurrentRate();
             document.getElementById('dashRateValue').innerText = `${rate.rate}  (₩1,000 = ฿${(rate.rate * 1000).toFixed(2)})`;
-            document.getElementById('dashRateMeta').innerText = `มีผลตั้งแต่ ${rate.effectiveFrom}`;
+            document.getElementById('dashRateMeta').innerText = 'เรทกลางคงที่ของร้าน';
 
             const openRounds = KpopStore.getRounds().filter(r => KpopStore.getRoundState(r) === 'open');
             document.getElementById('dashOpenRounds').innerHTML = openRounds.length === 0
@@ -1254,6 +1237,7 @@
                 <tr>
                     <td class="fw-bold">${esc(o.id)}</td>
                     <td>${esc(o.customerName)}</td>
+                    <td style="font-size:0.85rem;">${(o.items || []).map(i => `${esc(i.title)} (x${Number(i.qty) || 0})`).join(', ')}</td>
                     <td class="fw-bold text-danger">฿${(o.total || 0).toLocaleString()}</td>
                     <td>${renderStatusBadge(o)}</td>
                 </tr>
@@ -1281,6 +1265,66 @@
                         </div>
                     </div>
                 `).join('');
+
+            renderDailyProductOrders();
+        }
+
+        // ยอดสั่งรายวันของสินค้าที่เลือก — dropdown สร้างใหม่เฉพาะตอนยังว่าง/สินค้าเปลี่ยน เพื่อไม่ทิ้งค่าที่แอดมินเลือกไว้
+        function renderDailyProductOrders() {
+            const sel = document.getElementById('dailyProductSelect');
+            const products = KpopStore.getProducts();
+            if (sel.options.length !== products.length) {
+                const totals = {};
+                products.forEach(p => {
+                    totals[p.id] = KpopStore.getDailyOrdersForProduct(p.id).reduce((s, d) => s + d.qty, 0);
+                });
+                const sorted = products.slice().sort((a, b) => totals[b.id] - totals[a.id]);
+                sel.innerHTML = sorted.map(p =>
+                    `<option value="${esc(String(p.id))}">${esc(p.title || p.name || p.id)} (${totals[p.id]} ชิ้น)</option>`
+                ).join('');
+            }
+
+            const summary = document.getElementById('dailyProductSummary');
+            const tbody = document.getElementById('dailyProductTable');
+            if (!sel.value) {
+                summary.innerText = '';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">ยังไม่มีสินค้า</td></tr>';
+                return;
+            }
+
+            let rows = KpopStore.getDailyOrdersForProduct(sel.value);
+            const totalQty = rows.length ? rows[rows.length - 1].cumulativeQty : 0;
+            const product = products.find(p => String(p.id) === sel.value);
+            const cap = product && product.quotaPerRound;
+            summary.innerText = `รวมทั้งหมด ${totalQty} ชิ้น` +
+                (cap !== null && cap !== undefined && isFinite(Number(cap)) ? ` / โควตา ${Number(cap)} ชิ้นต่อรอบ` : '');
+
+            const range = Number(document.getElementById('dailyRangeSelect').value);
+            if (range > 0) {
+                const from = new Date();
+                from.setDate(from.getDate() - range + 1);
+                const fromDay = from.getFullYear() + '-' + String(from.getMonth() + 1).padStart(2, '0') + '-' + String(from.getDate()).padStart(2, '0');
+                rows = rows.filter(d => d.day >= fromDay);
+            }
+
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">ไม่มียอดสั่งในช่วงนี้</td></tr>';
+                return;
+            }
+            const maxQty = Math.max.apply(null, rows.map(d => d.qty)) || 1;
+            // แสดงวันล่าสุดก่อน
+            tbody.innerHTML = rows.slice().reverse().map(d => `
+                <tr>
+                    <td class="fw-bold">${esc(d.day)}</td>
+                    <td>
+                        <div class="fw-bold">${d.qty}</div>
+                        <div class="progress" style="height:6px;"><div class="progress-bar bg-info" style="width:${(d.qty / maxQty) * 100}%"></div></div>
+                    </td>
+                    <td>${d.orders}</td>
+                    <td class="text-danger fw-bold">฿${d.amount.toLocaleString()}</td>
+                    <td>${d.cumulativeQty}</td>
+                </tr>
+            `).join('');
         }
 
         // รับได้ทั้ง order object และข้อความสถานะ — สี/ไอคอน/ข้อความย่อมาจากตารางกลาง
@@ -1666,12 +1710,112 @@
                     <td>${quotaCell}</td>
                     <td><span class="badge bg-pink text-white" style="background:#ff3399;">${esc(p.status)}</span></td>
                     <td class="text-end">
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill me-1 px-3" onclick="switchTab('tab-report-tab'); showProductOrders('${escArg(p.id)}')" title="ดูคำสั่งซื้อของสินค้านี้"><i class="fa-solid fa-list-ul"></i></button>
                         <button class="btn btn-sm btn-outline-primary rounded-pill me-1 px-3" onclick="openEditProductModal('${escArg(p.id)}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="deleteProduct('${escArg(p.id)}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
                 `;
             }).join('');
+        }
+
+        // รายงานคำสั่งซื้อแยกตามสินค้า — ตอบคำถาม "สินค้านี้มีใครสั่งไปบ้าง" แยกเป็นรายออเดอร์
+        // (ต่างจาก "ใบสรุปรอบ" ที่รวมยอดของทุกสินค้าในรอบเดียวเข้าด้วยกัน)
+        let currentProductOrdersId = null;
+
+        function populateReportProductSelect() {
+            const select = document.getElementById('reportProductSelect');
+            const selected = select.value;
+            select.innerHTML = '<option value="">-- เลือกสินค้า --</option>' +
+                KpopStore.getProducts().map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('');
+            if (selected) select.value = selected;
+        }
+
+        function showProductOrders(productId) {
+            currentProductOrdersId = productId || null;
+            const select = document.getElementById('reportProductSelect');
+            if (select) select.value = productId || '';
+
+            const card = document.getElementById('productOrdersCard');
+            if (!productId) {
+                card.style.display = 'none';
+                return;
+            }
+
+            const product = KpopStore.getProductById(productId);
+            const rows = KpopStore.getOrdersForProduct(productId);
+
+            const totalQty = rows.reduce((sum, r) => sum + r.qty, 0);
+            const totalAmount = rows.reduce((sum, r) => sum + r.amount, 0);
+
+            document.getElementById('productOrdersSubtitle').innerText =
+                `${product ? product.title : productId} · ${rows.length} คำสั่งซื้อ · รวม ${totalQty} ชิ้น · ยอดรวม ฿${totalAmount.toLocaleString()}`;
+
+            document.getElementById('productOrdersBody').innerHTML = rows.length === 0
+                ? '<div class="text-muted">ยังไม่มีคำสั่งซื้อสินค้านี้</div>'
+                : `
+                    <div class="table-responsive">
+                        <table class="table custom-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>รหัสคำสั่งซื้อ</th>
+                                    <th>ลูกค้า</th>
+                                    <th class="text-end">จำนวน</th>
+                                    <th class="text-end">ยอดเงิน</th>
+                                    <th>รอบ</th>
+                                    <th>สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows.map(r => `
+                                    <tr>
+                                        <td class="fw-bold">${esc(r.orderId)}</td>
+                                        <td>${esc(r.customerName)}</td>
+                                        <td class="text-end fw-bold fs-5 text-danger">${r.qty}</td>
+                                        <td class="text-end fw-bold">฿${r.amount.toLocaleString()}</td>
+                                        <td style="font-size:0.85rem;">${esc(r.roundName)}</td>
+                                        <td>${renderStatusBadge(r.order)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+            card.style.display = 'block';
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // ดาวน์โหลดรายงานที่กำลังเปิดดูอยู่เป็น .xlsx — คอลัมน์เดียวกับตารางบนจอ ใช้ไลบรารี SheetJS (xlsx.js)
+        function exportProductOrdersExcel() {
+            if (!currentProductOrdersId) return;
+            const product = KpopStore.getProductById(currentProductOrdersId);
+            const rows = KpopStore.getOrdersForProduct(currentProductOrdersId);
+
+            if (rows.length === 0) {
+                alert('สินค้านี้ยังไม่มีคำสั่งซื้อ ไม่มีอะไรให้ดาวน์โหลดค่ะ');
+                return;
+            }
+
+            const data = rows.map(r => ({
+                'รหัสคำสั่งซื้อ': r.orderId,
+                'ลูกค้า': r.customerName,
+                'จำนวน': r.qty,
+                'ยอดเงิน (บาท)': r.amount,
+                'รอบ': r.roundName,
+                'สถานะ': KpopStore.getStatusMeta(r.order).text
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 8 }, { wch: 14 }, { wch: 30 }, { wch: 22 }];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'รายงาน');
+
+            const safeTitle = (product ? product.title : currentProductOrdersId)
+                .replace(/[\\/:*?"<>|]/g, '-')
+                .slice(0, 80);
+            XLSX.writeFile(wb, `รายงานคำสั่งซื้อ-${safeTitle}.xlsx`);
         }
 
         // ---- รูปสินค้า ----
@@ -1883,9 +2027,9 @@
             bootstrap.Modal.getInstance(document.getElementById('productFormModal')).hide();
             renderProductsTable();
             renderRoundsTable();
-            renderRatesTab();
             renderAdminDashboard();
             renderStorageUsage();
+            populateReportProductSelect();
             alert('บันทึกข้อมูลสินค้าเรียบร้อยแล้วค่ะ!');
         }
 
@@ -1902,6 +2046,8 @@
             renderProductsTable();
             renderAdminDashboard();
             renderStorageUsage();
+            populateReportProductSelect();
+            if (currentProductOrdersId === id) showProductOrders('');
             alert('ลบสินค้าเรียบร้อยแล้วค่ะ');
         }
 
@@ -2094,83 +2240,6 @@
 
         function closeRoundSummary() {
             document.getElementById('roundSummaryCard').style.display = 'none';
-        }
-
-        // --- EXCHANGE RATE ---
-        // 'YYYY-MM-DD HH:mm' ตามเวลาเครื่อง เทียบกับ effectiveFrom ได้ตรง ๆ แบบสตริง
-        function localStampNow() {
-            return new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-                .toISOString().slice(0, 16).replace('T', ' ');
-        }
-
-        function renderRatesTab() {
-            const current = KpopStore.getCurrentRate();
-
-            document.getElementById('currentRateDisplay').innerText =
-                `${current.rate} บาท / ₩1  (₩1,000 = ฿${(current.rate * 1000).toFixed(2)})`;
-            document.getElementById('currentRateMeta').innerText =
-                `มีผลตั้งแต่ ${current.effectiveFrom} · ตั้งโดย ${current.setBy || '-'}${current.note ? ' · ' + current.note : ''}`;
-
-            document.getElementById('ratePreviewTableBody').innerHTML = KpopStore.getProducts().map(p => {
-                const bd = KpopStore.getPriceBreakdown(p, current.rate);
-                return `
-                    <tr>
-                        <td class="fw-bold" style="font-size:0.88rem;">${esc(p.title)}</td>
-                        <td class="text-end">${bd.krw ? '₩' + bd.krw.toLocaleString() : '<span class="text-muted">-</span>'}</td>
-                        <td class="text-end">฿${bd.converted.toLocaleString()}</td>
-                        <td class="text-end">฿${bd.serviceFee.toLocaleString()}</td>
-                        <td class="text-end fw-bold text-danger">฿${bd.total.toLocaleString()}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            const nowStamp = localStampNow();
-            document.getElementById('ratesHistoryTableBody').innerHTML = KpopStore.getRates().map(r => {
-                const upcoming = String(r.effectiveFrom) > nowStamp;
-                const active = !upcoming && r.effectiveFrom === current.effectiveFrom && r.rate === current.rate;
-                return `
-                    <tr>
-                        <td class="fw-bold">${r.rate}
-                            ${active ? '<span class="badge bg-success ms-1" style="font-size:0.68rem;">ใช้อยู่</span>' : ''}
-                            ${upcoming ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.68rem;">รอมีผล</span>' : ''}
-                        </td>
-                        <td style="font-size:0.85rem;">${esc(r.effectiveFrom)}</td>
-                        <td style="font-size:0.85rem;">${esc(r.setBy) || '-'}</td>
-                        <td class="text-muted" style="font-size:0.85rem;">${esc(r.note) || '-'}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            if (!document.getElementById('rateEffectiveInput').value) fillRateEffective('cutoff');
-        }
-
-        // input datetime-local ใช้รูปแบบ 'YYYY-MM-DDTHH:mm' ส่วน store ใช้ 'YYYY-MM-DD HH:mm'
-        function fillRateEffective(mode) {
-            const value = (mode === 'now')
-                ? new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-                : KpopStore.getNextRateCutoff().replace(' ', 'T');
-            document.getElementById('rateEffectiveInput').value = value;
-        }
-
-        async function saveNewRate(e) {
-            e.preventDefault();
-            const rate = parseFloat(document.getElementById('rateValueInput').value);
-            const effective = document.getElementById('rateEffectiveInput').value.replace('T', ' ');
-            const note = document.getElementById('rateNoteInput').value;
-            const admin = KpopStore.getCurrentUser();
-
-            const res = await KpopStore.setRate(rate, effective, admin ? admin.email : 'admin', note);
-            if (!res.success) {
-                alert(res.message);
-                return;
-            }
-
-            document.getElementById('rateValueInput').value = '';
-            document.getElementById('rateNoteInput').value = '';
-            renderRatesTab();
-            renderProductsTable();
-            renderAdminDashboard();
-            alert(`บันทึกเรทใหม่เรียบร้อยแล้วค่ะ (เริ่มมีผล ${res.rate.effectiveFrom})`);
         }
 
         // --- USER MANAGEMENT RENDERER ---

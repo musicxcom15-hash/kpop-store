@@ -36,7 +36,7 @@ console.log('\n[2] addOrder ปกติต้องคืน { success, order }
 
     eq('success = true', res.success, true);
     eq('ได้ออเดอร์กลับมา', typeof res.order === 'object' && !!res.order.id, true);
-    eq('ยอดถูกคิดจากเรทที่ล็อก', res.order.total, 940);
+    eq('ยอดถูกคิดจากเรทที่ล็อก', res.order.total, 980);
     // seed มีออเดอร์ BTS 2 ชิ้นในรอบเดียวกันอยู่แล้ว บวกใบใหม่อีก 1 → 50 - 3
     eq('โควตาถูกตัดจริง', K.getRemainingQuota('bts'), 47);
 }
@@ -103,7 +103,6 @@ console.log('\n[7] เขียนไม่ลงในเส้นทางอ�
     eq('updateOrderStatus คืน null', await K.updateOrderStatus('ORD-2026071301', 'SHIPPING'), null);
     eq('approvePayment คืน null', await K.approvePayment('ORD-2026071301'), null);
     eq('markRefunded คืน null', await K.markRefunded('ORD-2026071301'), null);
-    eq('setRate', (await K.setRate(0.03)).success, false);
     eq('saveUser', (await K.saveUser({ id: 'u-x', name: 'x', email: 'x@y.z' })).success, false);
     eq('addToCart', (await K.addToCart('bts', 1)).success, false);
 }

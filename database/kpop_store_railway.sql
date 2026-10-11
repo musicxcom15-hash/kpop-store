@@ -267,7 +267,7 @@ INSERT INTO `products` (`id`, `artist`, `title`, `price_krw`, `service_fee`, `pr
 -- เรทเงินวอนตั้งต้น -----------------------------------------------------
 -- ย้อนหลัง 7 วันที่เวลา 22:00 (RATE_CUTOFF_HOUR) เพื่อให้มีผลบังคับใช้แล้วแน่ ๆ
 INSERT INTO `rates` (`rate`, `effective_from`, `set_by`, `note`) VALUES
-(0.026500, CONCAT(DATE_ADD(CURDATE(), INTERVAL -7 DAY), ' 22:00:00'),
+(0.028000, CONCAT(DATE_ADD(CURDATE(), INTERVAL -7 DAY), ' 22:00:00'),
  'admin@kpopstore.com', 'เรทตั้งต้นของระบบ');
 
 -- ออเดอร์ตัวอย่าง -------------------------------------------------------
