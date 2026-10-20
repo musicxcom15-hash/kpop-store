@@ -204,17 +204,6 @@ function now_stamp(): string
     return date('Y-m-d H:i');
 }
 
-/** แปลงค่าที่รับมาให้เป็น DATETIME ที่ MySQL รับได้ */
-function to_datetime(?string $value): ?string
-{
-    if ($value === null || trim($value) === '') {
-        return null;
-    }
-    $value = str_replace('T', ' ', trim($value));
-    $ts = strtotime($value);
-    return $ts === false ? null : date('Y-m-d H:i:s', $ts);
-}
-
 /* ------------------------------------------------------------------ */
 /* แปลงแถว DB -> รูปทรงที่ js/store.js คาดหวัง                          */
 /*                                                                     */

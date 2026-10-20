@@ -1,0 +1,27 @@
+/* สไตล์ที่ทุกหน้าฝั่งร้านค้าใช้เหมือนกัน (หน้าแอดมินมีชุดของตัวเองใน css/pages/admin.css)
+ * โหลดหลัง css/responsive.css และก่อน css/pages/<หน้า>.css เพื่อให้หน้าแต่ละหน้าทับต่อได้ */
+
+body {
+    font-family: 'Kanit', sans-serif;
+    background-color: #fcfcfc;
+}
+
+.navbar {
+    background-color: #ffffff;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
+    padding: 15px 0;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: #333 !important;
+    letter-spacing: 1px;
+}
+
+/* จำกัดไว้ใน .navbar — หน้าประวัติสั่งซื้อใช้ .nav-link กับแท็บกรองออเดอร์ด้วย ซึ่งต้องเป็นขนาดตัวอักษรปกติ */
+.navbar .nav-link {
+    color: #555 !important;
+    font-weight: 400;
+    font-size: 0.95rem;
+}

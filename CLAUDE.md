@@ -37,7 +37,7 @@ click     → await KpopStore.addOrder(...) → POST to API → refetch to overw
 
 This exists because the page-render code across all HTML files calls data-layer getters synchronously in the middle of loops that build DOM — converting every call site to async would mean rewriting all rendering. So instead: reads stay sync (from memory), writes are the only async boundary. `preorderkpopweb/api/bootstrap.php` is the one endpoint that assembles everything a page needs (products, rounds, rates, orders scoped to the viewer, notifications, cart, users) in a single request; it also enforces per-viewer visibility (admin sees all orders in full, a customer sees their own in full and everyone else's reduced to id/status/round/qty for quota display, an anonymous visitor gets only the quota-safe view).
 
-Script load order on every page is fixed: `js/api.js` → `js/store.js` → `js/ui.js`. `store.js` is the data layer (no DOM access); `ui.js` is navbar/modals/mobile nav and must load after it.
+Script load order on every page is fixed: `js/api.js` → `js/store.js` → `js/ui.js` → `js/pages/<page>.js`. `store.js` is the data layer (no DOM access); `ui.js` is navbar/modals/mobile nav and must load after it; `js/pages/<page>.js` holds that page's own code (classic script, so its functions stay global for the `onclick="..."` attributes in the HTML). HTML files contain no inline `<style>`/`<script>`: CSS is `css/responsive.css` → `css/common.css` (storefront pages only, not admin) → `css/pages/<page>.css`, in that order so each page can override the shared rules.
 
 **Business rules that touch money, quota, or admin rights are re-validated in PHP regardless of what the browser sends** — the client is never trusted for these.
 

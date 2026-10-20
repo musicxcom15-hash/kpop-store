@@ -81,6 +81,14 @@ function must_find_order(string $orderId): array
     return $order;
 }
 
+/** ลูกค้าแตะได้เฉพาะออเดอร์ของตัวเอง (แอดมินผ่านได้ทุกใบ) */
+function require_own_order(array $order, array $user, string $message): void
+{
+    if (strcasecmp($order['customerEmail'], $user['email']) !== 0 && $user['role'] !== 'admin') {
+        fail($message, 403);
+    }
+}
+
 switch (action()) {
 
     /* ================================================================
@@ -250,9 +258,7 @@ switch (action()) {
         $user  = require_login();
         $order = must_find_order((string) ($in['orderId'] ?? ''));
 
-        if (strcasecmp($order['customerEmail'], $user['email']) !== 0 && $user['role'] !== 'admin') {
-            fail('ยกเลิกได้เฉพาะคำสั่งซื้อของตัวเองค่ะ', 403);
-        }
+        require_own_order($order, $user, 'ยกเลิกได้เฉพาะคำสั่งซื้อของตัวเองค่ะ');
 
         $meta = ORDER_STATUS[$order['statusCode']];
         if (!$meta['canCancel']) {
@@ -285,9 +291,7 @@ switch (action()) {
         $user  = require_login();
         $order = must_find_order((string) ($in['orderId'] ?? ''));
 
-        if (strcasecmp($order['customerEmail'], $user['email']) !== 0 && $user['role'] !== 'admin') {
-            fail('ส่งสลิปได้เฉพาะคำสั่งซื้อของตัวเองค่ะ', 403);
-        }
+        require_own_order($order, $user, 'ส่งสลิปได้เฉพาะคำสั่งซื้อของตัวเองค่ะ');
         if (!ORDER_STATUS[$order['statusCode']]['canReuploadSlip']) {
             fail('คำสั่งซื้อนี้ส่งสลิปใบใหม่ไม่ได้แล้ว (อาจถูกยกเลิกหรือจัดส่งไปแล้ว)');
         }

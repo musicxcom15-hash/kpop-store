@@ -1,0 +1,232 @@
+:root {
+    --primary-pink: #ff3399;
+    --dark-bg: #111827;
+    --card-radius: 16px;
+}
+
+body {
+    font-family: 'Kanit', sans-serif;
+    background-color: #f4f6f9;
+    color: #333;
+}
+
+/* Top Admin Navbar */
+.admin-navbar {
+    background-color: #1a1a24;
+    color: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.admin-navbar .navbar-brand {
+    color: white !important;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Admin Sidebar / Nav Tabs */
+.admin-sidebar {
+    background: white;
+    border-radius: var(--card-radius);
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.admin-sidebar .nav-link {
+    color: #555;
+    font-weight: 500;
+    padding: 12px 18px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-sidebar .nav-link:hover {
+    background-color: #f8f9fa;
+    color: var(--primary-pink);
+}
+
+.admin-sidebar .nav-link.active {
+    background-color: #fff0f6;
+    color: var(--primary-pink);
+    font-weight: 600;
+}
+
+/* Metric KPI Cards */
+.kpi-card {
+    background: white;
+    border-radius: var(--card-radius);
+    padding: 22px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f0f0f0;
+    transition: transform 0.2s;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+}
+
+.kpi-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+/* Tables & Content Cards */
+.admin-card {
+    background: white;
+    border-radius: var(--card-radius);
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid #eee;
+    margin-bottom: 25px;
+}
+
+.table-responsive {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.custom-table th {
+    background-color: #f8f9fa;
+    color: #555;
+    font-weight: 600;
+    font-size: 0.88rem;
+    text-transform: uppercase;
+    padding: 14px;
+    border-bottom: 2px solid #eee;
+}
+
+.custom-table td {
+    padding: 14px;
+    vertical-align: middle;
+    font-size: 0.92rem;
+}
+
+.product-thumb {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #eee;
+}
+
+.slip-preview-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid var(--primary-pink);
+    transition: transform 0.2s;
+}
+
+.slip-preview-thumb:hover {
+    transform: scale(1.1);
+}
+
+/* Status Badges */
+.badge-status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.badge-status-processing {
+    background-color: #cce5ff;
+    color: #004085;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.badge-status-shipping {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.badge-status-success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.badge-status-rejected {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* กลุ่มคืนเงินต้องไม่ใช้สีแดงของ "ถูกปฏิเสธ"
+   เพราะลูกค้าจ่ายเงินถูกต้องทุกอย่าง เป็นฝั่งร้านที่กดของไม่ได้เอง */
+.badge-status-refund {
+    background-color: #fff3cd;
+    color: #7a5b00;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.btn-pink {
+    background-color: var(--primary-pink);
+    color: white;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: 500;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-pink:hover {
+    background-color: #e02484;
+    color: white;
+}
+
+/* Modal Slip Zoom */
+.slip-modal-img {
+    max-width: 100%;
+    max-height: 500px;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive Mobile Drawer */
+@media (max-width: 991.98px) {
+    .admin-sidebar {
+        margin-bottom: 20px;
+    }
+
+    .admin-sidebar .nav {
+        flex-direction: row;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 5px;
+    }
+
+    .admin-sidebar .nav-link {
+        white-space: nowrap;
+        margin-bottom: 0;
+    }
+}

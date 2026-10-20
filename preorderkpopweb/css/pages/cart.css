@@ -1,0 +1,80 @@
+.btn-dark-custom {
+    background-color: #1a1a24;
+    color: white;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    border: none;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.btn-dark-custom:hover {
+    background-color: #333;
+    color: white;
+}
+
+.btn-outline-dark-custom {
+    border: 1px solid #1a1a24;
+    color: #1a1a24;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    background: transparent;
+    font-weight: 500;
+}
+
+.cart-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    background: #ff3399;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    font-weight: 600;
+}
+
+.round-card {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 14px;
+    margin-bottom: 22px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+
+.round-card.is-blocked {
+    opacity: 0.75;
+    background: #fafafa;
+}
+
+.round-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fbfbfd;
+}
+
+.cart-item-img {
+    width: 66px;
+    height: 66px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.qty-input {
+    width: 78px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 6px;
+}
+
+.rate-banner {
+    background: #fff8ec;
+    border: 1px solid #ffe0a3;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 0.87rem;
+}

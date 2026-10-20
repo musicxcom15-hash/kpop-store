@@ -1,0 +1,54 @@
+.btn-dark-custom {
+    background-color: #1a1a24;
+    color: white;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    border: none;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.btn-dark-custom:hover {
+    background-color: #333;
+    color: white;
+}
+
+.checkout-card {
+    background-color: white;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #222;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.summary-item-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.bank-box {
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+
+.form-control {
+    border-radius: 8px;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+}

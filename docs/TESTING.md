@@ -509,7 +509,7 @@ Object.keys(localStorage).filter(k => k.startsWith('kpop_filler'))
 5. ดูค่าตัวแปรได้ที่แผง **Variables** ด้านซ้าย หรือเอาเมาส์ชี้ที่ชื่อตัวแปรในโค้ด
 6. ปุ่มควบคุม: **F10** ข้ามทีละบรรทัด, **F11** เข้าไปในฟังก์ชัน, **F5** ทำงานต่อ
 
-ตั้ง breakpoint ในโค้ด `<script>` ที่อยู่ในไฟล์ `order-history.html` ได้เหมือนกัน
+ตั้ง breakpoint ในโค้ดของหน้าประวัติการสั่งซื้อ (`preorderkpopweb/js/pages/order-history.js`) ได้เหมือนกัน
 
 ---
 

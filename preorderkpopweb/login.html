@@ -11,72 +11,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     
-    <style>
-        body {
-            font-family: 'Kanit', sans-serif;
-            background-color: #fcfcfc;
-        }
-        
-        /* Navbar */
-        .navbar { background-color: #ffffff; box-shadow: 0 2px 15px rgba(0,0,0,0.03); padding: 15px 0; }
-        .navbar-brand { font-weight: 600; font-size: 1.2rem; color: #333 !important; letter-spacing: 1px; }
-        
-        /* สไตล์กล่อง Login */
-        .login-container {
-            max-width: 450px;
-            margin: 80px auto;
-        }
-        .login-card {
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            padding: 40px;
-            background-color: white;
-        }
-        .form-control {
-            border-radius: 8px;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            font-size: 0.95rem;
-        }
-        .form-control:focus {
-            border-color: #ff3399;
-            box-shadow: 0 0 0 0.2rem rgba(255, 51, 153, 0.15);
-        }
-        .nav-link { color: #555 !important; font-weight: 400; font-size: 0.95rem; }
-        .nav-link:hover, .nav-link.active { color: #ff3399 !important; font-weight: 500; }
-
-        .btn-dark-custom {
-            background-color: #1a1a24; color: #ffffff !important; border-radius: 50rem;
-            padding: 6px 18px; font-size: 0.88rem; border: 1px solid #1a1a24; font-weight: 500;
-            box-shadow: 0 2px 8px rgba(26, 26, 36, 0.12);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            display: inline-flex; align-items: center; justify-content: center;
-        }
-        .btn-dark-custom:hover, .btn-dark-custom.active {
-            background-color: #ff3399; border-color: #ff3399; color: #ffffff !important;
-            box-shadow: 0 4px 15px rgba(255, 51, 153, 0.35); transform: translateY(-1px);
-        }
-        .btn-dark-custom:active { transform: translateY(0); }
-
-        .btn-outline-dark-custom {
-            border: 1.5px solid #1a1a24; color: #1a1a24 !important; border-radius: 50rem;
-            padding: 6px 18px; font-size: 0.88rem; font-weight: 500;
-            background-color: transparent;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            display: inline-flex; align-items: center; justify-content: center;
-        }
-        .btn-outline-dark-custom:hover {
-            background-color: #1a1a24; border-color: #1a1a24; color: #ffffff !important;
-            box-shadow: 0 4px 12px rgba(26, 26, 36, 0.15); transform: translateY(-1px);
-        }
-        .btn-outline-dark-custom:active { transform: translateY(0); }
-
-        .cart-badge {
-            position: absolute; top: -5px; right: -8px; background-color: #ff3399;
-            color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/pages/login.css">
 </head>
 <body>
 
@@ -150,48 +86,7 @@
     <script src="js/api.js"></script>
     <script src="js/store.js"></script>
     <script src="js/ui.js"></script>
-    <script>
-        // ปุ่มสั่งซื้อ/เพิ่มลงตะกร้า และหน้าที่บังคับล็อกอิน ส่ง ?next= มาเพื่อให้เด้งกลับไปที่เดิม
-        // ตัวกรอง path (กัน open redirect) อยู่ที่ KpopStore.getSafeNextUrl() ใน ui.js
-        function getSafeNextUrl() {
-            return KpopStore.getSafeNextUrl();
-        }
-
-        // ถ้าผู้ใช้ยังไม่มีบัญชี เขาจะกดไปหน้าสมัครสมาชิกจากตรงนี้
-        // ต้องพ่วง next ต่อไปด้วย ไม่งั้นสมัครเสร็จจะถูกโยนไปหน้าแรกแทนที่จะกลับไปสินค้าที่ค้างไว้
-        KpopStore.ready(function () {
-            const next = getSafeNextUrl();
-            const link = document.getElementById('goRegisterLink');
-            if (next && link) link.href = 'register.html?next=' + encodeURIComponent(next);
-        });
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPassword').value;
-
-            const res = await KpopStore.login(email, pass);
-            if (!res.success) {
-                alert(res.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-                return;
-            }
-
-            const next = getSafeNextUrl();
-            if (next) {
-                alert(`ยินดีต้อนรับคุณ ${res.user.name} ระบบจะพากลับไปหน้าที่ค้างไว้ค่ะ`);
-                window.location.href = next;
-                return;
-            }
-
-            if (res.user.role === 'admin') {
-                alert('ยินดีต้อนรับ ผู้ดูแลระบบ (Admin) เข้าสู่ระบบสำเร็จ!');
-                window.location.href = 'admin.html';
-            } else {
-                alert(`ยินดีต้อนรับคุณ ${res.user.name} เข้าสู่ระบบสำเร็จ!`);
-                window.location.href = 'index.html';
-            }
-        }
-    </script>
+    <script src="js/pages/login.js"></script>
 
 </body>
 </html>

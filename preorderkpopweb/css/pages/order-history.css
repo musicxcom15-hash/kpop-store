@@ -1,0 +1,105 @@
+/* Navbar Specific Styling */
+.navbar .nav-link.active { color: #ff3399 !important; font-weight: 500; }
+
+/* Order Filter Tabs Styling */
+#orderFilterTabs .nav-link {
+    color: #555 !important;
+    background-color: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    transition: all 0.2s ease;
+}
+#orderFilterTabs .nav-link:hover {
+    background-color: #e9ecef !important;
+    color: #1a1a24 !important;
+}
+#orderFilterTabs .nav-link.active {
+    background-color: #1a1a24 !important;
+    color: #ffffff !important;
+    border-color: #1a1a24 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* Pink KPOP Accent Option for Filter Tabs */
+.pink-theme #orderFilterTabs .nav-link.active {
+    background-color: #ff3399 !important;
+    color: #ffffff !important;
+    border-color: #ff3399 !important;
+    box-shadow: 0 4px 12px rgba(255, 51, 153, 0.25);
+}
+
+.order-card {
+    background-color: white; border: 1px solid #eee; border-radius: 12px;
+    padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+.order-header { border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px; }
+.product-img-small { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
+
+/* สไตล์ของป้ายสถานะต่างๆ */
+.badge-status-pending { background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+.badge-status-processing { background-color: #cce5ff; color: #004085; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+.badge-status-success { background-color: #d4edda; color: #155724; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+
+/* ปุ่มหลักทรงแคปซูล */
+.btn-dark-custom {
+    background-color: #1a1a24;
+    color: #ffffff !important;
+    border-radius: 50rem;
+    padding: 7px 20px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border: 1px solid #1a1a24;
+    box-shadow: 0 2px 8px rgba(26, 26, 36, 0.12);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-dark-custom:hover {
+    background-color: #ff3399;
+    border-color: #ff3399;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(255, 51, 153, 0.35);
+    transform: translateY(-1px);
+}
+.btn-dark-custom:active {
+    transform: translateY(0);
+}
+
+.btn-outline-dark-custom {
+    border: 1.5px solid #1a1a24;
+    color: #1a1a24 !important;
+    border-radius: 50rem;
+    padding: 6px 18px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    background-color: transparent;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-outline-dark-custom:hover {
+    background-color: #1a1a24;
+    border-color: #1a1a24;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(26, 26, 36, 0.15);
+    transform: translateY(-1px);
+}
+.btn-outline-dark-custom:active {
+    transform: translateY(0);
+}
+
+.btn-outline-custom { border: 1px solid #ddd; color: #555; border-radius: 20px; font-size: 0.85rem; padding: 6px 15px; transition: all 0.2s; }
+.btn-outline-custom:hover { background-color: #f8f9fa; color: #333; border-color: #ccc; }
+
+/* ป้ายจำนวนคำสั่งซื้อบน navbar (ฉีดโดย store.js) */
+.cart-badge {
+    background-color: #ff3399;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.6rem;
+    position: absolute;
+    top: -5px;
+    right: -8px;
+}

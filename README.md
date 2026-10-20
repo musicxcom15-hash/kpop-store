@@ -146,6 +146,10 @@ preorderkpopweb/
   js/api.js            ตัวห่อการเรียก API (ต้องโหลดก่อน store.js)
   js/store.js          ข้อมูลและตรรกะทั้งหมด (data layer — ไม่แตะ DOM)
   js/ui.js             navbar · modal · แถบล่างมือถือ (ต้องโหลดหลัง store.js)
+  js/pages/<หน้า>.js   โค้ดเฉพาะของแต่ละหน้า (เช่น js/pages/admin.js คู่กับ admin.html)
+  css/common.css       สไตล์ที่ทุกหน้าฝั่งร้านค้าใช้ร่วมกัน (body · navbar)
+  css/responsive.css   ปรับหน้าจอมือถือ ใช้ทุกหน้า
+  css/pages/<หน้า>.css สไตล์เฉพาะของแต่ละหน้า
 Dockerfile             image สำหรับ deploy (php:8.3-apache) — ตัวที่ Railway ใช้จริง
 docker-entrypoint.sh   ตั้งพอร์ตตาม PORT ที่ Railway ฉีดมา + วาง .htaccess คืนให้โฟลเดอร์ uploads ที่ถูก volume บัง
 railway.json           บังคับให้ Railway build ด้วย Dockerfile ไม่ใช่เดาเป็น Node app
@@ -155,7 +159,8 @@ docs/DEPLOY.md         คู่มือ deploy ขึ้น Railway + วิ�
 docs/TESTING.md        คู่มือทดสอบฉบับเต็ม
 ```
 
-ลำดับการโหลดสคริปต์ในทุกหน้าคือ `api.js` → `store.js` → `ui.js` **ห้ามสลับ**
+ลำดับการโหลดสคริปต์ในทุกหน้าคือ `api.js` → `store.js` → `ui.js` → `pages/<หน้า>.js` **ห้ามสลับ**
+(ไฟล์ HTML มีแค่โครงหน้า ไม่มี `<style>`/`<script>` ฝังในหน้าแล้ว)
 
 ## สถาปัตยกรรม
 

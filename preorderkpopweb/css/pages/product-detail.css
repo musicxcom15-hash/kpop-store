@@ -1,0 +1,107 @@
+.btn-dark-custom {
+    background-color: #1a1a24;
+    color: #ffffff !important;
+    border-radius: 50rem;
+    padding: 7px 20px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border: 1px solid #1a1a24;
+    box-shadow: 0 2px 8px rgba(26, 26, 36, 0.12);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-dark-custom:hover {
+    background-color: #ff3399;
+    border-color: #ff3399;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(255, 51, 153, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-dark-custom:active {
+    transform: translateY(0);
+}
+
+.btn-outline-dark-custom {
+    border: 1.5px solid #1a1a24;
+    color: #1a1a24 !important;
+    border-radius: 50rem;
+    padding: 6px 18px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    background-color: transparent;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-outline-dark-custom:hover {
+    background-color: #1a1a24;
+    border-color: #1a1a24;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(26, 26, 36, 0.15);
+    transform: translateY(-1px);
+}
+
+.btn-outline-dark-custom:active {
+    transform: translateY(0);
+}
+
+.cart-badge {
+    background-color: #ff3399;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.6rem;
+    position: absolute;
+    top: -5px;
+    right: -8px;
+}
+
+.product-image-container {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.product-main-img {
+    width: 100%;
+    object-fit: cover;
+    aspect-ratio: 1 / 1;
+}
+
+.artist-badge {
+    background-color: #f0f0f0;
+    color: #555;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+.price-large {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #ff3399;
+}
+
+.info-box {
+    background-color: white;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.qty-input {
+    width: 80px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
