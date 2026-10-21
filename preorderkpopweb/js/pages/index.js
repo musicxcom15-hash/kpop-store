@@ -48,9 +48,6 @@ function renderCatalog() {
                                 ${soldOut ? '<span class="badge bg-dark rounded-pill ms-1">เต็มโควตารอบนี้</span>' : ''}
                                 ${!sellable ? '<span class="badge bg-secondary rounded-pill ms-1">หมดชั่วคราว</span>' : ''}
                             </div>
-                            <div class="rating mb-3">
-                                <i class="fa-solid fa-star star-icon"></i> 4.9 (120+)
-                            </div>
                             <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <div>
                                     <div class="price">฿${price.toLocaleString()}</div>
@@ -83,14 +80,14 @@ function renderRoundChip(round, state) {
     return `<span class="badge bg-${badge} rounded-pill">${label}</span>`;
 }
 
-// แถบเรทวันนี้ ให้ลูกค้ารู้ว่าราคาที่เห็นมาจากเรทไหน
+// แถบเรทราคากลาง ให้ลูกค้ารู้ว่าราคาที่เห็นมาจากเรทไหน (ตัวเลขมาจาก CENTRAL_RATE เสมอ ไม่ hardcode)
 function renderRateBanner() {
     const box = document.getElementById('todayRateBanner');
     if (!box) return;
     const rate = KpopStore.getCurrentRate();
     box.innerHTML = `
                 <i class="fa-solid fa-money-bill-transfer me-1"></i>
-                เรทวันนี้ <strong>₩1,000 = ฿${(rate.rate * 1000).toFixed(2)}</strong>
-                <span class="opacity-75">· ราคาปรับตามเรทใหม่ทุก 22:00 น. ยอดจะถูกล็อกเมื่อคุณแนบสลิป</span>
+                เรทราคากลาง <strong>₩1,000 = ฿${(rate.rate * 1000).toFixed(2)}</strong>
+                <span class="opacity-75">· ราคาทุกชิ้นคิดจากเรทนี้ ยอดจะถูกล็อกเมื่อคุณแนบสลิป</span>
             `;
 }

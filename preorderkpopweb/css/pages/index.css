@@ -120,15 +120,6 @@
     overflow: hidden;
 }
 
-.rating {
-    font-size: 0.75rem;
-    color: #777;
-}
-
-.star-icon {
-    color: #ffc107;
-}
-
 .price {
     font-size: 1.1rem;
     font-weight: 600;
