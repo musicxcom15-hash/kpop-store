@@ -76,6 +76,27 @@ define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 33
 | ลูกค้า | `user@kpopstore.com` | `123456` |
 | ลูกค้า | `somi@kpopstore.com` | `123456` |
 
+## วิธีรันด้วย Docker (ทางเลือกแทน MAMP)
+
+ต้องมี **Docker Desktop** เปิดอยู่ แล้วรันที่รากโปรเจกต์:
+
+```
+docker compose up -d --build
+```
+
+| | |
+|---|---|
+| หน้าร้าน | http://localhost:8080 |
+| phpMyAdmin | http://localhost:8081 |
+
+- ใช้ image เดียวกับที่ Railway ใช้จริง (php:8.3-apache) และ MySQL 9.4 รุ่นเดียวกับบน Railway
+- ครั้งแรกจะ import `database/kpop_store.sql` ให้เอง บัญชีทดสอบชุดเดียวกับตารางด้านบน
+- โฟลเดอร์ `preorderkpopweb/` ผูกเข้าไปตรง ๆ แก้โค้ดแล้วรีเฟรชหน้าเห็นผลทันที ไม่ต้อง build ใหม่
+  (ยกเว้นแก้ `Dockerfile` หรือ `docker-entrypoint.sh` ต้องรัน `docker compose up -d --build` ใหม่)
+- ใช้พอร์ต 8080/8081 จึงเปิดคู่กับ MAMP ได้ ข้อมูลใน Docker แยกจาก MAMP คนละชุด
+- `docker compose down` ปิด (ข้อมูลยังอยู่) · `docker compose down -v` ปิดและล้างข้อมูล
+  ครั้งต่อไปที่เปิดจะ import ข้อมูลตั้งต้นใหม่
+
 ## Deploy ขึ้นเว็บจริง (Railway)
 
 ### 🌐 เว็บจริง: https://web-production-6fbe4.up.railway.app
@@ -152,6 +173,7 @@ preorderkpopweb/
   css/pages/<หน้า>.css สไตล์เฉพาะของแต่ละหน้า
 Dockerfile             image สำหรับ deploy (php:8.3-apache) — ตัวที่ Railway ใช้จริง
 docker-entrypoint.sh   ตั้งพอร์ตตาม PORT ที่ Railway ฉีดมา + วาง .htaccess คืนให้โฟลเดอร์ uploads ที่ถูก volume บัง
+docker-compose.yml     รันทั้งระบบบนเครื่องด้วย Docker (web + MySQL + phpMyAdmin) — ไม่ได้ใช้บน Railway
 railway.json           บังคับให้ Railway build ด้วย Dockerfile ไม่ใช่เดาเป็น Node app
 server.js              express static server (ของเดิม — รัน PHP ไม่ได้ ใช้แค่ตอนเสิร์ฟ static เฉย ๆ)
 tests/                 ชุดทดสอบอัตโนมัติ

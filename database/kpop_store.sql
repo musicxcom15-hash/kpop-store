@@ -13,6 +13,10 @@
 --   * character_set_server เป็น utf8 ไม่ใช่ utf8mb4 จึงต้องระบุ charset เองทุกที่
 -- =====================================================================
 
+-- ไฟล์นี้เป็น UTF-8 — ต้องบอก MySQL ให้ชัด ไม่งั้นตัว import ที่ไม่ได้ตั้ง charset เอง
+-- (เช่นตอน docker compose สร้าง DB ครั้งแรก) จะอ่านเป็น latin1 แล้วภาษาไทยเพี้ยนทั้งหมด
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS `kpop_store`
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `kpop_store`;

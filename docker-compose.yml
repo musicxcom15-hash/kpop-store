@@ -1,0 +1,75 @@
+# =====================================================================
+# KPOP STORE — รันทั้งระบบบนเครื่องตัวเองด้วย Docker (ใช้แทน MAMP ได้)
+#
+#   docker compose up -d --build    เปิด (ครั้งแรกจะ import database/kpop_store.sql ให้เอง)
+#   docker compose down             ปิด (ข้อมูลใน DB และไฟล์อัปโหลดยังอยู่)
+#   docker compose down -v          ปิดและล้างข้อมูลทั้งหมด (เปิดใหม่จะ import ข้อมูลตั้งต้นใหม่)
+#
+#   หน้าร้าน    http://localhost:8080
+#   phpMyAdmin  http://localhost:8081
+#
+# ใช้พอร์ต 8080/8081 เพื่อไม่ชนกับ MAMP (80) ถ้าเปิด MAMP ค้างไว้ก็รันคู่กันได้
+# รหัสผ่านในไฟล์นี้ใช้บนเครื่องตัวเองเท่านั้น — เว็บจริงบน Railway ใช้ค่าจาก Variables ของ Railway
+# =====================================================================
+
+services:
+  web:
+    # image เดียวกับที่ Railway ใช้จริง (php:8.3-apache) — ถ้ารันที่นี่ได้ deploy ก็ควรได้
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      # config.php อ่านชื่อตัวแปรชุดเดียวกับที่ Railway ฉีดให้
+      MYSQLHOST: db
+      MYSQLPORT: "3306"
+      MYSQLDATABASE: kpop_store
+      MYSQLUSER: kpop
+      MYSQLPASSWORD: kpop
+      # ไม่ใช่ production → API บอกสาเหตุ error ละเอียด (เช่น ต่อ DB ไม่ได้เพราะอะไร)
+      APP_ENV: development
+    volumes:
+      # ผูกโค้ดเข้าไปตรง ๆ: แก้ไฟล์ในเครื่องแล้วรีเฟรชหน้าเห็นผลทันที ไม่ต้อง build ใหม่
+      - ./preorderkpopweb:/var/www/html
+      # ไฟล์อัปโหลดแยกไว้ใน volume เหมือนบน Railway (entrypoint วาง .htaccess คืนให้เอง)
+      # และไม่ปนกับ preorderkpopweb/uploads/ ในเครื่องที่ MAMP ใช้
+      - uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # เวอร์ชันเดียวกับ MySQL บน Railway
+    image: mysql:9.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: kpop_store
+      MYSQL_USER: kpop
+      MYSQL_PASSWORD: kpop
+      # ให้ CURDATE() ในไฟล์ .sql (ใช้สร้างรอบตัวอย่าง) เป็นวันที่ไทย
+      TZ: Asia/Bangkok
+    volumes:
+      - db-data:/var/lib/mysql
+      # รันเฉพาะตอน volume ยังว่าง (เปิดครั้งแรก หรือหลัง down -v)
+      - ./database/kpop_store.sql:/docker-entrypoint-initdb.d/01-kpop_store.sql:ro
+    healthcheck:
+      # web ต้องรอจน import เสร็จ ไม่งั้นหน้าแรกจะเจอ "ต่อฐานข้อมูลไม่ได้"
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - db
+
+volumes:
+  db-data:
+  uploads:

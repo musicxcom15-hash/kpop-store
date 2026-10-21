@@ -23,6 +23,10 @@ No build step (`npm run build` is a no-op) and no linter is configured.
 
 Document Root must point at `preorderkpopweb/`. Import `database/kpop_store.sql` via phpMyAdmin (idempotent — `DROP TABLE IF EXISTS` up front, but re-importing wipes data). DB connection config lives solely in `preorderkpopweb/api/config.php`; if MAMP's MySQL port isn't 3307/3306, edit `DB_PORTS` there. Full walkthrough: `README.md`.
 
+### Local dev (Docker, alternative to MAMP)
+
+`docker compose up -d --build` → site on http://localhost:8080, phpMyAdmin on :8081. `web` builds the same Dockerfile Railway uses and bind-mounts `preorderkpopweb/` (edits show up without rebuilding); uploads live in a named volume, as on Railway. `db` is MySQL 9.4 (Railway's version) and auto-imports `database/kpop_store.sql` only when its volume is empty — `docker compose down -v` to re-seed. Both `.sql` files start with `SET NAMES utf8mb4;`: without it the MySQL image's init import reads the file as latin1 and double-encodes all Thai text. `docker-compose.yml` is local-only; Railway ignores it.
+
 ## Architecture
 
 ### Sync-read / async-write data layer
