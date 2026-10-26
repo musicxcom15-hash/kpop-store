@@ -68,7 +68,10 @@ define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 33
 > หมายเหตุ: ไฟล์ `C:\MAMP\conf\mysql\my.ini` อาจเขียนพอร์ตไว้ไม่ตรงกับที่ MySQL ฟังจริง
 > ถ้าไม่แน่ใจให้ดูเลขพอร์ตจากหน้าต่าง MAMP โดยตรง
 
-### บัญชีทดสอบ
+### บัญชีทดสอบ (เฉพาะฐานข้อมูลบนเครื่อง)
+
+บัญชีเหล่านี้มาจากข้อมูลตั้งต้นใน `database/*.sql` ใช้ทดสอบบน MAMP/Docker เท่านั้น
+รหัสผ่านถูกเผยแพร่อยู่ในไฟล์นี้แล้ว — **บนเว็บจริงต้องเปลี่ยนรหัสหรือลบบัญชีตัวอย่างทิ้งหลัง import ทุกครั้ง**
 
 | บทบาท | อีเมล | รหัสผ่าน |
 |---|---|---|
@@ -122,7 +125,7 @@ docker compose up -d --build
 5. **เพิ่ม Volume ที่ `/var/www/html/uploads`** — ไม่งั้นสลิปหายทุกครั้งที่ deploy
 6. Generate Domain แล้ว import [`database/kpop_store_railway.sql`](database/kpop_store_railway.sql)
    (ฉบับตัด `CREATE DATABASE` ออก — **ไม่ใช่** `kpop_store.sql`)
-7. เปลี่ยนรหัสแอดมินจาก `admin123`
+7. เปลี่ยนรหัสแอดมินจาก `admin123` และเปลี่ยนรหัสหรือลบบัญชีลูกค้าตัวอย่าง (`user@`, `somi@kpopstore.com`)
 
 ## ทดสอบ
 
