@@ -141,7 +141,8 @@ try {
     const fails = results.filter(r => r.startsWith('FAIL')).length;
     console.log(`\nสรุป: PASS ${results.length - fails} / FAIL ${fails}`);
     // 403 เกิดจากคำขอแอดมินที่ตั้งใจยิงด้วยบัญชีลูกค้า ไม่ใช่ปัญหา
-    const errs = problems.filter(p => !/403 \(Forbidden\)/.test(p));
+    // (บนเครื่องขึ้น "403 (Forbidden)" แต่ผ่าน HTTP/2 ของ Railway ขึ้น "403 ()")
+    const errs = problems.filter(p => !/status of 403 /.test(p));
     console.log('error ในเบราว์เซอร์: ' + (errs.length ? '\n' + errs.join('\n') : 'ไม่มี'));
     ws.close(); chrome.kill();
     setTimeout(() => { try { fs.rmSync(profile, { recursive: true, force: true }); } catch { } process.exit(fails || errs.length ? 1 : 0); }, 500);
