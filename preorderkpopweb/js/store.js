@@ -468,6 +468,42 @@
         return { success: true };
     }
 
+    // สถานะการโหลดข้อมูลรอบแรกของหน้า ให้ ui.js เอาไปแสดงแถบแจ้ง (store.js ไม่วาดหน้าจอเอง)
+    //
+    // MySQL บน Railway หลับเมื่อไม่มีคนใช้และตื่นช้าราว 10–20 วินาที ช่วงนั้น bootstrap.php
+    // ตอบ "ระบบขัดข้องชั่วคราว" — เดิมหน้าเว็บวาดต่อด้วยข้อมูลว่างแบบเงียบ ๆ
+    // ลูกค้าจึงเห็น "ยังไม่มีสินค้า" เหมือนข้อมูลหาย จึงลองซ้ำให้ครอบคลุมเวลาที่ DB ตื่น
+    const LOAD_RETRY_DELAYS_MS = [2000, 4000, 6000, 8000];
+    let loadStatus = { state: 'loading', message: '' };
+    const loadListeners = [];
+
+    function setLoadStatus(state, message) {
+        loadStatus = { state: state, message: message || '' };
+        loadListeners.forEach(function (fn) {
+            try { fn(loadStatus); } catch (e) { console.error(e); }
+        });
+    }
+
+    async function hydrateWithRetry() {
+        let res = await hydrate();
+        for (let i = 0; !res.success && i < LOAD_RETRY_DELAYS_MS.length; i++) {
+            setLoadStatus('retrying', res.message);
+            await new Promise(function (r) { setTimeout(r, LOAD_RETRY_DELAYS_MS[i]); });
+            res = await hydrate();
+        }
+        if (!res.success) {
+            // getter อย่าง getProducts() มีค่าสำรองเป็นข้อมูลตัวอย่าง DEFAULT_* (ไว้ใช้ในโหมด localStorage)
+            // ถ้าปล่อย CACHE ว่าง หน้าเว็บจะแสดงสินค้า/ราคาตัวอย่างที่ไม่มีอยู่จริงใน DB ทั้งที่โหลดพลาด
+            [STORAGE_KEYS.PRODUCTS, STORAGE_KEYS.ROUNDS, STORAGE_KEYS.ORDERS, STORAGE_KEYS.USERS,
+             STORAGE_KEYS.NOTIFICATIONS, STORAGE_KEYS.CART].forEach(function (key) {
+                if (!(key in CACHE)) CACHE[key] = [];
+            });
+            if (!(STORAGE_KEYS.CURRENT_USER in CACHE)) CACHE[STORAGE_KEYS.CURRENT_USER] = null;
+        }
+        setLoadStatus(res.success ? 'ok' : 'failed', res.message);
+        return res;
+    }
+
     /**
      * ส่งคำสั่งเขียนไปเซิร์ฟเวอร์ แล้วดึงข้อมูลใหม่มาทับ CACHE เมื่อสำเร็จ
      *
@@ -1890,10 +1926,19 @@
          * ของหน้านั้นจะเริ่มทำงาน โค้ดข้างในจึงยังเป็น synchronous ล้วนเหมือนเดิมทุกบรรทัด
          *
          * เรียกจากหลายที่ในหน้าเดียวกันได้ — ใช้ promise ตัวเดิม ไม่ยิงซ้ำ
+         *
+         * ถ้าโหลดไม่สำเร็จจะลองซ้ำเองก่อน (ดู hydrateWithRetry) แล้วค่อยเรียก fn
+         * ไม่ว่าจะสำเร็จหรือไม่ — หน้าอย่าง login ยังต้องผูกปุ่มได้แม้ข้อมูลไม่มา
+         * ส่วนการบอกผู้ใช้ว่าโหลดพลาดเป็นหน้าที่ของ onLoadStatus + ui.js
          */
         ready(fn) {
             if (!hydratePromise) {
-                hydratePromise = HAS_API ? hydrate() : Promise.resolve({ success: true });
+                if (HAS_API) {
+                    hydratePromise = hydrateWithRetry();
+                } else {
+                    setLoadStatus('ok');
+                    hydratePromise = Promise.resolve({ success: true });
+                }
             }
 
             const run = () => hydratePromise.then(() => {
@@ -1911,6 +1956,15 @@
             }
 
             return hydratePromise;
+        },
+
+        /**
+         * สมัครรับสถานะการโหลดรอบแรก: loading | retrying | ok | failed
+         * fn ถูกเรียกทันทีด้วยสถานะปัจจุบัน และทุกครั้งที่สถานะเปลี่ยน
+         */
+        onLoadStatus(fn) {
+            loadListeners.push(fn);
+            fn(loadStatus);
         },
 
         /** ดึงข้อมูลใหม่จากเซิร์ฟเวอร์มาทับ CACHE (ใช้ตอนอยากรีเฟรชโดยไม่โหลดหน้าใหม่) */

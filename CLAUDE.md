@@ -13,7 +13,10 @@ There is a leftover `server.js` (Express) + `package.json` from an earlier proto
 ```
 npm test                    # run all test files (tests/run-all.mjs), <1s, no npm install needed
 node tests/<file>.test.mjs  # run a single test file directly
+node tests/e2e/smoke.mjs http://localhost:8080   # headless-Chrome smoke test of the running site (not in npm test)
 ```
+
+The e2e smoke test needs a running site (Docker/MAMP) and local Chrome; it defaults to the sample accounts from `database/kpop_store.sql` — against the live site pass real accounts via `SMOKE_CUSTOMER_EMAIL`/`SMOKE_CUSTOMER_PASSWORD` (+ `SMOKE_SKIP_ADMIN=1` or `SMOKE_ADMIN_*`).
 
 Tests load the real `preorderkpopweb/js/store.js` into a simulated `localStorage`/`fetch` environment — the business logic under test is the same code that runs in the browser. `store.js` branches on whether `KpopApi`/`fetch` exist: present → talks to the PHP API, absent → falls back to raw `localStorage` (this fallback path is also what the tests exercise). Read `docs/TESTING.md` before touching order/rate/quota logic — it has the full checklist including things that must be verified manually in a browser.
 
@@ -38,6 +41,8 @@ open page → api/bootstrap.php (single request) → cached in memory
           → KpopStore.ready(fn) releases page-render code
 click     → await KpopStore.addOrder(...) → POST to API → refetch to overwrite cache
 ```
+
+If `bootstrap.php` fails (Railway's MySQL sleeps when idle and takes ~10–20s to wake), `ready()` retries for ~20s before giving up; on final failure it fills the cache with empty values so getters don't fall back to the `DEFAULT_*` sample data baked into `store.js`. Load state is exposed via `KpopStore.onLoadStatus(fn)` (`loading`/`retrying`/`ok`/`failed`) and `ui.js` renders the "connecting…/failed + retry" bar — keep that split, `store.js` doesn't render.
 
 This exists because the page-render code across all HTML files calls data-layer getters synchronously in the middle of loops that build DOM — converting every call site to async would mean rewriting all rendering. So instead: reads stay sync (from memory), writes are the only async boundary. `preorderkpopweb/api/bootstrap.php` is the one endpoint that assembles everything a page needs (products, rounds, rates, orders scoped to the viewer, notifications, cart, users) in a single request; it also enforces per-viewer visibility (admin sees all orders in full, a customer sees their own in full and everyone else's reduced to id/status/round/qty for quota display, an anonymous visitor gets only the quota-safe view).
 

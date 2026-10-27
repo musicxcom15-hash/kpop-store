@@ -16,6 +16,9 @@ services:
   web:
     # image เดียวกับที่ Railway ใช้จริง (php:8.3-apache) — ถ้ารันที่นี่ได้ deploy ก็ควรได้
     build: .
+    # เปิด Docker Desktop ใหม่/รีสตาร์ทเครื่องแล้วให้กลับมาเอง ไม่ต้องสั่ง up ซ้ำ
+    # (ยกเว้นตอนที่สั่ง docker compose stop เอง)
+    restart: unless-stopped
     ports:
       - "8080:80"
     environment:
@@ -40,6 +43,7 @@ services:
   db:
     # เวอร์ชันเดียวกับ MySQL บน Railway
     image: mysql:9.4
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: kpop_store
@@ -61,6 +65,7 @@ services:
 
   phpmyadmin:
     image: phpmyadmin:5.2
+    restart: unless-stopped
     ports:
       - "8081:80"
     environment:

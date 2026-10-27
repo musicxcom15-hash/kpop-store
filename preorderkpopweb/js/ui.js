@@ -410,6 +410,29 @@
         }
     });
 
+// แถบแจ้งเมื่อโหลดข้อมูลจากเซิร์ฟเวอร์ไม่ได้ (เช่น DB บน Railway เพิ่งตื่น)
+// สถานะ loading ปกติไม่แสดงอะไร จะได้ไม่กะพริบทุกครั้งที่เปิดหน้า — โผล่เฉพาะตอนต้องลองซ้ำหรือพลาดจริง
+KpopStore.onLoadStatus(function (status) {
+    const old = document.getElementById('kpopLoadStatusBar');
+    if (old) old.remove();
+    if (status.state !== 'retrying' && status.state !== 'failed') return;
+
+    const failed = status.state === 'failed';
+    const bar = document.createElement('div');
+    bar.id = 'kpopLoadStatusBar';
+    bar.setAttribute('role', 'status');
+    bar.className = 'alert ' + (failed ? 'alert-danger' : 'alert-warning') +
+        ' d-flex align-items-center justify-content-center flex-wrap gap-2 m-0 rounded-0 py-2 px-3 shadow-sm';
+    bar.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; z-index: 2000; font-size: 0.9rem;';
+    bar.innerHTML = failed
+        ? '<span><i class="fa-solid fa-triangle-exclamation me-2"></i>โหลดข้อมูลไม่สำเร็จ ' +
+          KpopStore.esc(status.message) + '</span>' +
+          '<button type="button" class="btn btn-sm btn-light rounded-pill px-3" onclick="location.reload()">' +
+          '<i class="fa-solid fa-rotate-right me-1"></i>ลองใหม่</button>'
+        : '<span><i class="fa-solid fa-spinner fa-spin me-2"></i>กำลังเชื่อมต่อเซิร์ฟเวอร์ อาจใช้เวลาสักครู่…</span>';
+    document.body.appendChild(bar);
+});
+
 // Auto boot on DOM load
 // ใช้ KpopStore.ready() แทน DOMContentLoaded ตรง ๆ เพื่อรอให้ข้อมูลจากเซิร์ฟเวอร์
 // มาถึงก่อน ไม่งั้น navbar จะวาดตอนที่ยังไม่รู้ว่าใครล็อกอินอยู่ แล้วกะพริบเป็นสถานะ guest
