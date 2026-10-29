@@ -287,24 +287,14 @@
                         </div>
                     </div>
 
-                    <div class="dropdown">
-                        <button class="btn btn-outline-dark border-0 dropdown-toggle d-flex align-items-center gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 25px; padding: 5px 12px; background: #f8f9fa;">
-                            <i class="fa-solid fa-circle-user fs-5 ${isAdmin ? 'text-danger' : 'text-primary'}"></i>
-                            <span class="d-none d-md-inline font-weight-500" style="font-size: 0.88rem;">${esc(currentUser.name)}</span>
-                            ${isAdmin ? '<span class="badge bg-danger ms-1" style="font-size: 0.65rem;">ADMIN</span>' : ''}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="userMenu" style="border-radius: 12px;">
-                            <li class="px-3 py-2 border-bottom">
-                                <div class="fw-bold" style="font-size: 0.9rem;">${esc(currentUser.name)}</div>
-                                <small class="text-muted">${esc(currentUser.email)}</small>
-                            </li>
-                            ${isAdmin ? '<li><a class="dropdown-item py-2 fw-bold text-danger" href="admin.html"><i class="fa-solid fa-gauge-high me-2"></i>ระบบผู้ดูแลระบบ (Admin)</a></li>' : ''}
-                            <li><button class="dropdown-item py-2" onclick="KpopStore.openProfileModal()"><i class="fa-solid fa-user-pen me-2 text-primary"></i>แก้ไขข้อมูลส่วนตัว / ที่อยู่</button></li>
-                            <li><a class="dropdown-item py-2" href="order-history.html"><i class="fa-solid fa-clock-rotate-left me-2 text-secondary"></i>ประวัติคำสั่งซื้อ</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><button class="dropdown-item py-2 text-danger" onclick="KpopStore.logout()"><i class="fa-solid fa-right-from-bracket me-2"></i>ออกจากระบบ</button></li>
-                        </ul>
-                    </div>
+                    <button class="btn btn-outline-dark border-0 d-flex align-items-center gap-2" type="button" id="userMenu"
+                        onclick="KpopStore.openAccountDrawer()" aria-controls="kpopAccountDrawer" aria-label="เปิดเมนูบัญชีของฉัน"
+                        style="border-radius: 25px; padding: 5px 12px; background: #f8f9fa;">
+                        <i class="fa-solid fa-circle-user fs-5 ${isAdmin ? 'text-danger' : 'text-primary'}"></i>
+                        <span class="d-none d-md-inline font-weight-500" style="font-size: 0.88rem;">${esc(currentUser.name)}</span>
+                        ${isAdmin ? '<span class="badge bg-danger ms-1" style="font-size: 0.65rem;">ADMIN</span>' : ''}
+                        <i class="fa-solid fa-bars text-secondary ms-1" style="font-size: 0.8rem;"></i>
+                    </button>
                 `;
             } else {
                 const isRegisterPage = window.location.pathname.endsWith('register.html') || window.location.href.includes('register.html');
@@ -343,6 +333,102 @@
                     ${authHtml}
                 `;
             }
+        },
+
+        // แผงบัญชีด้านข้าง (เลื่อนออกจากขวา) แทน dropdown เดิมใต้ชื่อผู้ใช้
+        // วาดเนื้อหาใหม่ทุกครั้งที่เปิด ตัวเลขตะกร้า/ออเดอร์/แจ้งเตือนจึงเป็นค่าล่าสุดเสมอ
+        openAccountDrawer() {
+            const currentUser = this.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            if (!document.getElementById('kpopAccountDrawerStyle')) {
+                const style = document.createElement('style');
+                style.id = 'kpopAccountDrawerStyle';
+                style.innerHTML = `
+                    .kpop-account-drawer { width: 360px !important; max-width: 88vw; color: #fff;
+                        background: linear-gradient(160deg, #2a1428 0%, #1a1a24 55%); border-left: 1px solid rgba(255, 51, 153, 0.25); }
+                    .kpop-account-drawer .drawer-avatar { width: 56px; height: 56px; border-radius: 50%; background: rgba(255, 255, 255, 0.12);
+                        display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 600; flex-shrink: 0; }
+                    .kpop-account-drawer .drawer-email { color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                    .kpop-account-drawer .drawer-divider { border-color: rgba(255, 255, 255, 0.15); opacity: 1; margin: 18px 0; }
+                    .kpop-account-drawer .drawer-stat { font-size: 0.95rem; color: rgba(255, 255, 255, 0.85); }
+                    .kpop-account-drawer .drawer-stat strong { color: #fff; font-size: 1.05rem; margin-right: 4px; }
+                    .kpop-account-drawer .btn-neon { flex: 1; color: #fff; background: transparent; border: 2px solid #ff3399; border-radius: 8px;
+                        padding: 9px 8px; font-size: 0.9rem; box-shadow: 0 0 10px rgba(255, 51, 153, 0.55), inset 0 0 6px rgba(255, 51, 153, 0.25);
+                        transition: background 0.2s, box-shadow 0.2s; }
+                    .kpop-account-drawer .btn-neon:hover { background: rgba(255, 51, 153, 0.18); color: #fff; box-shadow: 0 0 16px rgba(255, 51, 153, 0.8); }
+                    .kpop-account-drawer .drawer-note { color: #fff; font-size: 0.8rem; text-decoration: underline; font-style: italic; }
+                    .kpop-account-drawer .drawer-menu a, .kpop-account-drawer .drawer-menu button { display: flex; align-items: center; gap: 12px;
+                        width: 100%; padding: 11px 10px; color: #fff; background: none; border: 0; border-radius: 8px; text-align: left;
+                        text-decoration: none; font-size: 0.95rem; }
+                    .kpop-account-drawer .drawer-menu a:hover, .kpop-account-drawer .drawer-menu button:hover { background: rgba(255, 255, 255, 0.07); }
+                    .kpop-account-drawer .drawer-menu i { width: 22px; text-align: center; font-size: 1.05rem; color: rgba(255, 255, 255, 0.85); }
+                `;
+                document.head.appendChild(style);
+            }
+
+            let el = document.getElementById('kpopAccountDrawer');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'kpopAccountDrawer';
+                el.className = 'offcanvas offcanvas-end kpop-account-drawer';
+                el.tabIndex = -1;
+                el.setAttribute('aria-labelledby', 'kpopAccountDrawerLabel');
+                document.body.appendChild(el);
+            }
+
+            const isAdmin = currentUser.role === 'admin';
+            const myOrders = this.getOrders().filter(o => o.customerEmail && o.customerEmail.toLowerCase() === currentUser.email.toLowerCase());
+            const pendingSlips = myOrders.filter(o => this.getStatusMeta(o).group === 'pending').length;
+            const unread = this.getUnreadNotificationCount(currentUser.email);
+            const initial = String(currentUser.name || currentUser.email || '?').trim().charAt(0).toUpperCase();
+
+            // บรรทัดเตือนสั้น ๆ ใต้ปุ่ม: แจ้งเตือนที่ยังไม่อ่านสำคัญกว่า ถ้าไม่มีค่อยบอกออเดอร์ที่รอร้านตรวจสลิป
+            const note = unread > 0
+                ? `<a href="order-history.html" class="drawer-note">มีการแจ้งเตือนใหม่ ${unread} รายการ</a>`
+                : (pendingSlips > 0 ? `<a href="order-history.html" class="drawer-note">${pendingSlips} คำสั่งซื้อ, กำลังรอร้านตรวจสอบสลิป</a>` : '');
+
+            el.innerHTML = `
+                <div class="offcanvas-body p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="drawer-avatar">${esc(initial)}</div>
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div id="kpopAccountDrawerLabel" class="fw-bold text-truncate" style="font-size: 1.05rem;">${esc(currentUser.name)}</div>
+                            <div class="drawer-email">${esc(currentUser.email)}</div>
+                            <span class="badge ${isAdmin ? 'bg-danger' : 'bg-primary'} mt-1" style="font-size: 0.65rem;">${isAdmin ? 'ADMIN' : 'CUSTOMER'}</span>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white align-self-start" data-bs-dismiss="offcanvas" aria-label="ปิด"></button>
+                    </div>
+
+                    <hr class="drawer-divider">
+
+                    <div class="d-flex gap-4 mb-3">
+                        <div class="drawer-stat"><i class="fa-solid fa-receipt me-2"></i><strong>${myOrders.length}</strong>คำสั่งซื้อ</div>
+                        <div class="drawer-stat"><i class="fa-solid fa-cart-shopping me-2"></i><strong>${this.getCartCount()}</strong>ชิ้นในตะกร้า</div>
+                    </div>
+                    <div class="d-flex gap-3 mb-3">
+                        <a href="cart.html" class="btn btn-neon text-decoration-none">ตะกร้าของฉัน</a>
+                        <button type="button" class="btn btn-neon" data-bs-dismiss="offcanvas" onclick="KpopStore.goToAllProducts()">สินค้าทั้งหมด</button>
+                    </div>
+                    ${note}
+
+                    <hr class="drawer-divider">
+
+                    <nav class="drawer-menu">
+                        <button type="button" data-bs-dismiss="offcanvas" onclick="KpopStore.openProfileModal()"><i class="fa-regular fa-circle-user"></i>บัญชีของฉัน (ข้อมูลส่วนตัว / ที่อยู่)</button>
+                        <a href="order-history.html"><i class="fa-solid fa-list-check"></i>การสั่งซื้อของฉัน</a>
+                        <a href="cart.html"><i class="fa-solid fa-cart-shopping"></i>ตะกร้าพรีออเดอร์</a>
+                        <button type="button" data-bs-dismiss="offcanvas" onclick="KpopStore.openHowToOrderModal()"><i class="fa-regular fa-circle-question"></i>วิธีการสั่งซื้อ</button>
+                        ${isAdmin ? '<a href="admin.html"><i class="fa-solid fa-gauge-high" style="color: #ff6b9d;"></i>ระบบผู้ดูแลระบบ (Admin)</a>' : ''}
+                        <button type="button" onclick="KpopStore.logout()"><i class="fa-solid fa-door-open"></i>ออกจากระบบ</button>
+                    </nav>
+                </div>
+            `;
+
+            bootstrap.Offcanvas.getOrCreateInstance(el).show();
         },
 
         renderNotificationListHtml(userEmail) {
@@ -389,7 +475,7 @@
                             <i class="fa-solid fa-shield-halved fs-5 d-block mb-1 text-danger"></i>แอดมิน
                         </a>
                         ` : ''}
-                        <a href="${currentUser ? 'order-history.html' : 'login.html'}" class="text-decoration-none ${currentPath.includes('login') || currentPath.includes('register') ? 'text-pink font-weight-bold' : 'text-secondary'}" style="font-size: 0.75rem;">
+                        <a href="${currentUser ? 'javascript:void(0)' : 'login.html'}" ${currentUser ? 'onclick="KpopStore.openAccountDrawer()"' : ''} class="text-decoration-none ${currentPath.includes('login') || currentPath.includes('register') ? 'text-pink font-weight-bold' : 'text-secondary'}" style="font-size: 0.75rem;">
                             <i class="fa-solid fa-user fs-5 d-block mb-1"></i>${currentUser ? 'บัญชี' : 'เข้าสู่ระบบ'}
                         </a>
                     </div>

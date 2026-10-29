@@ -17,8 +17,10 @@ services:
     # image เดียวกับที่ Railway ใช้จริง (php:8.3-apache) — ถ้ารันที่นี่ได้ deploy ก็ควรได้
     build: .
     # เปิด Docker Desktop ใหม่/รีสตาร์ทเครื่องแล้วให้กลับมาเอง ไม่ต้องสั่ง up ซ้ำ
-    # (ยกเว้นตอนที่สั่ง docker compose stop เอง)
-    restart: unless-stopped
+    # ต้องเป็น always: unless-stopped ไม่กลับมาเอง เพราะตอนปิด Docker Desktop
+    # container ถูกหยุดก่อน daemon ปิด จึงนับเป็น "ถูกสั่งหยุด" (ทดสอบจริงแล้ว)
+    # อยากปิดถาวรให้ใช้ docker compose down แทน stop
+    restart: always
     ports:
       - "8080:80"
     environment:
@@ -43,7 +45,7 @@ services:
   db:
     # เวอร์ชันเดียวกับ MySQL บน Railway
     image: mysql:9.4
-    restart: unless-stopped
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: kpop_store
@@ -65,7 +67,7 @@ services:
 
   phpmyadmin:
     image: phpmyadmin:5.2
-    restart: unless-stopped
+    restart: always
     ports:
       - "8081:80"
     environment:
