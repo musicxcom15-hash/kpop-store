@@ -64,7 +64,9 @@ There used to be an append-only `rates` table (admin-editable rate history, and 
 
 ### Auth & sessions
 
-Real password auth (`password_hash()`/`password_verify()`) against `users.password_hash` — no auto-provisioning of accounts on login, unlike the old demo build. Login failure message is intentionally identical for "no such email" and "wrong password" to prevent account enumeration. Sessions are PHP's default file-based sessions stored in the container filesystem — **every deploy restarts the container and logs everyone out**, and running more than one replica would split sessions across instances, so Railway is configured for exactly one replica.
+Real password auth (`password_hash()`/`password_verify()`) against `users.password_hash` — no auto-provisioning of accounts on login, unlike the old demo build. Login failure message is intentionally identical for "no such email" and "wrong password" to prevent account enumeration.
+
+There is no email sending, so "forgot password" is admin-assisted: `auth.php?action=forgot` (public; same reply whether or not the account exists; deduped per email for 15 min) drops a notification in the shop inbox → admin clicks the key button in the users tab (`users.php?action=reset-password`, never for their own account) and gets a random temp password once (`random_temp_password()` in `helpers.php`, no 0/O/1/l/I because it's read out over the phone) → customer logs in and changes it via `auth.php?action=change-password` (requires the current password). Accounts the admin creates also get a random temp password shown once — there is no fixed default password. Sessions are PHP's default file-based sessions stored in the container filesystem — **every deploy restarts the container and logs everyone out**, and running more than one replica would split sessions across instances, so Railway is configured for exactly one replica.
 
 ### File uploads
 

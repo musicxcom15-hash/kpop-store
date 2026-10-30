@@ -2,17 +2,15 @@
 /**
  * จัดการผู้ใช้จากหน้าแอดมิน
  *
- * ฟอร์มแอดมินไม่มีช่องรหัสผ่าน — ตอนเพิ่มบัญชีใหม่จึงตั้งรหัสตั้งต้นให้
+ * ฟอร์มแอดมินไม่มีช่องรหัสผ่าน — ตอนเพิ่มบัญชีใหม่จึงสุ่มรหัสชั่วคราวให้
  * แล้วแจ้งกลับไปแสดงให้แอดมินเห็นครั้งเดียว (ตอนแก้บัญชีเดิมจะไม่แตะรหัสผ่าน)
+ * reset-password ใช้หลักเดียวกันตอนลูกค้าลืมรหัส
  */
 
 require_once __DIR__ . '/helpers.php';
 
 $admin = require_admin();
 $in    = body();
-
-/** รหัสผ่านตั้งต้นสำหรับบัญชีที่แอดมินสร้างให้ */
-const DEFAULT_NEW_USER_PASSWORD = 'kpop123456';
 
 function all_users(): array
 {
@@ -69,20 +67,21 @@ switch (action()) {
             $id = 'u-' . time() . '-' . bin2hex(random_bytes(3));
         }
 
+        $temp = random_temp_password();
         $st = db()->prepare(
             'INSERT INTO users (id, name, email, password_hash, phone, address, role, created_at)
              VALUES (?,?,?,?,?,?,?,?)'
         );
         $st->execute([
             $id, $name, $email,
-            password_hash(DEFAULT_NEW_USER_PASSWORD, PASSWORD_BCRYPT),
+            password_hash($temp, PASSWORD_BCRYPT),
             $phone, $address, $role, date('Y-m-d'),
         ]);
 
         ok([
             'users'           => all_users(),
             'id'              => $id,
-            'defaultPassword' => DEFAULT_NEW_USER_PASSWORD,
+            'defaultPassword' => $temp,
         ]);
     }
 
@@ -116,6 +115,32 @@ switch (action()) {
         }
 
         ok(['users' => $selfDeleted ? [] : all_users(), 'selfDeleted' => $selfDeleted]);
+    }
+
+    /* ---------------------------------------------------------- */
+    /* ลูกค้าลืมรหัสผ่าน: ตั้งรหัสชั่วคราวใหม่ แล้วส่งกลับให้แอดมินเห็นครั้งเดียวเพื่อแจ้งลูกค้า */
+    case 'reset-password': {
+        $id = (string) ($in['id'] ?? '');
+
+        $st = db()->prepare('SELECT * FROM users WHERE id = ?');
+        $st->execute([$id]);
+        $target = $st->fetch();
+        if (!$target) {
+            fail('ไม่พบบัญชีนี้ในระบบ', 200, ['users' => all_users()]);
+        }
+        // รหัสของตัวเองต้องเปลี่ยนผ่าน change-password ที่ยืนยันรหัสเดิม ไม่ใช่รีเซ็ตทับ
+        if ($target['id'] === $admin['id']) {
+            fail('รหัสผ่านของตัวเองให้เปลี่ยนที่เมนูบัญชี → เปลี่ยนรหัสผ่าน แทนค่ะ');
+        }
+
+        $temp = random_temp_password();
+        $st = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+        $st->execute([password_hash($temp, PASSWORD_BCRYPT), $id]);
+
+        push_notification($target['email'], 'รหัสผ่านของคุณถูกรีเซ็ตแล้ว',
+            'ร้านได้ตั้งรหัสผ่านชั่วคราวให้คุณตามคำขอ กรุณาเปลี่ยนรหัสผ่านใหม่ทันทีที่เมนูบัญชี → เปลี่ยนรหัสผ่าน');
+
+        ok(['users' => all_users(), 'tempPassword' => $temp]);
     }
 
     /* ---------------------------------------------------------- */

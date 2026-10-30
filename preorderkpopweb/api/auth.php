@@ -7,6 +7,10 @@
  *
  * ข้อความตอบกลับตอนล็อกอินไม่ผ่านตั้งใจให้เหมือนกันทั้งกรณี "ไม่มีอีเมลนี้"
  * และ "รหัสผิด" เพื่อไม่ให้ใครใช้หน้าล็อกอินไล่เดาว่าอีเมลไหนมีบัญชีอยู่บ้าง
+ *
+ * ลืมรหัสผ่าน: ระบบไม่มีการส่งอีเมล จึงใช้วิธีให้แอดมินรีเซ็ตให้
+ *   forgot (ลูกค้า) → แจ้งเตือนเข้ากล่องร้าน → แอดมินกดรีเซ็ตใน users.php
+ *   → โทรแจ้งรหัสชั่วคราว → ลูกค้าล็อกอินแล้วเปลี่ยนรหัสเองที่ change-password
  */
 
 require_once __DIR__ . '/helpers.php';
@@ -55,8 +59,8 @@ switch (action()) {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             fail('รูปแบบอีเมลไม่ถูกต้องค่ะ');
         }
-        if (strlen($pass) < 6) {
-            fail('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษรค่ะ');
+        if (strlen($pass) < MIN_PASSWORD_LENGTH) {
+            fail('รหัสผ่านต้องยาวอย่างน้อย ' . MIN_PASSWORD_LENGTH . ' ตัวอักษรค่ะ');
         }
 
         // อีเมลคือคีย์ที่ผูกออเดอร์กับเจ้าของ ถ้าปล่อยให้ซ้ำได้
@@ -124,6 +128,63 @@ switch (action()) {
         $st = db()->prepare('SELECT * FROM users WHERE id = ?');
         $st->execute([$user['id']]);
         ok(['user' => map_user($st->fetch())]);
+    }
+
+    /* ---------------------------------------------------------- */
+    case 'change-password': {
+        $user    = require_login();
+        $in      = body();
+        $current = (string) ($in['currentPassword'] ?? '');
+        $new     = (string) ($in['newPassword'] ?? '');
+
+        // ต้องยืนยันรหัสเดิมเสมอ — ใครเจอเครื่องที่ล็อกอินค้างไว้จะได้ยึดบัญชีไม่ได้
+        if (!password_verify($current, $user['password_hash'])) {
+            fail('รหัสผ่านปัจจุบันไม่ถูกต้องค่ะ');
+        }
+        if (strlen($new) < MIN_PASSWORD_LENGTH) {
+            fail('รหัสผ่านใหม่ต้องยาวอย่างน้อย ' . MIN_PASSWORD_LENGTH . ' ตัวอักษรค่ะ');
+        }
+        if ($new === $current) {
+            fail('รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิมค่ะ');
+        }
+
+        $st = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+        $st->execute([password_hash($new, PASSWORD_BCRYPT), $user['id']]);
+        ok();
+    }
+
+    /* ---------------------------------------------------------- */
+    case 'forgot': {
+        $email = trim((string) (body()['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            fail('รูปแบบอีเมลไม่ถูกต้องค่ะ');
+        }
+
+        // ตอบข้อความเดียวกันเสมอไม่ว่าจะมีบัญชีหรือไม่ — กันการไล่เดาว่าอีเมลไหนมีบัญชี
+        $reply = 'ส่งคำขอถึงร้านแล้วค่ะ ถ้าอีเมลนี้มีบัญชีอยู่ ร้านจะติดต่อกลับทางเบอร์โทรที่ให้ไว้ตอนสมัคร '
+               . 'พร้อมรหัสผ่านชั่วคราว จากนั้นเข้าสู่ระบบแล้วเปลี่ยนรหัสใหม่ได้ที่เมนูบัญชี → เปลี่ยนรหัสผ่าน';
+
+        $st = db()->prepare('SELECT * FROM users WHERE email = ?');
+        $st->execute([$email]);
+        $target = $st->fetch();
+
+        if ($target) {
+            // endpoint นี้ไม่ต้องล็อกอิน — ส่งซ้ำอีเมลเดิมภายใน 15 นาทีไม่สร้างแจ้งเตือนใหม่ กันกล่องร้านโดนถล่ม
+            $title = 'คำขอรีเซ็ตรหัสผ่าน';
+            $st = db()->prepare(
+                'SELECT COUNT(*) FROM notifications
+                 WHERE user_email = ? AND title = ? AND LOCATE(?, message) > 0 AND created_at >= ?'
+            );
+            $st->execute([SHOP_EMAIL, $title, $target['email'], date('Y-m-d H:i:s', time() - 15 * 60)]);
+
+            if ((int) $st->fetchColumn() === 0) {
+                push_notification(SHOP_EMAIL, $title,
+                    "ลูกค้า {$target['name']} ({$target['email']}) โทร " . ($target['phone'] ?: '-') . ' แจ้งลืมรหัสผ่าน — '
+                    . 'ไปที่แท็บจัดการผู้ใช้งาน กดปุ่มรีเซ็ตรหัสผ่าน แล้วโทรแจ้งรหัสชั่วคราวให้ลูกค้า');
+            }
+        }
+
+        ok(['message' => $reply]);
     }
 
     /* ---------------------------------------------------------- */

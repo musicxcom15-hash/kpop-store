@@ -154,6 +154,131 @@
             }
         },
 
+        // ลืมรหัสผ่าน: ส่งคำขอเข้ากล่องแจ้งเตือนร้าน (ระบบไม่มีการส่งอีเมล) แล้วบอกขั้นต่อไปในหน้าต่างเดิม
+        openForgotPasswordModal(prefillEmail) {
+            let modalEl = document.getElementById('globalForgotPasswordModal');
+            if (!modalEl) {
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div class="modal fade" id="globalForgotPasswordModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                                <div class="modal-header bg-light">
+                                    <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-key me-2" style="color: #ff3399;"></i>ลืมรหัสผ่าน</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <form id="forgotPasswordForm" onsubmit="KpopStore.handleForgotPasswordSubmit(event)">
+                                        <p class="text-secondary" style="font-size: 0.88rem;">
+                                            กรอกอีเมลที่ใช้สมัคร ระบบจะส่งคำขอถึงร้าน แล้วร้านจะ<strong>โทรแจ้งรหัสผ่านชั่วคราว</strong>
+                                            ไปที่เบอร์ที่คุณให้ไว้ตอนสมัคร
+                                        </p>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" style="font-size: 0.88rem;">อีเมลบัญชีผู้ใช้</label>
+                                            <input type="email" id="forgotEmail" class="form-control" required placeholder="name@example.com">
+                                        </div>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                                            <button type="submit" id="forgotSubmitBtn" class="btn btn-dark rounded-pill px-4 fw-bold">ส่งคำขอ</button>
+                                        </div>
+                                    </form>
+                                    <div id="forgotPasswordDone" class="d-none text-center py-2">
+                                        <i class="fa-solid fa-circle-check text-success d-block mb-3" style="font-size: 2.5rem;"></i>
+                                        <p id="forgotPasswordDoneText" class="text-secondary mb-4" style="font-size: 0.9rem;"></p>
+                                        <button type="button" class="btn btn-dark rounded-pill px-4" data-bs-dismiss="modal">ตกลง</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                modalEl = document.getElementById('globalForgotPasswordModal');
+            }
+
+            document.getElementById('forgotPasswordForm').classList.remove('d-none');
+            document.getElementById('forgotPasswordDone').classList.add('d-none');
+            document.getElementById('forgotEmail').value = prefillEmail || '';
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        },
+        async handleForgotPasswordSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('forgotSubmitBtn');
+            btn.disabled = true;
+            const res = await this.requestPasswordReset(document.getElementById('forgotEmail').value.trim());
+            btn.disabled = false;
+            if (!res.success) {
+                alert(res.message || 'ส่งคำขอไม่สำเร็จค่ะ กรุณาลองใหม่อีกครั้ง');
+                return;
+            }
+            document.getElementById('forgotPasswordForm').classList.add('d-none');
+            document.getElementById('forgotPasswordDoneText').innerText = res.message;
+            document.getElementById('forgotPasswordDone').classList.remove('d-none');
+        },
+
+        // เปลี่ยนรหัสผ่านเอง (ต้องยืนยันรหัสเดิม) — ใช้หลังได้รหัสชั่วคราวจากร้าน หรือเปลี่ยนตามปกติ
+        openChangePasswordModal() {
+            if (!this.getCurrentUser()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            let modalEl = document.getElementById('globalChangePasswordModal');
+            if (!modalEl) {
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div class="modal fade" id="globalChangePasswordModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                                <div class="modal-header bg-light">
+                                    <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-lock me-2 text-primary"></i>เปลี่ยนรหัสผ่าน</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <form id="changePasswordForm" onsubmit="KpopStore.handleChangePasswordSubmit(event)">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" style="font-size: 0.88rem;">รหัสผ่านปัจจุบัน (หรือรหัสชั่วคราวที่ได้จากร้าน)</label>
+                                            <input type="password" id="cpCurrent" class="form-control" required autocomplete="current-password">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" style="font-size: 0.88rem;">รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
+                                            <input type="password" id="cpNew" class="form-control" required minlength="6" autocomplete="new-password">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold" style="font-size: 0.88rem;">ยืนยันรหัสผ่านใหม่</label>
+                                            <input type="password" id="cpConfirm" class="form-control" required minlength="6" autocomplete="new-password">
+                                        </div>
+                                        <div class="d-flex justify-content-end gap-2 mt-4">
+                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                                            <button type="submit" id="cpSubmitBtn" class="btn btn-primary rounded-pill px-4 fw-bold">บันทึกรหัสผ่านใหม่</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                modalEl = document.getElementById('globalChangePasswordModal');
+            }
+            document.getElementById('changePasswordForm').reset();
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        },
+        async handleChangePasswordSubmit(e) {
+            e.preventDefault();
+            const current = document.getElementById('cpCurrent').value;
+            const next = document.getElementById('cpNew').value;
+            if (next !== document.getElementById('cpConfirm').value) {
+                alert('รหัสผ่านใหม่กับช่องยืนยันไม่ตรงกันค่ะ');
+                return;
+            }
+            const btn = document.getElementById('cpSubmitBtn');
+            btn.disabled = true;
+            const res = await this.changePassword(current, next);
+            btn.disabled = false;
+            if (!res.success) {
+                alert('เปลี่ยนรหัสผ่านไม่สำเร็จค่ะ\n\n' + res.message);
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('globalChangePasswordModal')).hide();
+            alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้วค่ะ ครั้งหน้าให้เข้าสู่ระบบด้วยรหัสผ่านใหม่');
+        },
+
         // Navigation actions
         goToAllProducts() {
             const currentPath = window.location.pathname;
@@ -419,6 +544,7 @@
 
                     <nav class="drawer-menu">
                         <button type="button" data-bs-dismiss="offcanvas" onclick="KpopStore.openProfileModal()"><i class="fa-regular fa-circle-user"></i>บัญชีของฉัน (ข้อมูลส่วนตัว / ที่อยู่)</button>
+                        <button type="button" data-bs-dismiss="offcanvas" onclick="KpopStore.openChangePasswordModal()"><i class="fa-solid fa-key"></i>เปลี่ยนรหัสผ่าน</button>
                         <a href="order-history.html"><i class="fa-solid fa-list-check"></i>การสั่งซื้อของฉัน</a>
                         <a href="cart.html"><i class="fa-solid fa-cart-shopping"></i>ตะกร้าพรีออเดอร์</a>
                         <button type="button" data-bs-dismiss="offcanvas" onclick="KpopStore.openHowToOrderModal()"><i class="fa-regular fa-circle-question"></i>วิธีการสั่งซื้อ</button>

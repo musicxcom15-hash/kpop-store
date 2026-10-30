@@ -67,7 +67,7 @@
                     <div class="mb-4">
                         <div class="d-flex justify-content-between">
                             <label class="form-label" style="font-size: 0.9rem; font-weight: 500;">รหัสผ่าน</label>
-                            <a href="#" class="text-decoration-none" style="font-size: 0.85rem; color: #ff3399;">ลืมรหัสผ่าน?</a>
+                            <a href="javascript:void(0)" id="forgotPasswordLink" onclick="KpopStore.openForgotPasswordModal(document.getElementById('loginEmail').value.trim())" class="text-decoration-none" style="font-size: 0.85rem; color: #ff3399;">ลืมรหัสผ่าน?</a>
                         </div>
                         <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
                     </div>

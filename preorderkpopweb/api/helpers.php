@@ -181,6 +181,24 @@ function require_admin(): array
     return $user;
 }
 
+/** ความยาวรหัสผ่านขั้นต่ำ ใช้ทั้งตอนสมัครและตอนเปลี่ยนรหัส */
+const MIN_PASSWORD_LENGTH = 6;
+
+/**
+ * รหัสผ่านชั่วคราวแบบสุ่ม สำหรับบัญชีที่แอดมินสร้างให้หรือรีเซ็ตให้
+ * ตัดตัวที่อ่านแล้วสับสนออก (0/O, 1/l/I) เพราะแอดมินต้องอ่านให้ลูกค้าฟังทางโทรศัพท์
+ * เดิมบัญชีที่แอดมินสร้างใช้รหัสตายตัวที่อยู่ใน repo สาธารณะ ใครก็เดาได้
+ */
+function random_temp_password(int $length = 10): string
+{
+    $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $out = '';
+    for ($i = 0; $i < $length; $i++) {
+        $out .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $out;
+}
+
 /* ------------------------------------------------------------------ */
 /* รูปแบบวันเวลา                                                       */
 /*                                                                     */

@@ -529,6 +529,8 @@
         return 'n-' + Date.now() + '-' + notificationSeq;
     }
 
+    const PASSWORD_NEEDS_SERVER_MESSAGE = 'การจัดการรหัสผ่านใช้ได้เมื่อเชื่อมต่อเซิร์ฟเวอร์เท่านั้นค่ะ';
+
     // ข้อความเดียวกันทุกจุดที่บันทึกไม่ลง เพื่อไม่ให้แต่ละหน้าบอกผู้ใช้คนละอย่าง
     const STORAGE_FULL_MESSAGE =
         'พื้นที่เก็บข้อมูลของเบราว์เซอร์เต็ม บันทึกไม่สำเร็จ\n' +
@@ -1151,6 +1153,28 @@
 
             return { success: true, user: currentUser };
         },
+
+        // --- รหัสผ่าน (ทำงานเฉพาะตอนต่อเซิร์ฟเวอร์ — โหมด localStorage ไม่มีรหัสผ่านให้จัดการ) ---
+        // ลืมรหัส: ระบบไม่ส่งอีเมล จึงส่งคำขอเข้ากล่องแจ้งเตือนร้าน ให้แอดมินรีเซ็ตแล้วโทรแจ้งลูกค้า
+        async requestPasswordReset(email) {
+            if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
+            const res = await global.KpopApi.post('auth.php?action=forgot', { email: email });
+            return { success: !!(res && res.success), message: (res && res.message) || '' };
+        },
+
+        // แอดมินตั้งรหัสชั่วคราวให้ลูกค้า — tempPassword ได้กลับมาครั้งเดียว ไม่มีที่ไหนเก็บไว้ให้ดูซ้ำ
+        async resetUserPassword(userId) {
+            if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
+            const res = await apiWrite('users.php?action=reset-password', { id: userId });
+            return { success: !!res.success, message: res.message || '', tempPassword: res.tempPassword };
+        },
+
+        async changePassword(currentPassword, newPassword) {
+            if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
+            const res = await global.KpopApi.post('auth.php?action=change-password', { currentPassword, newPassword });
+            return { success: !!(res && res.success), message: (res && res.message) || '' };
+        },
+
         // --- Order status ---
         // ทุกที่ในระบบต้องถามสถานะผ่านชุดนี้ ห้ามเทียบข้อความไทยเองอีก
         ORDER_STATUS: ORDER_STATUS,

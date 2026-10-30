@@ -1105,6 +1105,7 @@ function closeRoundSummary() {
 // --- USER MANAGEMENT RENDERER ---
 function renderUsersTable() {
     const users = KpopStore.getUsers();
+    const me = KpopStore.getCurrentUser();
     const tbody = document.getElementById('usersTableBody');
 
     tbody.innerHTML = users.map(u => `
@@ -1116,8 +1117,9 @@ function renderUsersTable() {
                     <td>
                         <span class="badge ${u.role === 'admin' ? 'bg-danger' : 'bg-primary'}">${esc(String(u.role || '').toUpperCase())}</span>
                     </td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
                         <button class="btn btn-sm btn-outline-primary rounded-pill me-1 px-3" onclick="openEditUserModal('${escArg(u.id)}')"><i class="fa-solid fa-pen"></i></button>
+                        ${me && me.id === u.id ? '' : `<button class="btn btn-sm btn-outline-warning rounded-pill me-1 px-3" title="รีเซ็ตรหัสผ่าน (ลูกค้าลืมรหัส)" onclick="resetUserPassword('${escArg(u.id)}')"><i class="fa-solid fa-key"></i></button>`}
                         <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="deleteUser('${escArg(u.id)}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
@@ -1180,7 +1182,26 @@ async function saveUserForm(e) {
     bootstrap.Modal.getInstance(document.getElementById('userFormModal')).hide();
     renderUsersTable();
     populateNotificationUserSelect();
-    alert('บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้วค่ะ!');
+    // บัญชีใหม่ได้รหัสชั่วคราวแบบสุ่มจากเซิร์ฟเวอร์ — เห็นได้ครั้งเดียวตรงนี้ ต้องแจ้งให้แอดมินจดไปบอกเจ้าของบัญชี
+    if (result.defaultPassword) {
+        prompt('สร้างบัญชีเรียบร้อยแล้วค่ะ\nรหัสผ่านชั่วคราว (คัดลอกไปแจ้งเจ้าของบัญชี — ปิดหน้าต่างนี้แล้วจะดูซ้ำไม่ได้):', result.defaultPassword);
+    } else {
+        alert('บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้วค่ะ!');
+    }
+}
+
+// ลูกค้าลืมรหัส (มักมาจากแจ้งเตือน "คำขอรีเซ็ตรหัสผ่าน"): ตั้งรหัสชั่วคราวใหม่ แล้วให้แอดมินโทรแจ้งลูกค้า
+async function resetUserPassword(id) {
+    const u = KpopStore.getUsers().find(x => x.id === id);
+    if (!u) return;
+    if (!confirm(`รีเซ็ตรหัสผ่านของ ${u.name} (${u.email})?\n\nรหัสเดิมจะใช้ไม่ได้ทันที ระบบจะสร้างรหัสชั่วคราวให้แจ้งลูกค้า`)) return;
+
+    const result = await KpopStore.resetUserPassword(id);
+    if (!result.success) {
+        alert('รีเซ็ตไม่สำเร็จค่ะ\n\n' + result.message);
+        return;
+    }
+    prompt(`รหัสผ่านชั่วคราวของ ${u.name}\nโทรแจ้งลูกค้าที่ ${u.phone || '(ไม่มีเบอร์ในบัญชี)'} แล้วให้เปลี่ยนรหัสใหม่ที่เมนูบัญชี → เปลี่ยนรหัสผ่าน\n(ปิดหน้าต่างนี้แล้วจะดูซ้ำไม่ได้)`, result.tempPassword);
 }
 
 async function deleteUser(id) {
