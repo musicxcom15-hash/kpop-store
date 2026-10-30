@@ -587,21 +587,20 @@ function mail_configured(): bool
 }
 
 /**
- * ส่งอีเมล คืน true เมื่อบริการรับไปแล้ว
+ * ส่งอีเมล คืน true เฉพาะเมื่อบริการส่งอีเมลรับไปจริง — คืน false = ผู้รับจะไม่ได้อีเมล ผู้เรียกต้องใช้ทางสำรอง
  *
- * ยังไม่ได้ตั้งค่า: บนเครื่อง (ไม่ใช่ production) เขียนลงไฟล์ outbox ใน temp ให้ทดสอบได้แล้วคืน true
- * ส่วนบนเว็บจริงคืน false ให้ผู้เรียกใช้ทางสำรองเอง
+ * ยังไม่ได้ตั้งค่าบนเครื่อง (ไม่ใช่ production): เขียนลงไฟล์ outbox ใน temp ให้เปิดลิงก์ทดสอบได้
+ * แต่ยังคืน false เพราะไม่มีใครได้อีเมลจริง (เดิมคืน true แล้วคำขอลืมรหัสหายเงียบ ไม่ถึงทั้งลูกค้าและแอดมิน)
  */
 function send_mail(string $toEmail, string $toName, string $subject, string $html, string $text): bool
 {
     if (!mail_configured()) {
-        if (IS_PRODUCTION) {
-            return false;
+        if (!IS_PRODUCTION) {
+            $entry = sprintf("=== %s\nTo: %s <%s>\nSubject: %s\n\n%s\n\n", date('Y-m-d H:i:s'), $toName, $toEmail, $subject, $text);
+            file_put_contents(sys_get_temp_dir() . '/kpop-mail-outbox.log', $entry, FILE_APPEND);
+            error_log("[kpop-mail] (dev outbox) {$subject} -> {$toEmail}");
         }
-        $entry = sprintf("=== %s\nTo: %s <%s>\nSubject: %s\n\n%s\n\n", date('Y-m-d H:i:s'), $toName, $toEmail, $subject, $text);
-        file_put_contents(sys_get_temp_dir() . '/kpop-mail-outbox.log', $entry, FILE_APPEND);
-        error_log("[kpop-mail] (dev outbox) {$subject} -> {$toEmail}");
-        return true;
+        return false;
     }
 
     $fromEmail = (string) getenv('MAIL_FROM');
