@@ -43,6 +43,7 @@ KpopStore.ready(function () {
 
     renderRoundInfo(breakdown);
     renderSizePicker();
+    renderAdminSourceLink();
 
     quotaLeft = KpopStore.getRemainingQuota(currentProduct.id);
     // ต้องคืนค่าจำนวนก่อน setupQtyLimit() เพราะตัวนั้นเรียก applyQtyLimit() ต่อ
@@ -124,6 +125,23 @@ function restoreQtyFromUrl() {
     const input = document.getElementById('qtyInput');
     const qtyParam = urlParams.get('qty');
     if (input && qtyParam) input.value = qtyParam;
+}
+
+// ลิงก์ร้านต้นทาง — เฉพาะแอดมิน
+// bootstrap.php ส่ง sourceUrl มาให้แอดมินเท่านั้น เบราว์เซอร์ของลูกค้าจึงไม่มีข้อมูลนี้อยู่แล้ว
+// เช็ค role ซ้ำตรงนี้เพื่อไม่ให้ปุ่มโผล่ผิดคน ถ้าวันหนึ่ง bootstrap เปลี่ยน
+function renderAdminSourceLink() {
+    const user = KpopStore.getCurrentUser();
+    const box = document.getElementById('adminSourceLink');
+    if (!box || !user || user.role !== 'admin' || !currentProduct.sourceUrl) return;
+
+    box.innerHTML = `
+        <a href="${KpopStore.esc(currentProduct.sourceUrl)}" target="_blank" rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>เปิดร้านต้นทาง
+            <span class="badge bg-secondary ms-1 fw-normal">เห็นเฉพาะแอดมิน</span>
+        </a>`;
+    box.style.display = '';
 }
 
 // --- ไซซ์ ---
