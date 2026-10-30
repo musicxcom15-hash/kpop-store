@@ -1,13 +1,15 @@
 // เช็คเอาต์รองรับ 2 ทาง:
 //   ?round=<roundId>  มาจากตะกร้า — รวมทุกชิ้นในรอบนั้นเป็นออเดอร์เดียว จ่ายค่าส่งครั้งเดียว
-//   ?id=&qty=         มาจากปุ่ม "สั่งซื้อทันที" ในหน้าสินค้า — ชิ้นเดียว ไม่ผ่านตะกร้า
+//   ?id=&qty=&size=   มาจากปุ่ม "สั่งซื้อทันที" ในหน้าสินค้า — ชิ้นเดียว ไม่ผ่านตะกร้า
 const urlParams = new URLSearchParams(window.location.search);
 const checkoutRoundId = urlParams.get('round');
 const productId = urlParams.get('id');
+const sizeParam = urlParams.get('size') || '';
+const esc = KpopStore.esc;
 
 const shippingFee = 50;
 
-let checkoutItems = [];   // [{ product, qty }]
+let checkoutItems = [];   // [{ product, qty, size }]
 let checkoutRound = null;
 let fromCart = false;
 let subtotalAmount = 0;
@@ -58,7 +60,7 @@ function loadFromCart() {
         return;
     }
 
-    checkoutItems = group.items.map(i => ({ product: i.product, qty: i.qty }));
+    checkoutItems = group.items.map(i => ({ product: i.product, qty: i.qty, size: i.size }));
 }
 
 function loadSingleProduct() {
@@ -68,6 +70,12 @@ function loadSingleProduct() {
         window.location.href = 'index.html';
         return;
     }
+    // ลิงก์ที่ไม่มีไซซ์ หรือไซซ์ที่ถูกลบไปแล้ว → กลับไปเลือกในหน้าสินค้า
+    if (!KpopStore.isValidSize(product, sizeParam)) {
+        alert('กรุณาเลือกไซซ์ในหน้าสินค้าก่อนค่ะ');
+        window.location.href = 'product-detail.html?id=' + encodeURIComponent(product.id);
+        return;
+    }
 
     const quotaLeft = KpopStore.getRemainingQuota(product.id);
     const requested = KpopStore.normalizeQty(urlParams.get('qty'));
@@ -75,18 +83,18 @@ function loadSingleProduct() {
     if (!KpopStore.isProductSellable(product)) {
         alert('ขออภัย สินค้านี้ปิดการขายชั่วคราวค่ะ');
         blockSubmit('สินค้าหมดชั่วคราว');
-        checkoutItems = [{ product, qty: requested }];
+        checkoutItems = [{ product, qty: requested, size: sizeParam }];
         return;
     }
     if (!KpopStore.isRoundOpen(product.roundId)) {
         blockSubmit('รอบพรีออเดอร์นี้ปิดรับแล้ว');
-        checkoutItems = [{ product, qty: requested }];
+        checkoutItems = [{ product, qty: requested, size: sizeParam }];
         return;
     }
     if (quotaLeft !== null && quotaLeft <= 0) {
         alert('ขออภัย รอบพรีออเดอร์นี้เต็มโควตาแล้วค่ะ ทางร้านรับหิ้วเพิ่มไม่ไหวในรอบนี้');
         blockSubmit('ปิดรับพรีออเดอร์รอบนี้ (เต็มโควตา)');
-        checkoutItems = [{ product, qty: requested }];
+        checkoutItems = [{ product, qty: requested, size: sizeParam }];
         return;
     }
 
@@ -95,7 +103,7 @@ function loadSingleProduct() {
         alert(`รอบนี้ทางร้านรับพรีออเดอร์ได้อีก ${qty} ชิ้น ระบบจึงปรับจำนวนในคำสั่งซื้อให้เป็น ${qty} ชิ้นค่ะ`);
     }
 
-    checkoutItems = [{ product, qty }];
+    checkoutItems = [{ product, qty, size: sizeParam }];
 }
 
 function blockSubmit(reason) {
@@ -119,7 +127,8 @@ function renderCheckoutSummary() {
                         <img src="${entry.product.image}" alt="${entry.product.title}" class="summary-item-img me-3"
                             onerror="this.onerror=null; this.src='images/mapsoul7.jpg'">
                         <div class="flex-grow-1">
-                            <h6 class="mb-1" style="font-size: 0.95rem;">${entry.product.title}</h6>
+                            <h6 class="mb-1" style="font-size: 0.95rem;">${esc(entry.product.title)}</h6>
+                            ${entry.size ? `<span class="badge bg-light text-dark border mb-1">ไซซ์ ${esc(entry.size)}</span>` : ''}
                             <span class="text-muted d-block" style="font-size: 0.85rem;">จำนวน ${entry.qty} x ฿${bd.total.toLocaleString()}</span>
                             <span class="text-muted" style="font-size: 0.76rem;">
                                 ${bd.legacy ? 'ราคาบาทคงที่' : `₩${bd.krw.toLocaleString()} x ${bd.rate} + ค่าบริการ ฿${bd.serviceFee.toLocaleString()}`}
@@ -204,15 +213,18 @@ function submitCheckoutOrder() {
     }
 
     // ตรวจโควตาทุกชิ้นอีกรอบ เผื่อมีคนอื่นสั่งตัดหน้าระหว่างที่กรอกฟอร์ม
-    for (const entry of checkoutItems) {
-        const remaining = KpopStore.getRemainingQuota(entry.product.id);
+    // โควตาใช้ร่วมกันทุกไซซ์ จึงรวมจำนวนต่อสินค้าก่อนเทียบ
+    const qtyByProduct = new Map();
+    checkoutItems.forEach(e => qtyByProduct.set(e.product, (qtyByProduct.get(e.product) || 0) + e.qty));
+    for (const [product, qty] of qtyByProduct) {
+        const remaining = KpopStore.getRemainingQuota(product.id);
         if (remaining === null) continue;
         if (remaining <= 0) {
-            alert(`ขออภัย "${entry.product.title}" เต็มโควตารอบนี้แล้วค่ะ`);
+            alert(`ขออภัย "${product.title}" เต็มโควตารอบนี้แล้วค่ะ`);
             return;
         }
-        if (entry.qty > remaining) {
-            alert(`ขออภัย "${entry.product.title}" รอบนี้รับได้อีกเพียง ${remaining} ชิ้น ไม่พอสำหรับจำนวนที่สั่ง (${entry.qty} ชิ้น)`);
+        if (qty > remaining) {
+            alert(`ขออภัย "${product.title}" รอบนี้รับได้อีกเพียง ${remaining} ชิ้น ไม่พอสำหรับจำนวนที่สั่ง (${qty} ชิ้น)`);
             return;
         }
     }
@@ -265,6 +277,7 @@ function submitCheckoutOrder() {
             items: checkoutItems.map(entry => ({
                 id: entry.product.id,
                 title: entry.product.title,
+                size: entry.size || '',
                 qty: entry.qty,
                 image: entry.product.image
             })),

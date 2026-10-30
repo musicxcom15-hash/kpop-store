@@ -72,7 +72,7 @@ set_exception_handler(function (Throwable $e): void {
 
 // ก่อน endpoint ใดจะเปิด transaction — เติมตาราง/คอลัมน์ใหม่ให้ DB ที่ import ไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
 // เปลี่ยนชื่อไฟล์ (v2, v3, ...) ทุกครั้งที่เพิ่มของใน ensure_schema() เพื่อให้ container ที่เคยเช็คแล้วเช็คใหม่
-define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-v3');
+define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-v4');
 ensure_schema_once();
 
 /* ------------------------------------------------------------------ */
@@ -253,16 +253,46 @@ function map_product(array $r): array
         'status'        => $r['status'],
         'estDelivery'   => $r['est_delivery'],
         'desc'          => $r['description'],
-        // ?? เผื่อ DB เก่าก่อนมีคอลัมน์ (ensure_product_category_column เติมให้ตอนต้นคำขอ)
+        // ?? เผื่อ DB เก่าก่อนมีคอลัมน์ (ensure_product_columns เติมให้ตอนต้นคำขอ)
         'category'      => $r['category'] ?? 'album',
+        'sizes'         => parse_sizes((string) ($r['sizes'] ?? '')),
+        // ร้านต้นทางที่แอดมินไปกดสั่ง — ข้อมูลภายในร้าน ต้องตัดออกก่อนส่งให้คนที่ไม่ใช่แอดมิน (ดู bootstrap.php)
+        'sourceUrl'     => $r['source_url'] ?? '',
     ];
+}
+
+/**
+ * ไซซ์ของสินค้า เก็บในคอลัมน์เดียวคั่นด้วยคอมมา เช่น "S,M,L,XL" ('' = ไม่มีไซซ์ให้เลือก)
+ * ราคาและโควตาใช้ร่วมกันทุกไซซ์ — ไซซ์เป็นแค่ข้อมูลว่าลูกค้าต้องการตัวไหน
+ */
+const MAX_SIZES = 20;
+const MAX_SIZE_LENGTH = 32;
+
+/** แยกข้อความไซซ์เป็นรายการ ตัดช่องว่าง ตัดตัวซ้ำ (ไม่ตรวจความยาว — ใช้ validate_sizes ตอนบันทึก) */
+function parse_sizes(string $raw): array
+{
+    $sizes = [];
+    foreach (explode(',', $raw) as $s) {
+        $s = trim($s);
+        if ($s !== '' && !in_array($s, $sizes, true)) {
+            $sizes[] = $s;
+        }
+    }
+    return $sizes;
+}
+
+/** ไซซ์ที่ลูกค้าเลือกใช้กับสินค้านี้ได้ไหม — สินค้าไม่มีไซซ์ต้องส่งมาเป็น '' เท่านั้น */
+function is_valid_size(array $productRow, string $size): bool
+{
+    $sizes = parse_sizes((string) ($productRow['sizes'] ?? ''));
+    return $sizes ? in_array($size, $sizes, true) : $size === '';
 }
 
 /**
  * หมวดหมู่สินค้า — เก็บเป็นรหัส ชื่อไทย/ไอคอนอยู่ที่ PRODUCT_CATEGORIES ใน js/store.js (ต้องตรงกัน)
  * สินค้าเดิมก่อนมีหมวดหมู่ทั้งหมดเป็นอัลบั้ม จึงใช้ album เป็นค่าตั้งต้น
  */
-const PRODUCT_CATEGORIES = ['album', 'lightstick', 'photocard', 'merch'];
+const PRODUCT_CATEGORIES = ['album', 'lightstick', 'photocard', 'clothing', 'popup', 'merch'];
 
 function map_round(array $r): array
 {
@@ -309,6 +339,7 @@ function map_order_item(array $r): array
     return [
         'id'         => $r['product_id'],   // ฝั่ง JS ใช้ item.id เป็นรหัสสินค้า
         'title'      => $r['title'],
+        'size'       => $r['size'] ?? '',
         'qty'        => (int) $r['qty'],
         'price'      => (float) $r['price'],
         'priceKRW'   => $r['price_krw'] === null ? null : (int) $r['price_krw'],
@@ -388,6 +419,7 @@ function map_cart_item(array $r): array
 {
     return [
         'productId' => $r['product_id'],
+        'size'      => $r['size'] ?? '',
         'qty'       => (int) $r['qty'],
         'addedAt'   => stamp($r['added_at']),
     ];
@@ -549,19 +581,43 @@ function ensure_schema_once(): void
     }
     ensure_notification_columns();
     ensure_password_resets_table();
-    ensure_product_category_column();
+    ensure_product_columns();
     @touch(SCHEMA_FLAG_FILE);
 }
 
-/** คอลัมน์หมวดหมู่สินค้า — DB ที่ import ก่อนมีหมวดหมู่ ได้ค่า album ให้สินค้าเดิมทุกชิ้น */
-function ensure_product_category_column(): void
+/** เพิ่มคอลัมน์ถ้ายังไม่มี ($definition = ส่วนหลังชื่อคอลัมน์ใน ALTER TABLE ... ADD COLUMN) */
+function ensure_column(string $table, string $column, string $definition): void
 {
-    $has = db()->query(
-        "SELECT COUNT(*) FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'category'"
-    )->fetchColumn();
-    if ((int) $has === 0) {
-        db()->exec("ALTER TABLE products ADD COLUMN `category` VARCHAR(32) NOT NULL DEFAULT 'album' AFTER title");
+    $st = db()->prepare(
+        'SELECT COUNT(*) FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+    );
+    $st->execute([$table, $column]);
+    if ((int) $st->fetchColumn() === 0) {
+        db()->exec("ALTER TABLE `$table` ADD COLUMN `$column` $definition");
+    }
+}
+
+/**
+ * คอลัมน์ที่เพิ่มทีหลังของสินค้า/ตะกร้า/ออเดอร์ — DB ที่ import ไว้ก่อนได้ค่าที่ทำให้ของเดิมทำงานเหมือนเดิม
+ * (สินค้าเดิมเป็นอัลบั้ม ไม่มีไซซ์ ไม่มีลิงก์ร้านต้นทาง)
+ */
+function ensure_product_columns(): void
+{
+    ensure_column('products', 'category', "VARCHAR(32) NOT NULL DEFAULT 'album' AFTER title");
+    ensure_column('products', 'sizes', "VARCHAR(255) NOT NULL DEFAULT '' AFTER category");
+    ensure_column('products', 'source_url', "VARCHAR(500) NOT NULL DEFAULT '' AFTER description");
+    ensure_column('order_items', 'size', "VARCHAR(32) NOT NULL DEFAULT '' AFTER title");
+    ensure_column('cart_items', 'size', "VARCHAR(32) NOT NULL DEFAULT '' AFTER product_id");
+
+    // ตะกร้า 1 แถว = สินค้า + ไซซ์ (เสื้อตัวเดียวกันคนละไซซ์ต้องอยู่คนละแถว)
+    // สร้าง unique ตัวใหม่ก่อนลบตัวเก่า เพราะ FK ของ user_id ต้องมี index ที่ขึ้นต้นด้วย user_id อยู่ตลอด
+    $indexes = db()->query("SHOW INDEX FROM cart_items")->fetchAll(PDO::FETCH_COLUMN, 2);
+    if (!in_array('uniq_cart_user_product_size', $indexes, true)) {
+        db()->exec('ALTER TABLE cart_items ADD UNIQUE KEY `uniq_cart_user_product_size` (`user_id`, `product_id`, `size`)');
+    }
+    if (in_array('uniq_cart_user_product', $indexes, true)) {
+        db()->exec('ALTER TABLE cart_items DROP INDEX `uniq_cart_user_product`');
     }
 }
 

@@ -62,7 +62,15 @@ Schema upgrade for DBs imported before `type`/`ref` existed (e.g. Railway) is au
 
 ### Product categories
 
-`products.category` is a code: `album`, `lightstick`, `photocard`, `merch`. The list exists twice and must stay in sync: `PRODUCT_CATEGORIES` in `helpers.php` (PHP rejects any other code on save) and `PRODUCT_CATEGORIES` in `js/store.js` (Thai label, icon, `chart` flag). Read it through `KpopStore.getProductCategory()`, which treats a missing or unknown code as `album`, so products from before categories existed still work. Only categories with `chart: true` show the "counts toward HANTEO & GAON" badge. Branch on that flag, not on the code or label. The homepage filter chips only appear when products span at least 2 categories. The column is added automatically by `ensure_product_category_column()`, and existing rows default to `album`. Size or version variants are not modelled yet: one product is one item at one price.
+`products.category` is a code: `album`, `lightstick`, `photocard`, `clothing`, `popup`, `merch`. The list exists twice and must stay in sync: `PRODUCT_CATEGORIES` in `helpers.php` (PHP rejects any other code on save) and `PRODUCT_CATEGORIES` in `js/store.js` (Thai label, icon, `chart` flag). Read it through `KpopStore.getProductCategory()`, which treats a missing or unknown code as `album`, so products from before categories existed still work. Only categories with `chart: true` show the "counts toward HANTEO & GAON" badge. Branch on that flag, not on the code or label. The homepage filter chips only appear when products span at least 2 categories. The `artist` column doubles as the brand for non-K-pop goods (the admin label reads "ศิลปิน / แบรนด์").
+
+`products.source_url` is the shop page the admin buys from. It is internal: `bootstrap.php` strips `sourceUrl` for anyone who is not admin, and `products.php` only accepts `http(s)` URLs.
+
+### Product sizes
+
+`products.sizes` is a comma-separated list (`'S,M,L'`; `''` = no sizes), exposed to JS as an array. Every size of a product shares one price and one quota, so a size records what the customer wants and does not change pricing. A cart line and an order line are keyed by product + `size` (`''` for products without sizes): `cart_items` is unique on `(user_id, product_id, size)`, and `order_items.size` stores it. Validity is "the size is in the product's list, or `''` if the list is empty": `is_valid_size()` in PHP, `KpopStore.isValidSize()` in JS. The server checks it on cart add and order create. Quota checks must sum quantities across all sizes of a product. That applies in `cart.php` (`other_sizes_qty()`), in `orders.php` create/reupload (`$qtyByProduct`), and client-side in `getCartGroupedByRound()` and checkout. Never compare one line's qty to the remaining quota alone. If the admin removes a size that sits in someone's cart, `getCartGroupedByRound()` flags the line `invalidSize` and the round can't be checked out until it's removed. The round purchase summary (`getRoundSummary()`) splits rows by size, so the admin knows what to buy.
+
+The category, size and source columns, and the cart unique-key swap, are added automatically by `ensure_product_columns()`.
 
 ### Exchange rate (KRW → THB)
 

@@ -119,9 +119,12 @@ switch (action()) {
         try {
             $resolved = [];
             $roundId  = null;
+            // จำนวนรวมต่อสินค้า (ทุกไซซ์) — โควตานับรวม ไม่ใช่นับแยกบรรทัด
+            $qtyByProduct = [];
 
             foreach ($items as $raw) {
                 $productId = (string) ($raw['id'] ?? '');
+                $size = trim((string) ($raw['size'] ?? ''));
                 $qty = max(1, (int) floor((float) ($raw['qty'] ?? 1)));
 
                 // ล็อกแถวสินค้าไว้จนจบ transaction กันสองคนแย่งโควตาชิ้นสุดท้ายพร้อมกัน
@@ -134,6 +137,11 @@ switch (action()) {
                 if (strtoupper((string) $product['status']) === 'OUT OF STOCK') {
                     throw new RuntimeException('สินค้า "' . $product['title'] . '" ปิดการขายชั่วคราวค่ะ');
                 }
+                if (!is_valid_size($product, $size)) {
+                    throw new RuntimeException($size === ''
+                        ? 'กรุณาเลือกไซซ์ของ "' . $product['title'] . '" ก่อนค่ะ'
+                        : 'สินค้า "' . $product['title'] . '" ไม่มีไซซ์ ' . $size . ' แล้วค่ะ กรุณาเลือกใหม่ในตะกร้า');
+                }
 
                 $round = fetch_round($product['round_id']);
                 if (round_state($round) !== 'open') {
@@ -142,20 +150,30 @@ switch (action()) {
                     );
                 }
 
+                $qtyByProduct[$productId] = ($qtyByProduct[$productId] ?? 0) + $qty;
+                $wanted = $qtyByProduct[$productId];
                 $remaining = remaining_quota($productId);
-                if ($remaining !== null && $remaining < $qty) {
+                if ($remaining !== null && $remaining < $wanted) {
                     throw new RuntimeException(
                         'ขออภัย "' . $product['title'] . '" รอบนี้รับได้อีกเพียง ' . $remaining .
-                        " ชิ้น ไม่พอกับจำนวนที่สั่ง ({$qty} ชิ้น)"
+                        " ชิ้น ไม่พอกับจำนวนที่สั่ง ({$wanted} ชิ้น)"
                     );
+                }
+
+                // สินค้า+ไซซ์เดียวกันส่งมาซ้ำ → รวมเป็นบรรทัดเดียว
+                $key = $productId . '|' . $size;
+                if (isset($resolved[$key])) {
+                    $resolved[$key]['qty'] += $qty;
+                    continue;
                 }
 
                 // ราคาคิดใหม่จากฐานข้อมูลเสมอ ไม่ใช้ตัวเลขที่เบราว์เซอร์ส่งมา
                 $bd = price_breakdown($product, $lockedRate);
 
-                $resolved[] = [
+                $resolved[$key] = [
                     'productId'  => $productId,
                     'title'      => $product['title'],
+                    'size'       => $size,
                     'qty'        => $qty,
                     'price'      => $bd['total'],
                     'priceKRW'   => $bd['krw'],
@@ -217,12 +235,12 @@ switch (action()) {
             ]);
 
             $st = $db->prepare(
-                'INSERT INTO order_items (order_id, product_id, title, qty, price, price_krw, service_fee, image)
-                 VALUES (?,?,?,?,?,?,?,?)'
+                'INSERT INTO order_items (order_id, product_id, title, size, qty, price, price_krw, service_fee, image)
+                 VALUES (?,?,?,?,?,?,?,?,?)'
             );
             foreach ($resolved as $r) {
                 $st->execute([
-                    $orderId, $r['productId'], $r['title'], $r['qty'],
+                    $orderId, $r['productId'], $r['title'], $r['size'], $r['qty'],
                     $r['price'], $r['priceKRW'], $r['serviceFee'], $r['image'],
                 ]);
             }
@@ -311,11 +329,18 @@ switch (action()) {
                  'กรุณาติดต่อผู้ดูแลระบบเพื่อขอคืนเงินหรือย้ายไปรอบถัดไป');
         }
 
+        // รวมจำนวนทุกไซซ์ของสินค้าเดียวกันก่อนเทียบโควตา
+        $qtyByProduct = [];
+        $titles = [];
         foreach ($order['items'] as $item) {
-            $remaining = remaining_quota($item['id']);
-            if ($remaining !== null && $remaining < (int) $item['qty']) {
-                fail("ขออภัย \"{$item['title']}\" รอบนี้รับได้อีกเพียง {$remaining} ชิ้น " .
-                     "ไม่พอสำหรับจำนวนในคำสั่งซื้อนี้ ({$item['qty']} ชิ้น)\nกรุณาติดต่อผู้ดูแลระบบค่ะ");
+            $qtyByProduct[$item['id']] = ($qtyByProduct[$item['id']] ?? 0) + (int) $item['qty'];
+            $titles[$item['id']] = $item['title'];
+        }
+        foreach ($qtyByProduct as $pid => $qty) {
+            $remaining = remaining_quota((string) $pid);
+            if ($remaining !== null && $remaining < $qty) {
+                fail("ขออภัย \"{$titles[$pid]}\" รอบนี้รับได้อีกเพียง {$remaining} ชิ้น " .
+                     "ไม่พอสำหรับจำนวนในคำสั่งซื้อนี้ ({$qty} ชิ้น)\nกรุณาติดต่อผู้ดูแลระบบค่ะ");
             }
         }
 

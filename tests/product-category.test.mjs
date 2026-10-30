@@ -23,9 +23,10 @@ console.log('\n[3] ป้ายนับชาร์ตตัดสินด้�
   eq('อัลบั้มนับชาร์ต', K.getProductCategory({ category: 'album' }).chart, true);
   eq('แท่งไฟไม่นับ', K.getProductCategory({ category: 'lightstick' }).chart, false);
   eq('โฟโต้การ์ดไม่นับ', K.getProductCategory({ category: 'photocard' }).chart, false);
+  eq('เสื้อผ้าไม่นับ', K.getProductCategory({ category: 'clothing' }).chart, false);
   eq('สินค้าอื่นไม่นับ', K.getProductCategory({ category: 'merch' }).chart, false);
   // รหัสต้องตรงกับ PRODUCT_CATEGORIES ใน api/helpers.php ที่ PHP ใช้ตรวจตอนบันทึก
-  eq('รหัสครบ 4 หมวด', Object.keys(K.PRODUCT_CATEGORIES).join(','), 'album,lightstick,photocard,merch');
+  eq('รหัสครบ 6 หมวด', Object.keys(K.PRODUCT_CATEGORIES).join(','), 'album,lightstick,photocard,clothing,popup,merch');
 }
 
 console.log('\n[4] บันทึกสินค้าพร้อมหมวดแล้วอ่านกลับได้ (โหมด localStorage)');

@@ -105,3 +105,29 @@
     border-radius: 8px;
     border: 1px solid #ddd;
 }
+
+/* ปุ่มเลือกไซซ์ */
+.size-option {
+    min-width: 52px;
+    border-radius: 10px;
+    border: 1.5px solid #d0d0da;
+    background: #ffffff;
+    color: #1a1a24;
+    font-weight: 500;
+    padding: 6px 14px;
+    transition: all 0.15s ease;
+}
+
+.size-option:hover {
+    border-color: #1a1a24;
+}
+
+.size-option.active {
+    background: #1a1a24;
+    border-color: #1a1a24;
+    color: #ffffff;
+}
+
+#sizePicker.needs-size .size-option {
+    border-color: #ff3399;
+}

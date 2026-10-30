@@ -9,6 +9,8 @@ let quotaLeft = null;
 let currentProduct = null;
 let currentRound = null;
 let roundState = 'closed';
+// ไซซ์ที่ลูกค้าเลือก ('' = ยังไม่เลือก หรือสินค้าไม่มีไซซ์)
+let selectedSize = '';
 
 KpopStore.ready(function () {
     // หน้านี้เปิดให้ guest ดูได้เต็มหน้า (ราคา รอบพรีออเดอร์ นับถอยหลัง)
@@ -40,6 +42,7 @@ KpopStore.ready(function () {
     document.getElementById('display-image').src = currentProduct.image;
 
     renderRoundInfo(breakdown);
+    renderSizePicker();
 
     quotaLeft = KpopStore.getRemainingQuota(currentProduct.id);
     // ต้องคืนค่าจำนวนก่อน setupQtyLimit() เพราะตัวนั้นเรียก applyQtyLimit() ต่อ
@@ -107,7 +110,8 @@ function applyRoundGating() {
 // พา guest ไปล็อกอิน แต่จำสินค้าและจำนวนที่กรอกไว้ กลับมาแล้วกดต่อได้เลย
 // ตั้งใจไม่สั่งซื้อ/ไม่หยิบลงตะกร้าให้อัตโนมัติหลังล็อกอิน — ผู้ใช้ต้องเป็นคนกดยืนยันเอง
 function requireLoginForAction(qty) {
-    const next = `product-detail.html?id=${encodeURIComponent(currentProduct.id)}&qty=${qty}`;
+    const next = `product-detail.html?id=${encodeURIComponent(currentProduct.id)}&qty=${qty}` +
+        (selectedSize ? `&size=${encodeURIComponent(selectedSize)}` : '');
     return KpopStore.requireLogin(
         'กรุณาเข้าสู่ระบบก่อนสั่งซื้อหรือเพิ่มลงตะกร้าค่ะ\nระบบจะพากลับมาที่สินค้าชิ้นนี้ให้อัตโนมัติ',
         next
@@ -122,15 +126,58 @@ function restoreQtyFromUrl() {
     if (input && qtyParam) input.value = qtyParam;
 }
 
+// --- ไซซ์ ---
+// สินค้าที่มีไซซ์: ต้องเลือกก่อนใส่ตะกร้า/สั่งซื้อ ราคาเท่ากันทุกไซซ์ (เซิร์ฟเวอร์ตรวจซ้ำว่าไซซ์มีจริง)
+function renderSizePicker() {
+    const sizes = KpopStore.getProductSizes(currentProduct);
+    const box = document.getElementById('sizePicker');
+    if (!box || sizes.length === 0) return;
+
+    // กลับมาจากหน้าล็อกอินพร้อม ?size= — ใช้ได้เฉพาะไซซ์ที่ยังมีอยู่จริง
+    const fromUrl = urlParams.get('size') || '';
+    selectedSize = sizes.includes(fromUrl) ? fromUrl : '';
+
+    document.getElementById('sizeOptions').innerHTML = sizes.map(size => `
+        <button type="button" class="size-option" data-size="${KpopStore.esc(size)}"
+            onclick="selectSize(this.dataset.size)">${KpopStore.esc(size)}</button>`).join('');
+    box.style.display = '';
+    updateSizeButtons();
+}
+
+function selectSize(size) {
+    selectedSize = size;
+    document.getElementById('sizePicker').classList.remove('needs-size');
+    updateSizeButtons();
+}
+
+function updateSizeButtons() {
+    document.querySelectorAll('#sizeOptions .size-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.size === selectedSize);
+    });
+    document.getElementById('sizeChosenText').innerText = selectedSize ? `: ${selectedSize}` : '(กรุณาเลือก)';
+}
+
+// คืน true ถ้าพร้อมไปต่อ (ไม่มีไซซ์ให้เลือก หรือเลือกแล้ว)
+function ensureSizeChosen() {
+    if (KpopStore.getProductSizes(currentProduct).length === 0 || selectedSize) return true;
+    const box = document.getElementById('sizePicker');
+    box.classList.add('needs-size');
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    alert('กรุณาเลือกไซซ์ก่อนค่ะ');
+    return false;
+}
+
 async function addCurrentToCart() {
     const input = document.getElementById('qtyInput');
     const qty = KpopStore.normalizeQty(input ? input.value : 1, quotaLeft);
+
+    if (!ensureSizeChosen()) return;
 
     // ต้องกันก่อนเรียก addToCart เพราะ store ไม่ได้เช็กล็อกอินให้
     // และตะกร้าฝั่งเซิร์ฟเวอร์ผูกกับบัญชี ถ้าไม่กันจะได้แค่ข้อความ 401 เปล่า ๆ
     if (!requireLoginForAction(qty)) return;
 
-    const res = await KpopStore.addToCart(currentProduct.id, qty);
+    const res = await KpopStore.addToCart(currentProduct.id, qty, selectedSize);
 
     if (!res.success) {
         alert(res.message);
@@ -141,7 +188,7 @@ async function addCurrentToCart() {
     }
 
     if (KpopStore.renderNavbarAuth) KpopStore.renderNavbarAuth();
-    if (confirm(`เพิ่ม "${currentProduct.title}" ลงตะกร้าแล้ว (รวม ${res.qty} ชิ้น)\n\nไปที่ตะกร้าเลยไหมคะ?`)) {
+    if (confirm(`เพิ่ม "${KpopStore.formatItemName(currentProduct.title, selectedSize)}" ลงตะกร้าแล้ว (รวม ${res.qty} ชิ้น)\n\nไปที่ตะกร้าเลยไหมคะ?`)) {
         window.location.href = 'cart.html';
     }
 }
@@ -195,7 +242,7 @@ function setupQtyLimit() {
 
     if (quotaLeft !== null && quotaLeft > 0) {
         input.max = quotaLeft;
-        if (hint) hint.innerText = `รอบนี้รับได้อีก ${quotaLeft} ชิ้น`;
+        if (hint) hint.innerText = `รอบนี้รับได้อีก ${quotaLeft} ชิ้น` + (KpopStore.getProductSizes(currentProduct).length ? ' (รวมทุกไซซ์)' : '');
     } else if (quotaLeft !== null && quotaLeft <= 0) {
         input.max = 1;
         input.disabled = true;
@@ -228,7 +275,9 @@ function goToCheckout() {
     const input = document.getElementById('qtyInput');
     const rawValue = input ? input.value : 1;
 
-    // เช็กล็อกอินเป็นอย่างแรกสุด ก่อน dialog ยืนยันจำนวนใด ๆ
+    if (!ensureSizeChosen()) return;
+
+    // เช็กล็อกอินก่อน dialog ยืนยันจำนวนใด ๆ
     // guest จะได้ไม่ต้องตอบ confirm ก่อนแล้วค่อยโดนเด้งออก
     if (!requireLoginForAction(KpopStore.normalizeQty(rawValue, quotaLeft))) return;
 
@@ -251,5 +300,6 @@ function goToCheckout() {
     }
 
     // ใช้ id ของสินค้าที่ยืนยันแล้วว่ามีจริงตอนโหลดหน้า ไม่ใช่ค่าดิบจาก URL
-    window.location.href = `checkout.html?id=${encodeURIComponent(currentProduct.id)}&qty=${qty}`;
+    window.location.href = `checkout.html?id=${encodeURIComponent(currentProduct.id)}&qty=${qty}` +
+        (selectedSize ? `&size=${encodeURIComponent(selectedSize)}` : '');
 }

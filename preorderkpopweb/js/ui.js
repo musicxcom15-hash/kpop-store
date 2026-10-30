@@ -341,7 +341,7 @@
                                                 <div class="badge rounded-circle p-3 text-white fw-bold fs-5" style="background: #ff3399; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">1</div>
                                                 <div>
                                                     <h6 class="fw-bold mb-1 text-dark">เลือกสินค้าพรีออเดอร์</h6>
-                                                    <p class="text-muted m-0" style="font-size: 0.85rem; line-height: 1.4;">เลือกอัลบั้ม แท่งไฟ โฟโต้การ์ด หรือสินค้าศิลปิน K-POP ของแท้ 100% จากเกาหลี ระบุจำนวนที่ต้องการ แล้วกดปุ่ม "ดูเพิ่มเติม" หรือ "สั่งซื้อทันที"</p>
+                                                    <p class="text-muted m-0" style="font-size: 0.85rem; line-height: 1.4;">เลือกอัลบั้ม แท่งไฟ โฟโต้การ์ด เสื้อผ้า หรือสินค้าป๊อปอัพ ของแท้ 100% จากเกาหลี เลือกไซซ์ (ถ้ามี) และจำนวนที่ต้องการ แล้วกดปุ่ม "ดูเพิ่มเติม" หรือ "สั่งซื้อทันที"</p>
                                                 </div>
                                             </div>
                                         </div>

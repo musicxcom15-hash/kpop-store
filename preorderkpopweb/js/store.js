@@ -47,7 +47,9 @@
         album:      { label: 'อัลบั้ม',       icon: 'fa-compact-disc', chart: true },
         lightstick: { label: 'แท่งไฟ',        icon: 'fa-wand-magic-sparkles', chart: false },
         photocard:  { label: 'โฟโต้การ์ด',    icon: 'fa-id-card', chart: false },
-        merch:      { label: 'สินค้าอื่น ๆ',   icon: 'fa-shirt', chart: false }
+        clothing:   { label: 'เสื้อผ้า',       icon: 'fa-shirt', chart: false },
+        popup:      { label: 'ป๊อปอัพสโตร์',   icon: 'fa-store', chart: false },
+        merch:      { label: 'สินค้าอื่น ๆ',   icon: 'fa-bag-shopping', chart: false }
     };
 
     // ความหมายของแต่ละ flag:
@@ -878,9 +880,11 @@
             orders.forEach(o => {
                 grandTotal += Number(o.total) || 0;
                 (o.items || []).forEach(i => {
-                    const key = String(i.id);
+                    // แยกตามไซซ์ด้วย — แอดมินต้องรู้ว่าไปกดสั่งไซซ์ไหนกี่ตัว
+                    const size = i.size || '';
+                    const key = String(i.id) + '|' + size;
                     if (!byProduct[key]) {
-                        byProduct[key] = { id: key, title: i.title, qty: 0, amountTHB: 0, priceKRW: Number(i.priceKRW) || 0 };
+                        byProduct[key] = { id: String(i.id), size: size, title: i.title, qty: 0, amountTHB: 0, priceKRW: Number(i.priceKRW) || 0 };
                     }
                     byProduct[key].qty += Number(i.qty) || 0;
                     byProduct[key].amountTHB += (Number(i.price) || 0) * (Number(i.qty) || 0);
@@ -891,8 +895,16 @@
                 roundId,
                 orderCount: orders.length,
                 grandTotal,
-                items: Object.keys(byProduct).map(k => byProduct[k]).sort((a, b) => b.qty - a.qty)
+                // สินค้าที่สั่งรวมเยอะสุดขึ้นก่อน ไซซ์ของสินค้าเดียวกันเรียงติดกันตามลำดับที่แอดมินตั้งไว้
+                items: this._sortSummaryRows(Object.keys(byProduct).map(k => byProduct[k]))
             };
+        },
+        _sortSummaryRows(rows) {
+            const totals = {};
+            rows.forEach(r => { totals[r.id] = (totals[r.id] || 0) + r.qty; });
+            const sizeIndex = r => this.getProductSizes(r.id).indexOf(r.size);
+            return rows.sort((a, b) =>
+                (totals[b.id] - totals[a.id]) || a.id.localeCompare(b.id) || (sizeIndex(a) - sizeIndex(b)));
         },
 
         // รายชื่อคำสั่งซื้อทั้งหมดที่มีสินค้าชิ้นนี้อยู่ (ทุกรอบ ทุกสถานะ) เรียงใหม่สุดก่อน
@@ -907,6 +919,7 @@
                         order: o,
                         orderId: o.id,
                         customerName: o.customerName,
+                        size: i.size || '',
                         qty: Number(i.qty) || 0,
                         amount: (Number(i.price) || 0) * (Number(i.qty) || 0),
                         roundId: o.roundId,
@@ -1208,6 +1221,23 @@
             return Object.assign({ code: code }, PRODUCT_CATEGORIES[code]);
         },
 
+        // --- ไซซ์ ---
+        // สินค้าที่มีไซซ์ ลูกค้าต้องเลือก 1 ไซซ์ต่อบรรทัด ราคาและโควตาใช้ร่วมกันทุกไซซ์
+        // สินค้าไม่มีไซซ์ใช้ size = '' (ต้องตรงกับ is_valid_size() ใน api/helpers.php)
+        getProductSizes(productOrId) {
+            const p = typeof productOrId === 'string' ? this.getProductById(productOrId) : productOrId;
+            return p && Array.isArray(p.sizes) ? p.sizes : [];
+        },
+        isValidSize(productOrId, size) {
+            const sizes = this.getProductSizes(productOrId);
+            const s = String(size || '');
+            return sizes.length ? sizes.includes(s) : s === '';
+        },
+        // ชื่อสินค้าพร้อมไซซ์ เช่น "Hoodie · ไซซ์ M" (ข้อความล้วน ผู้เรียกต้อง esc เองก่อนใส่ HTML)
+        formatItemName(title, size) {
+            return size ? `${title} · ไซซ์ ${size}` : String(title || '');
+        },
+
         // --- Order status ---
         // ทุกที่ในระบบต้องถามสถานะผ่านชุดนี้ ห้ามเทียบข้อความไทยเองอีก
         ORDER_STATUS: ORDER_STATUS,
@@ -1303,7 +1333,7 @@
                 // ส่งแค่ id กับ qty ไป — ราคาและยอดรวมให้เซิร์ฟเวอร์คิดใหม่จากฐานข้อมูล
                 // ไม่เชื่อตัวเลขที่มาจากเบราว์เซอร์ เพราะเป็นข้อมูลเรื่องเงิน
                 const res = await apiWrite('orders.php?action=create', {
-                    items: (orderData.items || []).map(i => ({ id: i.id, qty: i.qty })),
+                    items: (orderData.items || []).map(i => ({ id: i.id, qty: i.qty, size: i.size || '' })),
                     customerName: orderData.customerName,
                     phone: orderData.phone,
                     address: orderData.address,
@@ -1759,7 +1789,8 @@
         },
 
         // --- Cart ---
-        // ตะกร้าเก็บแค่ productId + qty และ "ไม่เก็บราคา" โดยตั้งใจ
+        // ตะกร้าเก็บแค่ productId + size + qty และ "ไม่เก็บราคา" โดยตั้งใจ
+        // 1 บรรทัด = สินค้า + ไซซ์ (size = '' ถ้าสินค้าไม่มีไซซ์) โควตานับรวมทุกไซซ์ของสินค้าเดียวกัน
         // เพราะราคาบาทคิดจากเรทกลาง (CENTRAL_RATE) และจะถูกล็อกตอนแนบสลิปเท่านั้น
         // ถ้าร้านเปลี่ยนเรท ของที่ค้างในตะกร้าจะได้ราคาตามเรทใหม่ทันที
         getCart() {
@@ -1769,9 +1800,19 @@
         getCartCount() {
             return this.getCart().reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
         },
-        async addToCart(productId, qty) {
+        _isCartLine(entry, productId, size) {
+            return String(entry.productId) === String(productId) && String(entry.size || '') === String(size || '');
+        },
+        // จำนวนของสินค้านี้ในตะกร้าที่เป็นไซซ์อื่น (ใช้หักโควตา ตรงกับ other_sizes_qty() ใน api/cart.php)
+        _otherSizesInCart(cart, productId, size) {
+            return cart
+                .filter(c => String(c.productId) === String(productId) && String(c.size || '') !== String(size || ''))
+                .reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
+        },
+        async addToCart(productId, qty, size) {
+            size = String(size || '');
             if (HAS_API) {
-                const res = await apiWrite('cart.php?action=add', { productId: productId, qty: qty });
+                const res = await apiWrite('cart.php?action=add', { productId: productId, size: size, qty: qty });
                 return res.success
                     ? { success: true, qty: res.qty, adjusted: !!res.adjusted }
                     : { success: false, message: res.message || 'เพิ่มลงตะกร้าไม่สำเร็จ' };
@@ -1782,17 +1823,26 @@
             if (!this.isProductSellable(product)) {
                 return { success: false, message: 'สินค้านี้ปิดการขายชั่วคราวค่ะ (หมดชั่วคราว)' };
             }
+            if (!this.isValidSize(product, size)) {
+                return { success: false, message: size === '' ? 'กรุณาเลือกไซซ์ก่อนค่ะ' : 'ไม่มีไซซ์นี้สำหรับสินค้านี้ค่ะ' };
+            }
             if (!this.isRoundOpen(product.roundId)) {
                 return { success: false, message: 'รอบพรีออเดอร์ของสินค้านี้ปิดรับแล้วค่ะ' };
             }
 
-            const remaining = this.getRemainingQuota(productId);
+            const cart = this.getCart();
+            let remaining = this.getRemainingQuota(productId);
             if (remaining !== null && remaining <= 0) {
                 return { success: false, message: 'รอบนี้เต็มโควตาแล้วค่ะ กรุณารอรอบถัดไป' };
             }
+            if (remaining !== null) {
+                remaining -= this._otherSizesInCart(cart, productId, size);
+                if (remaining <= 0) {
+                    return { success: false, message: 'ในตะกร้ามีสินค้านี้ (ไซซ์อื่น) ครบจำนวนที่รอบนี้รับได้แล้วค่ะ' };
+                }
+            }
 
-            const cart = this.getCart();
-            const existing = cart.find(c => String(c.productId) === String(productId));
+            const existing = cart.find(c => this._isCartLine(c, productId, size));
             const requested = (existing ? Number(existing.qty) || 0 : 0) + this.normalizeQty(qty);
             // clamp เองแทน normalizeQty(v, max) เพราะเมื่อ max = 0 ตัวนั้นจะถือว่า "ไม่มีเพดาน"
             const finalQty = (remaining !== null) ? Math.min(requested, remaining) : requested;
@@ -1800,7 +1850,7 @@
             if (existing) {
                 existing.qty = finalQty;
             } else {
-                cart.push({ productId: String(productId), qty: finalQty, addedAt: formatStamp() });
+                cart.push({ productId: String(productId), size: size, qty: finalQty, addedAt: formatStamp() });
             }
 
             if (!setJSON(STORAGE_KEYS.CART, cart)) {
@@ -1809,19 +1859,21 @@
 
             return { success: true, qty: finalQty, adjusted: finalQty !== requested };
         },
-        async updateCartQty(productId, qty) {
+        async updateCartQty(productId, qty, size) {
+            size = String(size || '');
             if (HAS_API) {
-                const res = await apiWrite('cart.php?action=update', { productId: productId, qty: qty });
+                const res = await apiWrite('cart.php?action=update', { productId: productId, size: size, qty: qty });
                 return res.success
                     ? { success: true, qty: res.qty, adjusted: !!res.adjusted }
                     : { success: false, message: res.message || 'แก้จำนวนไม่สำเร็จ' };
             }
 
             const cart = this.getCart();
-            const entry = cart.find(c => String(c.productId) === String(productId));
+            const entry = cart.find(c => this._isCartLine(c, productId, size));
             if (!entry) return { success: false, message: 'ไม่พบสินค้านี้ในตะกร้า' };
 
-            const remaining = this.getRemainingQuota(productId);
+            let remaining = this.getRemainingQuota(productId);
+            if (remaining !== null) remaining -= this._otherSizesInCart(cart, productId, size);
 
             // โควตาหมดพอดี = แก้จำนวนไม่ได้เลย
             // ของเดิมใช้ Math.max(remaining, 1) ทำให้ยัดเป็น 1 ชิ้นแล้วบอกว่า "ปรับให้แล้ว"
@@ -1840,13 +1892,14 @@
 
             return { success: true, qty: finalQty, adjusted: finalQty !== requested };
         },
-        async removeFromCart(productId) {
+        async removeFromCart(productId, size) {
+            size = String(size || '');
             if (HAS_API) {
-                await apiWrite('cart.php?action=remove', { productId: productId });
+                await apiWrite('cart.php?action=remove', { productId: productId, size: size });
                 return this.getCart();
             }
 
-            const cart = this.getCart().filter(c => String(c.productId) !== String(productId));
+            const cart = this.getCart().filter(c => !this._isCartLine(c, productId, size));
             setJSON(STORAGE_KEYS.CART, cart);
             return cart;
         },
@@ -1871,8 +1924,15 @@
             const shippingFee = (typeof shippingFeePerRound === 'number') ? shippingFeePerRound : 50;
             const rate = this.getCurrentRate();
             const groups = [];
+            const cart = this.getCart();
 
-            this.getCart().forEach(entry => {
+            // จำนวนรวมทุกไซซ์ต่อสินค้า — เทียบกับโควตาที่เหลือ (โควตาใช้ร่วมกันทุกไซซ์)
+            const qtyByProduct = {};
+            cart.forEach(c => {
+                qtyByProduct[c.productId] = (qtyByProduct[c.productId] || 0) + (Number(c.qty) || 0);
+            });
+
+            cart.forEach(entry => {
                 const product = this.getProductById(entry.productId);
                 if (!product) return; // สินค้าถูกลบไปแล้ว ข้ามไป
 
@@ -1897,19 +1957,23 @@
                 const qty = Number(entry.qty) || 0;
                 const lineTotal = breakdown.total * qty;
 
+                const size = String(entry.size || '');
                 group.items.push({
                     product,
+                    size,
                     qty,
                     breakdown,
                     lineTotal,
                     remaining,
-                    overQuota: remaining !== null && qty > remaining
+                    overQuota: remaining !== null && qtyByProduct[entry.productId] > remaining,
+                    // แอดมินลบไซซ์นี้ออก หรือเพิ่มไซซ์ให้สินค้าที่เคยไม่มีไซซ์ หลังลูกค้าหยิบใส่ตะกร้าแล้ว
+                    invalidSize: !this.isValidSize(product, size)
                 });
                 group.subtotal += lineTotal;
             });
 
             groups.forEach(g => {
-                g.orderable = g.state === 'open' && g.items.every(i => !i.overQuota);
+                g.orderable = g.state === 'open' && g.items.every(i => !i.overQuota && !i.invalidSize);
                 g.total = g.subtotal + g.shippingFee;
             });
 

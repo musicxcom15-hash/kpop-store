@@ -103,7 +103,7 @@ function renderRoundGroup(group) {
                                            <i class="fa-solid fa-credit-card me-2"></i>ชำระเงินรอบนี้
                                        </button>`
                             : `<button class="btn btn-secondary" disabled>
-                                           <i class="fa-solid fa-ban me-2"></i>${group.state === 'open' ? 'มีรายการเกินโควตา' : meta.text}
+                                           <i class="fa-solid fa-ban me-2"></i>${group.state !== 'open' ? meta.text : (group.items.some(i => i.invalidSize) ? 'มีรายการที่ต้องเลือกไซซ์ใหม่' : 'มีรายการเกินโควตา')}
                                        </button>`}
                             </div>
                         </div>
@@ -115,6 +115,8 @@ function renderRoundGroup(group) {
 function renderCartItem(item) {
     const p = item.product;
     const bd = item.breakdown;
+    // id ของช่องจำนวนต้องไม่ชนกันระหว่างไซซ์ของสินค้าเดียวกัน
+    const qtyId = 'qty_' + esc(p.id) + (item.size ? '_' + esc(item.size) : '');
 
     return `
                 <div class="d-flex align-items-center gap-3 py-3 border-bottom flex-wrap">
@@ -122,31 +124,35 @@ function renderCartItem(item) {
                         onerror="this.onerror=null; this.src='${FALLBACK_IMAGE}'">
 
                     <div class="flex-grow-1" style="min-width: 180px;">
-                        <div class="fw-bold" style="font-size: 0.95rem;">${esc(p.title)}</div>
+                        <div class="fw-bold" style="font-size: 0.95rem;">${esc(p.title)}
+                            ${item.size ? `<span class="badge bg-light text-dark border ms-1">ไซซ์ ${esc(item.size)}</span>` : ''}</div>
                         <div class="text-muted" style="font-size: 0.8rem;">
                             ${bd.legacy
                         ? 'ราคาบาทคงที่'
                         : `₩${bd.krw.toLocaleString()} x ${bd.rate} = ฿${bd.converted.toLocaleString()} + ค่าบริการ ฿${bd.serviceFee.toLocaleString()}`}
                         </div>
                         <div class="mt-1" style="font-size: 0.8rem;">
+                            ${item.invalidSize
+                        ? `<span class="text-danger fw-bold d-block"><i class="fa-solid fa-triangle-exclamation me-1"></i>${item.size ? 'ไซซ์นี้ไม่มีขายแล้ว' : 'สินค้านี้ต้องเลือกไซซ์'} กรุณาลบออกแล้วเลือกใหม่ในหน้าสินค้า</span>`
+                        : ''}
                             ${item.remaining === null
                         ? '<span class="text-muted">รับไม่จำกัด</span>'
                         : (item.overQuota
                             ? `<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i>รอบนี้เหลือรับได้แค่ ${item.remaining} ชิ้น กรุณาลดจำนวน</span>`
-                            : `<span class="text-muted">รอบนี้รับได้อีก ${item.remaining} ชิ้น</span>`)}
+                            : `<span class="text-muted">รอบนี้รับได้อีก ${item.remaining} ชิ้น${item.size ? ' (รวมทุกไซซ์)' : ''}</span>`)}
                         </div>
                     </div>
 
                     <div class="text-center">
-                        <label class="text-muted d-block" style="font-size: 0.75rem;" for="qty_${esc(p.id)}">จำนวน</label>
-                        <input type="number" class="qty-input" id="qty_${esc(p.id)}" value="${item.qty}" min="1" step="1"
-                            onchange="changeQty('${escArg(p.id)}', this.value)">
+                        <label class="text-muted d-block" style="font-size: 0.75rem;" for="${qtyId}">จำนวน</label>
+                        <input type="number" class="qty-input" id="${qtyId}" value="${item.qty}" min="1" step="1"
+                            onchange="changeQty('${escArg(p.id)}', '${escArg(item.size)}', this.value)">
                     </div>
 
                     <div class="text-end" style="min-width: 110px;">
                         <div class="fw-bold text-danger">${baht(item.lineTotal)}</div>
                         <button class="btn btn-sm btn-link text-decoration-none text-muted p-0 mt-1"
-                            onclick="removeItem('${escArg(p.id)}')" style="font-size: 0.8rem;">
+                            onclick="removeItem('${escArg(p.id)}', '${escArg(item.size)}')" style="font-size: 0.8rem;">
                             <i class="fa-regular fa-trash-can me-1"></i>ลบ
                         </button>
                     </div>
@@ -154,8 +160,8 @@ function renderCartItem(item) {
             `;
 }
 
-async function changeQty(productId, value) {
-    const res = await KpopStore.updateCartQty(productId, value);
+async function changeQty(productId, size, value) {
+    const res = await KpopStore.updateCartQty(productId, value, size);
     if (!res.success) {
         alert(res.message);
         renderCart();
@@ -167,8 +173,8 @@ async function changeQty(productId, value) {
     renderCart();
 }
 
-async function removeItem(productId) {
-    await KpopStore.removeFromCart(productId);
+async function removeItem(productId, size) {
+    await KpopStore.removeFromCart(productId, size);
     renderCart();
 }
 

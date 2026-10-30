@@ -143,7 +143,7 @@ function renderAdminDashboard() {
                 <tr>
                     <td class="fw-bold">${esc(o.id)}</td>
                     <td>${esc(o.customerName)}</td>
-                    <td style="font-size:0.85rem;">${(o.items || []).map(i => `${esc(i.title)} (x${Number(i.qty) || 0})`).join(', ')}</td>
+                    <td style="font-size:0.85rem;">${(o.items || []).map(i => `${esc(KpopStore.formatItemName(i.title, i.size))} (x${Number(i.qty) || 0})`).join(', ')}</td>
                     <td class="fw-bold text-danger">฿${(o.total || 0).toLocaleString()}</td>
                     <td>${renderStatusBadge(o)}</td>
                 </tr>
@@ -371,7 +371,7 @@ function renderOrdersTable() {
                         <div class="fw-bold">${esc(o.customerName)}</div>
                         <small class="text-muted">${esc(o.phone)}</small>
                     </td>
-                    <td style="font-size:0.85rem;">${(o.items || []).map(i => `${esc(i.title)} (x${Number(i.qty) || 0})`).join(', ')}</td>
+                    <td style="font-size:0.85rem;">${(o.items || []).map(i => `${esc(KpopStore.formatItemName(i.title, i.size))} (x${Number(i.qty) || 0})`).join(', ')}</td>
                     <td class="fw-bold text-danger">฿${(o.total || 0).toLocaleString()}</td>
                     <td>${renderStatusBadge(o)}</td>
                     <td><small class="font-monospace text-primary fw-bold">${esc(o.trackingNumber) || '-'}</small></td>
@@ -608,6 +608,8 @@ function renderProductsTable() {
                     <td>
                         <div class="fw-bold">${esc(p.title)}</div>
                         <span class="badge bg-light text-dark border me-1"><i class="fa-solid ${KpopStore.getProductCategory(p).icon} me-1"></i>${esc(KpopStore.getProductCategory(p).label)}</span>
+                        ${KpopStore.getProductSizes(p).length ? `<span class="badge bg-light text-dark border me-1"><i class="fa-solid fa-ruler me-1"></i>${esc(KpopStore.getProductSizes(p).join(' / '))}</span>` : ''}
+                        ${p.sourceUrl ? `<a href="${esc(p.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="badge bg-light text-primary border me-1 text-decoration-none" title="เปิดหน้าร้านต้นทาง"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i>ร้านต้นทาง</a>` : ''}
                         <small class="text-muted">${round ? esc(round.name) : 'ยังไม่ผูกรอบ'} ${renderRoundStateBadge(state)}</small>
                     </td>
                     <td>
@@ -678,7 +680,7 @@ function showProductOrders(productId) {
                                     <tr>
                                         <td class="fw-bold">${esc(r.orderId)}</td>
                                         <td>${esc(r.customerName)}</td>
-                                        <td class="text-end fw-bold fs-5 text-danger">${r.qty}</td>
+                                        <td class="text-end fw-bold fs-5 text-danger">${r.size ? `<span class="badge bg-light text-dark border me-1 fs-6">${esc(r.size)}</span>` : ''}${r.qty}</td>
                                         <td class="text-end fw-bold">฿${r.amount.toLocaleString()}</td>
                                         <td style="font-size:0.85rem;">${esc(r.roundName)}</td>
                                         <td>${renderStatusBadge(r.order)}</td>
@@ -707,6 +709,7 @@ function exportProductOrdersExcel() {
     const data = rows.map(r => ({
         'รหัสคำสั่งซื้อ': r.orderId,
         'ลูกค้า': r.customerName,
+        'ไซซ์': r.size || '-',
         'จำนวน': r.qty,
         'ยอดเงิน (บาท)': r.amount,
         'รอบ': r.roundName,
@@ -714,7 +717,7 @@ function exportProductOrdersExcel() {
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 8 }, { wch: 14 }, { wch: 30 }, { wch: 22 }];
+    ws['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 14 }, { wch: 30 }, { wch: 22 }];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'รายงาน');
@@ -837,6 +840,8 @@ function openAddProductModal() {
     document.getElementById('pArtist').value = '';
     document.getElementById('pTitle').value = '';
     populateCategorySelect('album');
+    document.getElementById('pSizes').value = '';
+    document.getElementById('pSourceUrl').value = '';
     document.getElementById('pPriceKRW').value = '25000';
     document.getElementById('pServiceFee').value = '170';
     document.getElementById('pQuota').value = '50';
@@ -862,6 +867,8 @@ function openEditProductModal(productId) {
     document.getElementById('pArtist').value = p.artist;
     document.getElementById('pTitle').value = p.title;
     populateCategorySelect(KpopStore.getProductCategory(p).code);
+    document.getElementById('pSizes').value = KpopStore.getProductSizes(p).join(', ');
+    document.getElementById('pSourceUrl').value = p.sourceUrl || '';
     document.getElementById('pPriceKRW').value = p.priceKRW || '';
     document.getElementById('pServiceFee').value = p.serviceFee || 0;
     // ว่าง = รับไม่จำกัด จึงต้องแยก null ออกจาก 0 ให้ชัด
@@ -893,6 +900,9 @@ async function saveProductForm(e) {
         artist: document.getElementById('pArtist').value,
         title: document.getElementById('pTitle').value,
         category: document.getElementById('pCategory').value,
+        // "S, M, L" → ['S','M','L'] ตัดช่องว่างและตัวซ้ำ (PHP ตรวจซ้ำอีกรอบตอนบันทึก)
+        sizes: [...new Set(document.getElementById('pSizes').value.split(',').map(x => x.trim()).filter(Boolean))],
+        sourceUrl: document.getElementById('pSourceUrl').value.trim(),
         priceKRW: parseFloat(document.getElementById('pPriceKRW').value) || 0,
         serviceFee: parseFloat(document.getElementById('pServiceFee').value) || 0,
         roundId: document.getElementById('pRoundId').value,
@@ -1139,7 +1149,7 @@ function showRoundSummary(roundId) {
                             <tbody>
                                 ${summary.items.map(i => `
                                     <tr>
-                                        <td class="fw-bold">${esc(i.title)}</td>
+                                        <td class="fw-bold">${esc(i.title)}${i.size ? ` <span class="badge bg-dark ms-1">ไซซ์ ${esc(i.size)}</span>` : ''}</td>
                                         <td class="text-end fw-bold fs-5 text-danger">${i.qty}</td>
                                         <td class="text-end">${i.priceKRW ? '₩' + i.priceKRW.toLocaleString() : '-'}</td>
                                         <td class="text-end fw-bold">${i.priceKRW ? '₩' + (i.priceKRW * i.qty).toLocaleString() : '-'}</td>

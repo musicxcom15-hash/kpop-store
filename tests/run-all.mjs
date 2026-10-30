@@ -22,7 +22,8 @@ const FILES = [
     'save-failure.test.mjs',
     'admin-product.test.mjs',
     'auth-gate.test.mjs',
-    'product-category.test.mjs'
+    'product-category.test.mjs',
+    'product-sizes.test.mjs'
 ];
 
 const failed = [];

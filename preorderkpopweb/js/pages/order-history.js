@@ -190,7 +190,7 @@ function renderCustomerOrders() {
                         <div class="d-flex align-items-center mt-3 flex-wrap gap-3">
                             <img src="${esc(itemImg)}" class="product-img-small me-2" alt="${esc(item.title)}" style="cursor: pointer; transition: transform 0.2s;" onclick="openSlipLightbox(this.src)" title="คลิกดูภาพใหญ่" onerror="this.onerror=null; this.src='${FALLBACK_IMAGE}'">
                             <div class="flex-grow-1">
-                                <h6 class="mb-1 fw-bold">${esc(item.title)}</h6>
+                                <h6 class="mb-1 fw-bold">${esc(KpopStore.formatItemName(item.title, item.size))}</h6>
                                 <p class="text-muted mb-0" style="font-size: 0.85rem;">จำนวน: ${Number(item.qty) || 1} ชิ้น ${items.length > 1 ? `(+อีก ${items.length - 1} รายการ)` : ''}</p>
                                 ${trackingNo ? `
                                     <div class="mt-1 text-primary fw-bold" style="font-size: 0.82rem;">
@@ -332,7 +332,7 @@ function viewCustomerOrderDetail(orderId) {
                                 <div class="d-flex align-items-center gap-2">
                                     <img src="${esc(iImg)}" alt="${esc(i.title)}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; cursor: pointer;" onclick="openSlipLightbox(this.src)" title="คลิกดูภาพใหญ่" onerror="this.onerror=null; this.src='${FALLBACK_IMAGE}'">
                                     <div>
-                                        <div class="fw-bold" style="font-size: 0.9rem;">${esc(i.title)}</div>
+                                        <div class="fw-bold" style="font-size: 0.9rem;">${esc(KpopStore.formatItemName(i.title, i.size))}</div>
                                         <small class="text-muted">จำนวน x${Number(i.qty) || 0} ชิ้น</small>
                                     </div>
                                 </div>

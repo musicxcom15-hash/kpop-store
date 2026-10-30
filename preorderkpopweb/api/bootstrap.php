@@ -22,6 +22,10 @@ $isAdmin = $user && $user['role'] === 'admin';
 
 /* --- สินค้า / รอบ : ข้อมูลสาธารณะ ทุกคนเห็นเหมือนกัน --- */
 $products = array_map('map_product', db()->query('SELECT * FROM products ORDER BY id')->fetchAll());
+// ยกเว้นลิงก์ร้านต้นทาง — เป็นข้อมูลภายในร้าน เห็นเฉพาะแอดมิน
+if (!$isAdmin) {
+    $products = array_map(fn($p) => array_diff_key($p, ['sourceUrl' => true]), $products);
+}
 $rounds   = array_map('map_round',   db()->query('SELECT * FROM rounds ORDER BY open_at')->fetchAll());
 
 /* --- ออเดอร์ --- */

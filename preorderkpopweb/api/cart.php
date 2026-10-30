@@ -34,11 +34,23 @@ function normalize_qty($value, ?int $max = null): int
     return $n;
 }
 
+/**
+ * จำนวนของสินค้านี้ในตะกร้า "ไซซ์อื่น" — โควตานับรวมทุกไซซ์
+ * ถ้าไม่หักส่วนนี้ ลูกค้าใส่ M เต็มโควตาแล้วใส่ L ได้อีกเต็มโควตา
+ */
+function other_sizes_qty(string $userId, string $productId, string $size): int
+{
+    $st = db()->prepare('SELECT COALESCE(SUM(qty), 0) FROM cart_items WHERE user_id = ? AND product_id = ? AND size <> ?');
+    $st->execute([$userId, $productId, $size]);
+    return (int) $st->fetchColumn();
+}
+
 switch (action()) {
 
     /* ---------------------------------------------------------- */
     case 'add': {
         $productId = (string) ($in['productId'] ?? '');
+        $size      = trim((string) ($in['size'] ?? ''));
         $addQty    = normalize_qty($in['qty'] ?? 1);
 
         $st = db()->prepare('SELECT * FROM products WHERE id = ?');
@@ -49,6 +61,10 @@ switch (action()) {
         }
         if (strtoupper((string) $product['status']) === 'OUT OF STOCK') {
             fail('สินค้านี้ปิดการขายชั่วคราวค่ะ (หมดชั่วคราว)', 200, ['cart' => cart_of($user['id'])]);
+        }
+        if (!is_valid_size($product, $size)) {
+            fail($size === '' ? 'กรุณาเลือกไซซ์ก่อนค่ะ' : 'ไม่มีไซซ์นี้สำหรับสินค้านี้ค่ะ',
+                 200, ['cart' => cart_of($user['id'])]);
         }
 
         $round = fetch_round($product['round_id']);
@@ -61,10 +77,18 @@ switch (action()) {
         if ($remaining !== null && $remaining <= 0) {
             fail('รอบนี้เต็มโควตาแล้วค่ะ กรุณารอรอบถัดไป', 200, ['cart' => cart_of($user['id'])]);
         }
+        // โควตาที่เหลือให้ไซซ์นี้ = โควตารอบ - ไซซ์อื่นที่อยู่ในตะกร้าแล้ว
+        if ($remaining !== null) {
+            $remaining -= other_sizes_qty($user['id'], $productId, $size);
+            if ($remaining <= 0) {
+                fail('ในตะกร้ามีสินค้านี้ (ไซซ์อื่น) ครบจำนวนที่รอบนี้รับได้แล้วค่ะ',
+                     200, ['cart' => cart_of($user['id'])]);
+            }
+        }
 
         // จำนวนที่ขอ = ของเดิมในตะกร้า + ที่เพิ่งกดเพิ่ม
-        $st = db()->prepare('SELECT qty FROM cart_items WHERE user_id = ? AND product_id = ?');
-        $st->execute([$user['id'], $productId]);
+        $st = db()->prepare('SELECT qty FROM cart_items WHERE user_id = ? AND product_id = ? AND size = ?');
+        $st->execute([$user['id'], $productId, $size]);
         $existing  = (int) ($st->fetchColumn() ?: 0);
         $requested = $existing + $addQty;
 
@@ -72,11 +96,11 @@ switch (action()) {
         $finalQty = $remaining !== null ? min($requested, $remaining) : $requested;
 
         $st = db()->prepare(
-            'INSERT INTO cart_items (user_id, product_id, qty, added_at)
-             VALUES (?, ?, ?, ?)
+            'INSERT INTO cart_items (user_id, product_id, size, qty, added_at)
+             VALUES (?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE qty = VALUES(qty)'
         );
-        $st->execute([$user['id'], $productId, $finalQty, date('Y-m-d H:i:s')]);
+        $st->execute([$user['id'], $productId, $size, $finalQty, date('Y-m-d H:i:s')]);
 
         ok([
             'qty'      => $finalQty,
@@ -88,19 +112,23 @@ switch (action()) {
     /* ---------------------------------------------------------- */
     case 'update': {
         $productId = (string) ($in['productId'] ?? '');
+        $size      = trim((string) ($in['size'] ?? ''));
 
-        $st = db()->prepare('SELECT qty FROM cart_items WHERE user_id = ? AND product_id = ?');
-        $st->execute([$user['id'], $productId]);
+        $st = db()->prepare('SELECT qty FROM cart_items WHERE user_id = ? AND product_id = ? AND size = ?');
+        $st->execute([$user['id'], $productId, $size]);
         if ($st->fetchColumn() === false) {
             fail('ไม่พบสินค้านี้ในตะกร้า', 200, ['cart' => cart_of($user['id'])]);
         }
 
         $remaining = remaining_quota($productId);
+        if ($remaining !== null) {
+            $remaining -= other_sizes_qty($user['id'], $productId, $size);
+        }
         $requested = normalize_qty($in['qty'] ?? 1);
         $finalQty  = $remaining !== null ? min($requested, max(1, $remaining)) : $requested;
 
-        $st = db()->prepare('UPDATE cart_items SET qty = ? WHERE user_id = ? AND product_id = ?');
-        $st->execute([$finalQty, $user['id'], $productId]);
+        $st = db()->prepare('UPDATE cart_items SET qty = ? WHERE user_id = ? AND product_id = ? AND size = ?');
+        $st->execute([$finalQty, $user['id'], $productId, $size]);
 
         ok([
             'qty'      => $finalQty,
@@ -111,8 +139,8 @@ switch (action()) {
 
     /* ---------------------------------------------------------- */
     case 'remove': {
-        $st = db()->prepare('DELETE FROM cart_items WHERE user_id = ? AND product_id = ?');
-        $st->execute([$user['id'], (string) ($in['productId'] ?? '')]);
+        $st = db()->prepare('DELETE FROM cart_items WHERE user_id = ? AND product_id = ? AND size = ?');
+        $st->execute([$user['id'], (string) ($in['productId'] ?? ''), trim((string) ($in['size'] ?? ''))]);
         ok(['cart' => cart_of($user['id'])]);
     }
 

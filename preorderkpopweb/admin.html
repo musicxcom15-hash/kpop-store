@@ -363,7 +363,7 @@
                                     <thead>
                                         <tr>
                                             <th>รูป</th>
-                                            <th>ศิลปิน</th>
+                                            <th>ศิลปิน/แบรนด์</th>
                                             <th>ชื่ออัลบั้ม/สินค้า</th>
                                             <th>ราคา</th>
                                             <th>โควตารับ/รอบ</th>
@@ -684,8 +684,8 @@
                         <input type="hidden" id="pId">
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">ชื่อศิลปิน / ศิลปินกลุ่ม</label>
-                                <input type="text" id="pArtist" class="form-control" placeholder="เช่น BTS, NEWJEANS, BLACKPINK" required>
+                                <label class="form-label fw-bold">ศิลปิน / แบรนด์</label>
+                                <input type="text" id="pArtist" class="form-control" placeholder="เช่น BTS, NEWJEANS หรือชื่อแบรนด์เสื้อผ้า" required>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-bold">ชื่อสินค้า</label>
@@ -695,6 +695,18 @@
                                 <label class="form-label fw-bold">หมวดหมู่</label>
                                 <!-- ตัวเลือกเติมจาก KpopStore.PRODUCT_CATEGORIES (populateCategorySelect ใน admin.js) -->
                                 <select id="pCategory" class="form-select"></select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold" for="pSizes">ไซซ์ให้ลูกค้าเลือก</label>
+                                <input type="text" id="pSizes" class="form-control" placeholder="เช่น S, M, L, XL">
+                                <div class="form-text" style="font-size: 0.78rem;">คั่นด้วยคอมมา · เว้นว่าง = ไม่มีไซซ์ · ราคาและโควตาใช้ร่วมกันทุกไซซ์</div>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold" for="pSourceUrl">ลิงก์ร้านต้นทาง <span class="badge bg-secondary fw-normal">เห็นเฉพาะแอดมิน</span></label>
+                                <input type="url" id="pSourceUrl" class="form-control" placeholder="https://... หน้าสินค้าบนเว็บที่ร้านไปกดสั่ง">
+                                <div class="form-text" style="font-size: 0.78rem;">ลูกค้าไม่เห็นลิงก์นี้</div>
                             </div>
                         </div>
                         <div class="row g-3 mb-3">

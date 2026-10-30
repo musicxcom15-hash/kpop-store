@@ -28,7 +28,7 @@ switch (action()) {
         $roundId = trim((string) ($in['roundId'] ?? ''));
 
         if ($artist === '' || $title === '') {
-            fail('กรุณากรอกชื่อศิลปินและชื่อสินค้าค่ะ', 200, ['products' => all_products()]);
+            fail('กรุณากรอกชื่อศิลปิน/แบรนด์และชื่อสินค้าค่ะ', 200, ['products' => all_products()]);
         }
         if ($roundId === '' || !fetch_round($roundId)) {
             fail('กรุณาเลือกรอบพรีออเดอร์ที่มีอยู่จริงค่ะ', 200, ['products' => all_products()]);
@@ -42,6 +42,29 @@ switch (action()) {
         $category = (string) ($in['category'] ?? 'album');
         if (!in_array($category, PRODUCT_CATEGORIES, true)) {
             fail('หมวดหมู่สินค้าไม่ถูกต้องค่ะ', 200, ['products' => all_products()]);
+        }
+
+        // ไซซ์รับได้ทั้งแบบ array และข้อความคั่นคอมมา ("S, M, L")
+        $sizesRaw = $in['sizes'] ?? '';
+        $sizes = parse_sizes(is_array($sizesRaw) ? implode(',', array_map('strval', $sizesRaw)) : (string) $sizesRaw);
+        if (count($sizes) > MAX_SIZES) {
+            fail('ใส่ไซซ์ได้ไม่เกิน ' . MAX_SIZES . ' แบบค่ะ', 200, ['products' => all_products()]);
+        }
+        foreach ($sizes as $s) {
+            if (mb_strlen($s) > MAX_SIZE_LENGTH) {
+                fail('ชื่อไซซ์ยาวเกินไปค่ะ (ไม่เกิน ' . MAX_SIZE_LENGTH . ' ตัวอักษรต่อไซซ์)', 200, ['products' => all_products()]);
+            }
+        }
+        $sizesCsv = implode(',', $sizes);
+
+        // ลิงก์ร้านต้นทางต้องเป็น http(s) เท่านั้น — กัน javascript: ที่จะกลายเป็นลิงก์ในหน้าแอดมิน
+        $sourceUrl = trim((string) ($in['sourceUrl'] ?? ''));
+        if ($sourceUrl !== '' && (
+            mb_strlen($sourceUrl) > 500 ||
+            !filter_var($sourceUrl, FILTER_VALIDATE_URL) ||
+            !in_array(strtolower((string) parse_url($sourceUrl, PHP_URL_SCHEME)), ['http', 'https'], true)
+        )) {
+            fail('ลิงก์ร้านต้นทางต้องขึ้นต้นด้วย http:// หรือ https:// ค่ะ', 200, ['products' => all_products()]);
         }
 
         // '' หรือ null = รับไม่จำกัด ห้ามแปลงเป็น 0 เพราะ 0 แปลว่า "เต็มแล้ว"
@@ -67,21 +90,21 @@ switch (action()) {
 
         if ($exists) {
             $st = db()->prepare(
-                'UPDATE products SET artist = ?, title = ?, category = ?, price_krw = ?, service_fee = ?, price = ?,
+                'UPDATE products SET artist = ?, title = ?, category = ?, sizes = ?, price_krw = ?, service_fee = ?, price = ?,
                                      round_id = ?, quota_per_round = ?, image = ?, status = ?,
-                                     est_delivery = ?, description = ?
+                                     est_delivery = ?, description = ?, source_url = ?
                  WHERE id = ?'
             );
-            $st->execute([$artist, $title, $category, $priceKRW, $serviceFee, $price, $roundId, $quota,
-                          $image, $status, $estDelivery, $desc, $id]);
+            $st->execute([$artist, $title, $category, $sizesCsv, $priceKRW, $serviceFee, $price, $roundId, $quota,
+                          $image, $status, $estDelivery, $desc, $sourceUrl, $id]);
         } else {
             $st = db()->prepare(
-                'INSERT INTO products (id, artist, title, category, price_krw, service_fee, price, round_id,
-                                       quota_per_round, image, status, est_delivery, description)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                'INSERT INTO products (id, artist, title, category, sizes, price_krw, service_fee, price, round_id,
+                                       quota_per_round, image, status, est_delivery, description, source_url)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             );
-            $st->execute([$id, $artist, $title, $category, $priceKRW, $serviceFee, $price, $roundId, $quota,
-                          $image, $status, $estDelivery, $desc]);
+            $st->execute([$id, $artist, $title, $category, $sizesCsv, $priceKRW, $serviceFee, $price, $roundId, $quota,
+                          $image, $status, $estDelivery, $desc, $sourceUrl]);
         }
 
         ok(['products' => all_products(), 'id' => $id]);

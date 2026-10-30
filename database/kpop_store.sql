@@ -81,8 +81,10 @@ CREATE TABLE `products` (
     `id`              VARCHAR(50)   NOT NULL,
     `artist`          VARCHAR(150)  NOT NULL,
     `title`           VARCHAR(255)  NOT NULL,
-    -- album | lightstick | photocard | merch (ชื่อไทยอยู่ที่ PRODUCT_CATEGORIES ใน js/store.js)
+    -- album | lightstick | photocard | clothing | popup | merch (ชื่อไทยอยู่ที่ PRODUCT_CATEGORIES ใน js/store.js)
     `category`        VARCHAR(32)   NOT NULL DEFAULT 'album',
+    -- ไซซ์ให้ลูกค้าเลือก คั่นด้วยคอมมา เช่น 'S,M,L,XL' ('' = ไม่มีไซซ์) ราคา/โควตาใช้ร่วมกันทุกไซซ์
+    `sizes`           VARCHAR(255)  NOT NULL DEFAULT '',
     `price_krw`       INT           NOT NULL DEFAULT 0,
     `service_fee`     DECIMAL(10,2) NOT NULL DEFAULT 0,
     `price`           DECIMAL(10,2) NULL,
@@ -95,6 +97,8 @@ CREATE TABLE `products` (
     `est_delivery`    VARCHAR(255)  NULL,
     -- ชื่อ desc ตรงกับฝั่ง JS แต่เป็น reserved word ของ SQL จึงใช้ description
     `description`     TEXT          NULL,
+    -- ลิงก์ร้านต้นทางที่แอดมินไปกดสั่ง (ข้อมูลภายใน ไม่ส่งให้ลูกค้า)
+    `source_url`      VARCHAR(500)  NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
     KEY `idx_products_round` (`round_id`),
     CONSTRAINT `fk_products_round` FOREIGN KEY (`round_id`)
@@ -170,6 +174,7 @@ CREATE TABLE `order_items` (
     `order_id`    VARCHAR(30)   NOT NULL,
     `product_id`  VARCHAR(50)   NOT NULL,
     `title`       VARCHAR(255)  NOT NULL,
+    `size`        VARCHAR(32)   NOT NULL DEFAULT '',
     `qty`         INT           NOT NULL DEFAULT 1,
     `price`       DECIMAL(10,2) NOT NULL DEFAULT 0,
     `price_krw`   INT           NULL,
@@ -228,10 +233,12 @@ CREATE TABLE `cart_items` (
     `id`         INT         NOT NULL AUTO_INCREMENT,
     `user_id`    VARCHAR(50) NOT NULL,
     `product_id` VARCHAR(50) NOT NULL,
+    `size`       VARCHAR(32) NOT NULL DEFAULT '',
     `qty`        INT         NOT NULL DEFAULT 1,
     `added_at`   DATETIME    NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_cart_user_product` (`user_id`, `product_id`),
+    -- 1 แถว = สินค้า + ไซซ์ (เสื้อตัวเดียวกันคนละไซซ์อยู่คนละแถว)
+    UNIQUE KEY `uniq_cart_user_product_size` (`user_id`, `product_id`, `size`),
     KEY `idx_cart_product` (`product_id`),
     CONSTRAINT `fk_cart_user` FOREIGN KEY (`user_id`)
         REFERENCES `users` (`id`) ON DELETE CASCADE,
