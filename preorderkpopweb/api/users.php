@@ -106,6 +106,9 @@ switch (action()) {
 
         $st = db()->prepare('DELETE FROM users WHERE id = ?');
         $st->execute([$id]);
+        // password_resets ไม่มี foreign key (ดู ensure_password_resets_table) จึงต้องลบลิงก์ค้างเอง
+        $st = db()->prepare('DELETE FROM password_resets WHERE user_id = ?');
+        $st->execute([$id]);
 
         // ลบบัญชีตัวเอง = ต้องหลุดออกจากระบบด้วย (พฤติกรรมเดิมของ deleteUser)
         $selfDeleted = $target['id'] === $admin['id'];

@@ -24,6 +24,7 @@ SET NAMES utf8mb4;
 -- เรียงจากตารางลูกไปแม่ ไม่งั้นติด foreign key
 DROP TABLE IF EXISTS `cart_items`;
 DROP TABLE IF EXISTS `order_items`;
+DROP TABLE IF EXISTS `password_resets`;
 DROP TABLE IF EXISTS `notifications`;
 DROP TABLE IF EXISTS `orders`;
 DROP TABLE IF EXISTS `products`;
@@ -194,6 +195,23 @@ CREATE TABLE `notifications` (
     `is_read`    TINYINT(1)   NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
     KEY `idx_noti_email` (`user_email`, `is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- password_resets — ลิงก์รีเซ็ตรหัสผ่านทางอีเมล (auth.php forgot / reset-with-token)
+-- เก็บแค่ hash ของ token ใช้ได้ครั้งเดียว หมดอายุ 30 นาที
+-- ไม่ใส่ foreign key ตั้งใจ (ดู ensure_password_resets_table ใน helpers.php)
+-- ---------------------------------------------------------------------
+CREATE TABLE `password_resets` (
+    `id`         INT         NOT NULL AUTO_INCREMENT,
+    `user_id`    VARCHAR(50) NOT NULL,
+    `token_hash` CHAR(64)    NOT NULL,
+    `expires_at` DATETIME    NOT NULL,
+    `used_at`    DATETIME    NULL,
+    `created_at` DATETIME    NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_reset_token` (`token_hash`),
+    KEY `idx_reset_user` (`user_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------

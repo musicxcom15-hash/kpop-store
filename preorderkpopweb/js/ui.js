@@ -180,7 +180,7 @@
             }
         },
 
-        // ลืมรหัสผ่าน: ส่งคำขอเข้ากล่องแจ้งเตือนร้าน (ระบบไม่มีการส่งอีเมล) แล้วบอกขั้นต่อไปในหน้าต่างเดิม
+        // ลืมรหัสผ่าน: ขอลิงก์รีเซ็ตทางอีเมล แล้วบอกขั้นต่อไปในหน้าต่างเดิม
         openForgotPasswordModal(prefillEmail) {
             let modalEl = document.getElementById('globalForgotPasswordModal');
             if (!modalEl) {
@@ -195,8 +195,8 @@
                                 <div class="modal-body p-4">
                                     <form id="forgotPasswordForm" onsubmit="KpopStore.handleForgotPasswordSubmit(event)">
                                         <p class="text-secondary" style="font-size: 0.88rem;">
-                                            กรอกอีเมลที่ใช้สมัคร ระบบจะส่งคำขอถึงร้าน แล้วร้านจะ<strong>โทรแจ้งรหัสผ่านชั่วคราว</strong>
-                                            ไปที่เบอร์ที่คุณให้ไว้ตอนสมัคร
+                                            กรอกอีเมลที่ใช้สมัคร เราจะส่ง<strong>ลิงก์สำหรับตั้งรหัสผ่านใหม่</strong>ไปที่อีเมลนั้น
+                                            (ลิงก์ใช้ได้ 30 นาที และใช้ได้ครั้งเดียว)
                                         </p>
                                         <div class="mb-3">
                                             <label class="form-label fw-bold" style="font-size: 0.88rem;">อีเมลบัญชีผู้ใช้</label>
@@ -204,11 +204,11 @@
                                         </div>
                                         <div class="d-flex justify-content-end gap-2">
                                             <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
-                                            <button type="submit" id="forgotSubmitBtn" class="btn btn-dark rounded-pill px-4 fw-bold">ส่งคำขอ</button>
+                                            <button type="submit" id="forgotSubmitBtn" class="btn btn-dark rounded-pill px-4 fw-bold">ส่งลิงก์รีเซ็ต</button>
                                         </div>
                                     </form>
                                     <div id="forgotPasswordDone" class="d-none text-center py-2">
-                                        <i class="fa-solid fa-circle-check text-success d-block mb-3" style="font-size: 2.5rem;"></i>
+                                        <i class="fa-solid fa-envelope-circle-check text-success d-block mb-3" style="font-size: 2.5rem;"></i>
                                         <p id="forgotPasswordDoneText" class="text-secondary mb-4" style="font-size: 0.9rem;"></p>
                                         <button type="button" class="btn btn-dark rounded-pill px-4" data-bs-dismiss="modal">ตกลง</button>
                                     </div>

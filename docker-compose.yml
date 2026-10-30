@@ -32,6 +32,12 @@ services:
       MYSQLPASSWORD: kpop
       # ไม่ใช่ production → API บอกสาเหตุ error ละเอียด (เช่น ต่อ DB ไม่ได้เพราะอะไร)
       APP_ENV: development
+      # อีเมล (ลิงก์รีเซ็ตรหัสผ่าน): ไม่ตั้ง = เขียนลง /tmp/kpop-mail-outbox.log ใน container แทนการส่งจริง
+      # อยากลองส่งจริงบนเครื่อง ใส่ค่าในไฟล์ .env ข้างไฟล์นี้ (.env ถูก gitignore ไว้แล้ว ห้าม commit key)
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-}
+      MAIL_API_KEY: ${MAIL_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
     volumes:
       # ผูกโค้ดเข้าไปตรง ๆ: แก้ไฟล์ในเครื่องแล้วรีเฟรชหน้าเห็นผลทันที ไม่ต้อง build ใหม่
       - ./preorderkpopweb:/var/www/html

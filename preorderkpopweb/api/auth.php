@@ -8,14 +8,40 @@
  * ข้อความตอบกลับตอนล็อกอินไม่ผ่านตั้งใจให้เหมือนกันทั้งกรณี "ไม่มีอีเมลนี้"
  * และ "รหัสผิด" เพื่อไม่ให้ใครใช้หน้าล็อกอินไล่เดาว่าอีเมลไหนมีบัญชีอยู่บ้าง
  *
- * ลืมรหัสผ่าน: ระบบไม่มีการส่งอีเมล จึงใช้วิธีให้แอดมินรีเซ็ตให้
- *   forgot (ลูกค้า) → แจ้งเตือนเข้ากล่องร้าน → แอดมินกดรีเซ็ตใน users.php
- *   → โทรแจ้งรหัสชั่วคราว → ลูกค้าล็อกอินแล้วเปลี่ยนรหัสเองที่ change-password
+ * ลืมรหัสผ่าน: ส่งลิงก์รีเซ็ตทางอีเมล
+ *   forgot → สร้าง token สุ่ม (เก็บแค่ hash, ใช้ได้ครั้งเดียว, หมดอายุ 30 นาที) → ส่งอีเมลลิงก์
+ *   reset-password.html?token=… → reset-token-status (เช็คลิงก์) → reset-with-token (ตั้งรหัสใหม่)
+ * ถ้าบนเว็บจริงยังไม่ได้ตั้งค่าส่งอีเมล (หรือส่งพลาด) ใช้ทางสำรองเดิม: แจ้งเตือนเข้ากล่องร้าน
+ *   → แอดมินกดรีเซ็ตใน users.php → โทรแจ้งรหัสชั่วคราว → ลูกค้าเปลี่ยนรหัสเองที่ change-password
  */
 
 require_once __DIR__ . '/helpers.php';
 
 const LOGIN_FAILED_MESSAGE = 'อีเมลหรือรหัสผ่านไม่ถูกต้องค่ะ';
+const RESET_TOKEN_TTL_MINUTES = 30;
+const RESET_LINK_INVALID_MESSAGE = 'ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้อง หมดอายุ หรือถูกใช้ไปแล้วค่ะ กรุณาขอลิงก์ใหม่';
+
+/** แถว token ที่ยังใช้ได้ (ยังไม่หมดอายุและยังไม่ถูกใช้) หรือ null */
+function find_valid_reset(string $token): ?array
+{
+    if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+        return null;
+    }
+    $st = db()->prepare(
+        'SELECT r.*, u.email, u.name FROM password_resets r JOIN users u ON u.id = r.user_id
+         WHERE r.token_hash = ? AND r.used_at IS NULL AND r.expires_at > ?'
+    );
+    $st->execute([hash('sha256', $token), date('Y-m-d H:i:s')]);
+    $row = $st->fetch();
+    return $row ?: null;
+}
+
+/** ปิดบังอีเมลก่อนแสดงบนหน้ารีเซ็ต เช่น so***@gmail.com */
+function mask_email(string $email): string
+{
+    [$local, $domain] = explode('@', $email, 2) + [1 => ''];
+    return mb_substr($local, 0, 2) . str_repeat('*', max(3, mb_strlen($local) - 2)) . '@' . $domain;
+}
 
 switch (action()) {
 
@@ -161,30 +187,96 @@ switch (action()) {
         }
 
         // ตอบข้อความเดียวกันเสมอไม่ว่าจะมีบัญชีหรือไม่ — กันการไล่เดาว่าอีเมลไหนมีบัญชี
-        $reply = 'ส่งคำขอถึงร้านแล้วค่ะ ถ้าอีเมลนี้มีบัญชีอยู่ ร้านจะติดต่อกลับทางเบอร์โทรที่ให้ไว้ตอนสมัคร '
-               . 'พร้อมรหัสผ่านชั่วคราว จากนั้นเข้าสู่ระบบแล้วเปลี่ยนรหัสใหม่ได้ที่เมนูบัญชี → เปลี่ยนรหัสผ่าน';
+        $reply = 'ถ้าอีเมลนี้มีบัญชีอยู่ เราได้ส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปที่อีเมลแล้วค่ะ '
+               . '(ลิงก์ใช้ได้ ' . RESET_TOKEN_TTL_MINUTES . ' นาที หากไม่พบให้ดูในโฟลเดอร์สแปม '
+               . 'ถ้ายังไม่ได้รับภายใน 10 นาที ร้านจะติดต่อกลับทางเบอร์โทรที่ให้ไว้)';
 
         $st = db()->prepare('SELECT * FROM users WHERE email = ?');
         $st->execute([$email]);
         $target = $st->fetch();
+        if (!$target) {
+            ok(['message' => $reply]);
+        }
 
-        if ($target) {
-            // endpoint นี้ไม่ต้องล็อกอิน — ส่งซ้ำอีเมลเดิมภายใน 15 นาทีไม่สร้างแจ้งเตือนใหม่ กันกล่องร้านโดนถล่ม
-            $st = db()->prepare(
-                "SELECT COUNT(*) FROM notifications
-                 WHERE user_email = ? AND type = 'admin_password_request' AND ref = ? AND created_at >= ?"
-            );
-            $st->execute([SHOP_EMAIL, $target['id'], date('Y-m-d H:i:s', time() - 15 * 60)]);
+        // endpoint นี้ไม่ต้องล็อกอิน — จำกัดอีเมลละ 1 ลิงก์ต่อ 2 นาที และ 5 ลิงก์ต่อชั่วโมง กันใช้ถล่มกล่องอีเมลคนอื่น
+        $st = db()->prepare(
+            'SELECT SUM(created_at >= ?) AS recent, COUNT(*) AS hour FROM password_resets WHERE user_id = ? AND created_at >= ?'
+        );
+        $st->execute([date('Y-m-d H:i:s', time() - 120), $target['id'], date('Y-m-d H:i:s', time() - 3600)]);
+        $rate = $st->fetch();
+        if ((int) $rate['recent'] > 0 || (int) $rate['hour'] >= 5) {
+            ok(['message' => $reply]);
+        }
 
-            if ((int) $st->fetchColumn() === 0) {
-                push_notification(SHOP_EMAIL, "คำขอรีเซ็ตรหัสผ่าน: {$target['name']}",
-                    "{$target['email']} · โทร " . ($target['phone'] ?: '-')
-                    . ' — กดเพื่อไปรีเซ็ตรหัสผ่าน แล้วโทรแจ้งรหัสชั่วคราวให้ลูกค้า',
-                    'admin_password_request', $target['id']);
-            }
+        $token = bin2hex(random_bytes(32));
+        $st = db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)');
+        $st->execute([$target['id'], hash('sha256', $token),
+            date('Y-m-d H:i:s', time() + RESET_TOKEN_TTL_MINUTES * 60), date('Y-m-d H:i:s')]);
+
+        $link = app_base_url() . '/reset-password.html?token=' . $token;
+        $name = htmlspecialchars($target['name'], ENT_QUOTES, 'UTF-8');
+        $sent = send_mail($target['email'], $target['name'], 'ตั้งรหัสผ่านใหม่ — KPOP STORE',
+            "<div style=\"font-family:Tahoma,sans-serif;font-size:15px;line-height:1.6;color:#222\">
+                <p>สวัสดีค่ะ {$name}</p>
+                <p>เราได้รับคำขอตั้งรหัสผ่านใหม่สำหรับบัญชี KPOP STORE ของคุณ กดปุ่มด้านล่างเพื่อตั้งรหัสผ่านใหม่
+                (ลิงก์ใช้ได้ " . RESET_TOKEN_TTL_MINUTES . " นาที และใช้ได้ครั้งเดียว)</p>
+                <p><a href=\"{$link}\" style=\"display:inline-block;background:#ff3399;color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none;font-weight:bold\">ตั้งรหัสผ่านใหม่</a></p>
+                <p style=\"font-size:13px;color:#666\">ถ้ากดปุ่มไม่ได้ ให้คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์:<br>{$link}</p>
+                <p style=\"font-size:13px;color:#666\">ถ้าคุณไม่ได้ขอตั้งรหัสผ่านใหม่ ไม่ต้องทำอะไร รหัสผ่านเดิมยังใช้ได้ตามปกติ</p>
+            </div>",
+            "สวัสดีค่ะ {$target['name']}\n\nตั้งรหัสผ่านใหม่สำหรับบัญชี KPOP STORE ได้ที่ลิงก์นี้ (ใช้ได้ "
+            . RESET_TOKEN_TTL_MINUTES . " นาที ครั้งเดียว):\n{$link}\n\nถ้าคุณไม่ได้ขอ ไม่ต้องทำอะไร รหัสผ่านเดิมยังใช้ได้ตามปกติ");
+
+        // ส่งอีเมลไม่ได้ (เว็บจริงยังไม่ตั้งค่า หรือบริการขัดข้อง) — อย่าให้คำขอหาย ส่งเข้ากล่องร้านแทน
+        if (!$sent) {
+            push_notification(SHOP_EMAIL, "คำขอรีเซ็ตรหัสผ่าน: {$target['name']}",
+                "{$target['email']} · โทร " . ($target['phone'] ?: '-')
+                . ' — ส่งอีเมลลิงก์รีเซ็ตไม่สำเร็จ กดเพื่อไปรีเซ็ตรหัสผ่าน แล้วโทรแจ้งรหัสชั่วคราวให้ลูกค้า',
+                'admin_password_request', $target['id']);
         }
 
         ok(['message' => $reply]);
+    }
+
+    /* ---------------------------------------------------------- */
+    /* หน้า reset-password.html เช็คก่อนว่าลิงก์ยังใช้ได้ไหม จะได้บอกตั้งแต่เปิดหน้า ไม่ใช่หลังกรอกรหัสเสร็จ */
+    case 'reset-token-status': {
+        $reset = find_valid_reset((string) (body()['token'] ?? ''));
+        if (!$reset) {
+            fail(RESET_LINK_INVALID_MESSAGE, 200, ['code' => 'invalid_link']);
+        }
+        ok(['email' => mask_email($reset['email'])]);
+    }
+
+    /* ---------------------------------------------------------- */
+    case 'reset-with-token': {
+        $in    = body();
+        $reset = find_valid_reset((string) ($in['token'] ?? ''));
+        if (!$reset) {
+            fail(RESET_LINK_INVALID_MESSAGE, 200, ['code' => 'invalid_link']);
+        }
+        $new = (string) ($in['newPassword'] ?? '');
+        if (strlen($new) < MIN_PASSWORD_LENGTH) {
+            fail('รหัสผ่านใหม่ต้องยาวอย่างน้อย ' . MIN_PASSWORD_LENGTH . ' ตัวอักษรค่ะ');
+        }
+
+        $db = db();
+        $db->beginTransaction();
+        try {
+            $st = $db->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+            $st->execute([password_hash($new, PASSWORD_BCRYPT), $reset['user_id']]);
+            // ลิงก์นี้และลิงก์อื่นที่ยังไม่ได้ใช้ของบัญชีเดียวกันใช้ไม่ได้อีก
+            $st = $db->prepare('UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL');
+            $st->execute([date('Y-m-d H:i:s'), $reset['user_id']]);
+            push_notification($reset['email'], 'เปลี่ยนรหัสผ่านเรียบร้อย',
+                'รหัสผ่านของบัญชีนี้ถูกตั้งใหม่ผ่านลิงก์ทางอีเมล ถ้าคุณไม่ได้ทำเอง กรุณาติดต่อร้านทันที');
+            $db->commit();
+        } catch (Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+
+        ok(['email' => $reset['email']]);
     }
 
     /* ---------------------------------------------------------- */

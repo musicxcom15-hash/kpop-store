@@ -1155,7 +1155,7 @@
         },
 
         // --- รหัสผ่าน (ทำงานเฉพาะตอนต่อเซิร์ฟเวอร์ — โหมด localStorage ไม่มีรหัสผ่านให้จัดการ) ---
-        // ลืมรหัส: ระบบไม่ส่งอีเมล จึงส่งคำขอเข้ากล่องแจ้งเตือนร้าน ให้แอดมินรีเซ็ตแล้วโทรแจ้งลูกค้า
+        // ลืมรหัส: เซิร์ฟเวอร์ส่งลิงก์รีเซ็ตทางอีเมล (ส่งไม่ได้จะส่งคำขอเข้ากล่องร้านแทน ดู auth.php forgot)
         async requestPasswordReset(email) {
             if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
             const res = await global.KpopApi.post('auth.php?action=forgot', { email: email });
@@ -1173,6 +1173,19 @@
             if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
             const res = await global.KpopApi.post('auth.php?action=change-password', { currentPassword, newPassword });
             return { success: !!(res && res.success), message: (res && res.message) || '' };
+        },
+
+        // ลิงก์รีเซ็ตจากอีเมล (reset-password.html?token=…) — เช็คก่อนว่ายังใช้ได้ แล้วค่อยตั้งรหัสใหม่
+        async checkResetToken(token) {
+            if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
+            const res = await global.KpopApi.post('auth.php?action=reset-token-status', { token });
+            return { success: !!(res && res.success), message: (res && res.message) || '', code: res && res.code, email: res && res.email };
+        },
+        async resetPasswordWithToken(token, newPassword) {
+            if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
+            const res = await global.KpopApi.post('auth.php?action=reset-with-token', { token, newPassword });
+            // code === 'invalid_link' = ลิงก์หมดอายุ/ถูกใช้แล้ว (ห้ามเดาจากข้อความไทย)
+            return { success: !!(res && res.success), message: (res && res.message) || '', code: res && res.code, email: res && res.email };
         },
 
         // --- Order status ---

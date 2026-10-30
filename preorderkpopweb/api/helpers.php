@@ -70,8 +70,9 @@ set_exception_handler(function (Throwable $e): void {
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });
 
-// ก่อน endpoint ใดจะเปิด transaction — เติมคอลัมน์ใหม่ให้ DB ที่ import ไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
-define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-notifications-v1');
+// ก่อน endpoint ใดจะเปิด transaction — เติมตาราง/คอลัมน์ใหม่ให้ DB ที่ import ไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
+// เปลี่ยนชื่อไฟล์ (v2, v3, ...) ทุกครั้งที่เพิ่มของใน ensure_schema() เพื่อให้ container ที่เคยเช็คแล้วเช็คใหม่
+define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-v2');
 ensure_schema_once();
 
 /* ------------------------------------------------------------------ */
@@ -539,7 +540,135 @@ function ensure_schema_once(): void
         return;
     }
     ensure_notification_columns();
+    ensure_password_resets_table();
     @touch(SCHEMA_FLAG_FILE);
+}
+
+/**
+ * ตารางลิงก์รีเซ็ตรหัสผ่าน (ต้องตรงกับ database/*.sql)
+ * เก็บแค่ hash ของ token — ถ้า DB หลุด คนได้ไปก็เอาไปเปิดลิงก์ไม่ได้
+ * ไม่ใส่ foreign key: ถ้า collation ของ users บน DB เก่าไม่ตรง การสร้างจะล้มแล้วพาทุกคำขอล้มตาม
+ * (users.php ลบ token ของผู้ใช้ที่ถูกลบเองแทน)
+ */
+function ensure_password_resets_table(): void
+{
+    db()->exec(
+        'CREATE TABLE IF NOT EXISTS password_resets (
+            id         INT         NOT NULL AUTO_INCREMENT,
+            user_id    VARCHAR(50) NOT NULL,
+            token_hash CHAR(64)    NOT NULL,
+            expires_at DATETIME    NOT NULL,
+            used_at    DATETIME    NULL,
+            created_at DATETIME    NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_reset_token (token_hash),
+            KEY idx_reset_user (user_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+}
+
+/* ------------------------------------------------------------------ */
+/* อีเมล                                                               */
+/*                                                                     */
+/* Railway แพ็กเกจ Free/Hobby ปิด SMTP ("SMTP is only available on the */
+/* Pro plan and above") จึงส่งผ่าน HTTPS API ของบริการส่งอีเมลแทน      */
+/* ตั้งค่าด้วย environment variable (ใน Railway → Variables ของ web):    */
+/*   MAIL_PROVIDER  = brevo | resend                                   */
+/*   MAIL_API_KEY   = API key ของบริการนั้น                             */
+/*   MAIL_FROM      = อีเมลผู้ส่งที่ยืนยันกับบริการแล้ว                  */
+/*   MAIL_FROM_NAME = ชื่อผู้ส่ง (ไม่ใส่ = KPOP STORE)                   */
+/* ------------------------------------------------------------------ */
+
+/** ตั้งค่าส่งอีเมลครบหรือยัง */
+function mail_configured(): bool
+{
+    return in_array(getenv('MAIL_PROVIDER'), ['brevo', 'resend'], true)
+        && getenv('MAIL_API_KEY') && getenv('MAIL_FROM');
+}
+
+/**
+ * ส่งอีเมล คืน true เมื่อบริการรับไปแล้ว
+ *
+ * ยังไม่ได้ตั้งค่า: บนเครื่อง (ไม่ใช่ production) เขียนลงไฟล์ outbox ใน temp ให้ทดสอบได้แล้วคืน true
+ * ส่วนบนเว็บจริงคืน false ให้ผู้เรียกใช้ทางสำรองเอง
+ */
+function send_mail(string $toEmail, string $toName, string $subject, string $html, string $text): bool
+{
+    if (!mail_configured()) {
+        if (IS_PRODUCTION) {
+            return false;
+        }
+        $entry = sprintf("=== %s\nTo: %s <%s>\nSubject: %s\n\n%s\n\n", date('Y-m-d H:i:s'), $toName, $toEmail, $subject, $text);
+        file_put_contents(sys_get_temp_dir() . '/kpop-mail-outbox.log', $entry, FILE_APPEND);
+        error_log("[kpop-mail] (dev outbox) {$subject} -> {$toEmail}");
+        return true;
+    }
+
+    $fromEmail = (string) getenv('MAIL_FROM');
+    $fromName  = (string) (getenv('MAIL_FROM_NAME') ?: 'KPOP STORE');
+    $key       = (string) getenv('MAIL_API_KEY');
+
+    if (getenv('MAIL_PROVIDER') === 'brevo') {
+        $url     = 'https://api.brevo.com/v3/smtp/email';
+        $headers = ['api-key: ' . $key];
+        $payload = [
+            'sender'      => ['name' => $fromName, 'email' => $fromEmail],
+            'to'          => [['email' => $toEmail, 'name' => $toName]],
+            'subject'     => $subject,
+            'htmlContent' => $html,
+            'textContent' => $text,
+        ];
+    } else {
+        $url     = 'https://api.resend.com/emails';
+        $headers = ['Authorization: Bearer ' . $key];
+        $payload = [
+            'from'    => "{$fromName} <{$fromEmail}>",
+            'to'      => [$toEmail],
+            'subject' => $subject,
+            'html'    => $html,
+            'text'    => $text,
+        ];
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_HTTPHEADER     => array_merge($headers, ['Content-Type: application/json', 'Accept: application/json']),
+        CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+    ]);
+    $body   = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err    = curl_error($ch);
+    curl_close($ch);
+
+    if ($status >= 200 && $status < 300) {
+        return true;
+    }
+    // ไม่ใส่ key ลง log — มีแค่สถานะกับข้อความตอบกลับของบริการ
+    error_log('[kpop-mail] ส่งไม่สำเร็จ (' . getenv('MAIL_PROVIDER') . " HTTP {$status}) " . ($err ?: substr((string) $body, 0, 300)));
+    return false;
+}
+
+/**
+ * URL หน้าแรกของเว็บ สำหรับประกอบลิงก์ในอีเมล
+ * บนเว็บจริงห้ามเชื่อ Host header — ใครก็ส่งมาเป็นโดเมนตัวเองได้ แล้วลิงก์รีเซ็ตในอีเมลจะชี้ไปเว็บปลอม
+ * จึงใช้ APP_BASE_URL ถ้าตั้งไว้ ไม่งั้นใช้โดเมนที่ Railway ฉีดมาให้ (RAILWAY_PUBLIC_DOMAIN)
+ */
+function app_base_url(): string
+{
+    if ($u = getenv('APP_BASE_URL')) {
+        return rtrim($u, '/');
+    }
+    if ($d = getenv('RAILWAY_PUBLIC_DOMAIN')) {
+        return 'https://' . $d;
+    }
+    if (IS_PRODUCTION) {
+        throw new RuntimeException('ไม่รู้ URL ของเว็บ — ตั้ง APP_BASE_URL ใน environment');
+    }
+    $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
+    return ($https ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 }
 
 /** เติมคอลัมน์ type/ref ให้ตาราง notifications ที่สร้างจาก .sql รุ่นเก่า (เรียกซ้ำได้ ไม่เพิ่มซ้ำ) */

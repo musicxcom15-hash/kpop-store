@@ -128,7 +128,7 @@ try {
     }
 
     await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
-    for (const p of ['index.html', 'admin.html', 'login.html', 'register.html']) {
+    for (const p of ['index.html', 'admin.html', 'login.html', 'register.html', 'reset-password.html']) {
         step = 'mobile ' + p; await goto(p);
         const w = await evaluate('document.documentElement.scrollWidth');
         check(`จอมือถือ 390px ไม่ล้น: ${p}`, w <= 390, `scrollWidth=${w}`);
