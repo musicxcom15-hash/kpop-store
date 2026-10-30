@@ -1922,6 +1922,15 @@
 
             return newNoti;
         },
+        // กดแจ้งเตือนใบเดียว: ทำเครื่องหมายอ่านแล้วในหน่วยความจำทันที แล้วบอกเซิร์ฟเวอร์
+        // ไม่ re-hydrate ทั้งก้อน เพราะส่วนใหญ่จะพาไปหน้าอื่นต่อทันทีอยู่แล้ว
+        async markNotificationRead(id) {
+            const notifications = getJSON(STORAGE_KEYS.NOTIFICATIONS, DEFAULT_NOTIFICATIONS);
+            const target = notifications.find(n => String(n.id) === String(id));
+            if (target) target.read = true;
+            setJSON(STORAGE_KEYS.NOTIFICATIONS, notifications);
+            if (HAS_API) await global.KpopApi.post('notifications.php?action=read-one', { id: id });
+        },
         async markNotificationsAsRead(userEmail) {
             if (HAS_API) {
                 // ฝั่งเซิร์ฟเวอร์ใช้อีเมลของ session เอง ไม่รับค่าที่ส่งมา

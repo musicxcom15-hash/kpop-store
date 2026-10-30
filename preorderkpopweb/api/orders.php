@@ -231,12 +231,16 @@ switch (action()) {
             push_notification(
                 SHOP_EMAIL,
                 "มีคำสั่งซื้อใหม่ #{$orderId}",
-                "ลูกค้า {$customerName} ส่งสลิปชำระเงินจำนวน ฿" . money($total) . ' บาท'
+                "ลูกค้า {$customerName} ส่งสลิปชำระเงินจำนวน ฿" . money($total) . ' บาท',
+                'admin_new_order',
+                $orderId
             );
             push_notification(
                 $user['email'],
                 "ส่งหลักฐานชำระเงินเรียบร้อย #{$orderId}",
-                'ขอบคุณสำหรับการสั่งซื้อ ระบบกำลังเสนอสลิปชำระเงินให้ผู้ดูแลระบบตรวจสอบค่ะ'
+                'ขอบคุณสำหรับการสั่งซื้อ ระบบกำลังเสนอสลิปชำระเงินให้ผู้ดูแลระบบตรวจสอบค่ะ',
+                'order',
+                $orderId
             );
 
             $db->commit();
@@ -277,9 +281,10 @@ switch (action()) {
         ]);
 
         push_notification(SHOP_EMAIL, "ลูกค้ายกเลิกคำสั่งซื้อ #{$order['id']}",
-            "ลูกค้า {$order['customerName']} ได้ทำการยกเลิกคำสั่งซื้อ #{$order['id']} (เหตุผล: {$reason})");
+            "ลูกค้า {$order['customerName']} ได้ทำการยกเลิกคำสั่งซื้อ #{$order['id']} (เหตุผล: {$reason})",
+            'admin_order_cancelled', $order['id']);
         push_notification($order['customerEmail'], "ยกเลิกคำสั่งซื้อเรียบร้อย #{$order['id']}",
-            "ยกเลิกคำสั่งซื้อ #{$order['id']} เรียบร้อยแล้ว");
+            "ยกเลิกคำสั่งซื้อ #{$order['id']} เรียบร้อยแล้ว", 'order', $order['id']);
 
         ok(['order' => $updated]);
     }
@@ -322,9 +327,10 @@ switch (action()) {
         ]);
 
         push_notification(SHOP_EMAIL, "ลูกค้าแนบสลิปใหม่ #{$order['id']}",
-            "ลูกค้า {$order['customerName']} ได้ส่งสลิปชำระเงินใบใหม่สำหรับคำสั่งซื้อ #{$order['id']}");
+            "ลูกค้า {$order['customerName']} ได้ส่งสลิปชำระเงินใบใหม่สำหรับคำสั่งซื้อ #{$order['id']}",
+            'admin_new_slip', $order['id']);
         push_notification($order['customerEmail'], "ส่งสลิปใบใหม่เรียบร้อย #{$order['id']}",
-            'ส่งหลักฐานการโอนเงินใบใหม่เรียบร้อยแล้ว รอผู้ขายตรวจสอบความถูกต้องค่ะ');
+            'ส่งหลักฐานการโอนเงินใบใหม่เรียบร้อยแล้ว รอผู้ขายตรวจสอบความถูกต้องค่ะ', 'order', $order['id']);
 
         ok(['order' => $updated]);
     }
@@ -359,7 +365,7 @@ switch (action()) {
         if (!empty($tracking)) {
             $msg .= " (หมายเลขติดตามพัสดุ: {$tracking})";
         }
-        push_notification($order['customerEmail'], "อัปเดตสถานะคำสั่งซื้อ #{$order['id']}", $msg);
+        push_notification($order['customerEmail'], "อัปเดตสถานะคำสั่งซื้อ #{$order['id']}", $msg, 'order', $order['id']);
 
         ok(['order' => $updated]);
     }
@@ -376,7 +382,8 @@ switch (action()) {
         $updated = write_order_status($order['id'], 'PAID_WAIT_ROUND', ['adminNotes' => $notes]);
 
         push_notification($order['customerEmail'], "อัปเดตสถานะคำสั่งซื้อ #{$order['id']}",
-            "สถานะคำสั่งซื้อ #{$order['id']} ของคุณเปลี่ยนเป็น \"" . ORDER_STATUS['PAID_WAIT_ROUND']['text'] . '"');
+            "สถานะคำสั่งซื้อ #{$order['id']} ของคุณเปลี่ยนเป็น \"" . ORDER_STATUS['PAID_WAIT_ROUND']['text'] . '"',
+            'order', $order['id']);
 
         ok(['order' => $updated]);
     }
@@ -394,7 +401,8 @@ switch (action()) {
         ]);
 
         push_notification($order['customerEmail'], "อัปเดตสถานะคำสั่งซื้อ #{$order['id']}",
-            "สถานะคำสั่งซื้อ #{$order['id']} ของคุณเปลี่ยนเป็น \"" . ORDER_STATUS['SLIP_REJECTED']['text'] . '"');
+            "สถานะคำสั่งซื้อ #{$order['id']} ของคุณเปลี่ยนเป็น \"" . ORDER_STATUS['SLIP_REJECTED']['text'] . '"',
+            'order', $order['id']);
 
         ok(['order' => $updated]);
     }
@@ -417,7 +425,7 @@ switch (action()) {
         ]);
 
         push_notification($order['customerEmail'], "ต้องขออภัย ร้านกดสั่ง #{$order['id']} ไม่สำเร็จ",
-            "{$reason} — ทางร้านจะคืนเงินเต็มจำนวน ฿{$amount} ให้ค่ะ");
+            "{$reason} — ทางร้านจะคืนเงินเต็มจำนวน ฿{$amount} ให้ค่ะ", 'order', $order['id']);
 
         ok(['order' => $updated]);
     }
@@ -436,7 +444,7 @@ switch (action()) {
 
         push_notification($order['customerEmail'], "คืนเงินคำสั่งซื้อ #{$order['id']} เรียบร้อยแล้ว",
             'ทางร้านโอนคืน ฿' . money((float) $order['total']) . ' เรียบร้อยแล้วค่ะ' .
-            ($note !== '' ? " ({$note})" : ''));
+            ($note !== '' ? " ({$note})" : ''), 'order', $order['id']);
 
         ok(['order' => $updated]);
     }

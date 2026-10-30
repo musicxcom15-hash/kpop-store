@@ -230,3 +230,12 @@ body {
         margin-bottom: 0;
     }
 }
+
+/* แถวที่ถูกชี้มาจากการกดแจ้งเตือน (handleAdminNotification ใน js/pages/admin.js) */
+@keyframes kpopRowFlash {
+    0%, 35% { background-color: #ffd6eb; }
+    100% { background-color: transparent; }
+}
+.kpop-row-flash > td {
+    animation: kpopRowFlash 2.8s ease-out;
+}

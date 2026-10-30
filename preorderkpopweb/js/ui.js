@@ -26,6 +26,32 @@
             .replace(/'/g, '&#39;');
     }
 
+    // หน้าตาของแจ้งเตือนแต่ละประเภท — type มาจาก push_notification ใน api/helpers.php
+    // ปลายทางตอนกดอยู่ที่ openNotification (ห้ามเดาประเภทจากหัวข้อภาษาไทย)
+    const NOTIFICATION_KINDS = {
+        admin_password_request: { icon: 'fa-key', color: '#ff3399', action: 'ไปรีเซ็ตรหัสผ่าน' },
+        admin_new_order: { icon: 'fa-cart-plus', color: '#0d6efd', action: 'ตรวจสลิป' },
+        admin_new_slip: { icon: 'fa-receipt', color: '#fd7e14', action: 'ตรวจสลิปใบใหม่' },
+        admin_order_cancelled: { icon: 'fa-ban', color: '#dc3545', action: 'ดูคำสั่งซื้อ' },
+        order: { icon: 'fa-box', color: '#6f42c1', action: 'ดูคำสั่งซื้อ' },
+        password_reset: { icon: 'fa-key', color: '#d39e00', action: 'เปลี่ยนรหัสผ่านตอนนี้' }
+    };
+    const NOTIFICATION_DEFAULT = { icon: 'fa-bell', color: '#6c757d', action: '' };
+
+    function ensureNotificationStyle() {
+        if (document.getElementById('kpopNotificationStyle')) return;
+        const style = document.createElement('style');
+        style.id = 'kpopNotificationStyle';
+        style.innerHTML = `
+            .kpop-noti-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+                justify-content: center; flex-shrink: 0; font-size: 0.95rem; }
+            .kpop-noti-unread { background: #fff4fa; }
+            .kpop-noti-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff3399;
+                margin-right: 6px; vertical-align: middle; }
+        `;
+        document.head.appendChild(style);
+    }
+
     // สำหรับค่าที่ถูกวางในสตริง JS ภายใน attribute เช่น onclick="fn('...')"
     // ต้อง escape ทั้งชั้น JS (backslash, quote) แล้วส่งต่อให้ esc จัดการชั้น HTML อีกที
     function escArg(value) {
@@ -388,29 +414,12 @@
             const navContainer = document.querySelector('nav .container');
             if (!navContainer) return;
 
-            // Check unread count
-            const unreadCount = currentUser ? this.getUnreadNotificationCount(currentUser.email) : 0;
-
             // Header auth controls
             let authHtml = '';
             if (currentUser) {
                 const isAdmin = currentUser.role === 'admin';
                 authHtml = `
-                    <div class="dropdown me-2">
-                        <button class="btn btn-light position-relative rounded-circle p-2" type="button" id="notiDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="width: 40px; height: 40px;">
-                            <i class="fa-regular fa-bell text-secondary fs-5"></i>
-                            ${unreadCount > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;">${unreadCount}</span>` : ''}
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" aria-labelledby="notiDropdown" style="width: 320px; max-height: 400px; overflow-y: auto; border-radius: 12px; border: none;">
-                            <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                                <h6 class="m-0 fw-bold"><i class="fa-solid fa-bell me-2 text-danger"></i>การแจ้งเตือน</h6>
-                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted" onclick="KpopStore.markNotificationsAsRead('${escArg(currentUser.email)}').then(function () { location.reload(); });" style="font-size: 0.75rem;">อ่านทั้งหมด</button>
-                            </div>
-                            <div class="list-group list-group-flush">
-                                ${this.renderNotificationListHtml(currentUser.email)}
-                            </div>
-                        </div>
-                    </div>
+                    ${this.notificationBellHtml(currentUser, 'store')}
 
                     <button class="btn btn-outline-dark border-0 d-flex align-items-center gap-2" type="button" id="userMenu"
                         onclick="KpopStore.openAccountDrawer()" aria-controls="kpopAccountDrawer" aria-label="เปิดเมนูบัญชีของฉัน"
@@ -557,6 +566,55 @@
             bootstrap.Offcanvas.getOrCreateInstance(el).show();
         },
 
+        // กระดิ่งแจ้งเตือน ใช้ทั้ง navbar หน้าร้าน ('store') และแถบบนของหลังบ้าน ('admin' พื้นเข้ม)
+        notificationBellHtml(currentUser, variant) {
+            ensureNotificationStyle();
+            const unread = this.getUnreadNotificationCount(currentUser.email);
+            const isAdminBar = variant === 'admin';
+            return `
+                <div class="dropdown ${isAdminBar ? '' : 'me-2'}" id="kpopNotiBell" data-variant="${variant}">
+                    <button class="btn ${isAdminBar ? 'btn-outline-light btn-sm rounded-pill px-3' : 'btn-light rounded-circle p-2'} position-relative" type="button"
+                        id="notiDropdown" data-bs-toggle="dropdown" aria-expanded="false" aria-label="การแจ้งเตือน"
+                        style="${isAdminBar ? '' : 'width: 40px; height: 40px;'}">
+                        <i class="fa-regular fa-bell ${isAdminBar ? '' : 'text-secondary fs-5'}"></i>${isAdminBar ? ' แจ้งเตือน' : ''}
+                        ${unread > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;">${unread}</span>` : ''}
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" aria-labelledby="notiDropdown" style="width: 360px; max-width: 92vw; max-height: 440px; overflow-y: auto; border-radius: 12px; border: none;">
+                        <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center sticky-top">
+                            <h6 class="m-0 fw-bold"><i class="fa-solid fa-bell me-2 text-danger"></i>การแจ้งเตือน${unread > 0 ? ` <span class="badge bg-danger rounded-pill ms-1">${unread} ใหม่</span>` : ''}</h6>
+                            ${unread > 0 ? `<button class="btn btn-sm btn-link text-decoration-none p-0 text-muted" onclick="event.stopPropagation(); KpopStore.markAllNotificationsRead()" style="font-size: 0.75rem;">อ่านทั้งหมด</button>` : ''}
+                        </div>
+                        <div class="list-group list-group-flush">
+                            ${this.renderNotificationListHtml(currentUser.email)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        },
+
+        // วาดกระดิ่งใหม่ในที่เดิม (หลังอ่านแจ้งเตือน) ไม่ต้องโหลดทั้งหน้า
+        refreshNotificationBell() {
+            const el = document.getElementById('kpopNotiBell');
+            const user = this.getCurrentUser();
+            if (!el || !user) return;
+            el.outerHTML = this.notificationBellHtml(user, el.dataset.variant || 'store');
+        },
+
+        async markAllNotificationsRead() {
+            const user = this.getCurrentUser();
+            if (!user) return;
+            await this.markNotificationsAsRead(user.email);
+            this.refreshNotificationBell();
+        },
+
+        // หลังบ้านมีแถบบนของตัวเอง (ไม่ผ่าน renderNavbarAuth) — ต้องใส่กระดิ่งให้แยก
+        renderAdminNotificationBell() {
+            const user = this.getCurrentUser();
+            const bar = document.querySelector('.admin-navbar .d-flex.align-items-center.gap-3');
+            if (!user || user.role !== 'admin' || !bar || document.getElementById('kpopNotiBell')) return;
+            bar.insertAdjacentHTML('afterbegin', this.notificationBellHtml(user, 'admin'));
+        },
+
         renderNotificationListHtml(userEmail) {
             const notis = this.getNotifications(userEmail);
             if (!notis || notis.length === 0) {
@@ -564,15 +622,54 @@
             }
             // ข้อความแจ้งเตือนมีชื่อลูกค้าและหมายเหตุที่คนพิมพ์เองปนอยู่
             // (เช่น "ลูกค้า <ชื่อ> ส่งสลิป...") จึงต้องล้างก่อนต่อเป็น HTML
-            return notis.slice(0, 5).map(n => `
-                <div class="list-group-item p-3 ${!n.read ? 'bg-light' : ''}">
-                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                        <strong class="mb-0 text-dark" style="font-size: 0.85rem;">${esc(n.title)}</strong>
-                        <small class="text-muted" style="font-size: 0.7rem;">${n.date ? esc(String(n.date).split(' ')[0]) : ''}</small>
-                    </div>
-                    <p class="mb-1 text-secondary" style="font-size: 0.8rem; line-height: 1.4;">${esc(n.message)}</p>
-                </div>
-            `).join('');
+            return notis.slice(0, 10).map(n => {
+                const kind = NOTIFICATION_KINDS[n.type] || NOTIFICATION_DEFAULT;
+                const actionable = !!NOTIFICATION_KINDS[n.type] && (!!n.ref || n.type === 'password_reset');
+                return `
+                    <button type="button" class="list-group-item list-group-item-action p-3 d-flex gap-3 text-start ${!n.read ? 'kpop-noti-unread' : ''}"
+                        onclick="KpopStore.openNotification('${escArg(n.id)}')">
+                        <span class="kpop-noti-icon" style="background: ${kind.color}1f; color: ${kind.color};"><i class="fa-solid ${kind.icon}"></i></span>
+                        <span class="flex-grow-1" style="min-width: 0;">
+                            <span class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                <strong class="text-dark" style="font-size: 0.85rem;">${!n.read ? '<span class="kpop-noti-dot"></span>' : ''}${esc(n.title)}</strong>
+                                <small class="text-muted text-nowrap" style="font-size: 0.7rem;">${n.date ? esc(String(n.date).split(' ')[0]) : ''}</small>
+                            </span>
+                            <span class="d-block text-secondary" style="font-size: 0.8rem; line-height: 1.4;">${esc(n.message)}</span>
+                            ${actionable ? `<span class="d-block mt-1 fw-semibold" style="font-size: 0.75rem; color: ${kind.color};">${kind.action} →</span>` : ''}
+                        </span>
+                    </button>
+                `;
+            }).join('');
+        },
+
+        // กดแจ้งเตือน: ทำเครื่องหมายว่าอ่านแล้ว แล้วพาไปหน้าที่เกี่ยวข้องตาม type/ref (ดู push_notification ใน api/helpers.php)
+        async openNotification(id) {
+            const user = this.getCurrentUser();
+            if (!user) return;
+            const n = this.getNotifications(user.email).find(x => String(x.id) === String(id));
+            if (!n) return;
+
+            await this.markNotificationRead(n.id);
+            this.refreshNotificationBell();
+
+            const type = n.type || '';
+            const ref = n.ref || '';
+            if (type.indexOf('admin_') === 0) {
+                // อยู่หน้าแอดมินอยู่แล้ว (admin.js มีตัวรับ) ก็สลับแท็บเลย ไม่ต้องโหลดหน้าใหม่
+                if (typeof global.handleAdminNotification === 'function') {
+                    global.handleAdminNotification(type, ref);
+                } else {
+                    window.location.href = 'admin.html?noti=' + encodeURIComponent(type) + '&ref=' + encodeURIComponent(ref);
+                }
+            } else if (type === 'order' && ref) {
+                if (typeof global.viewCustomerOrderDetail === 'function') {
+                    global.viewCustomerOrderDetail(ref);
+                } else {
+                    window.location.href = 'order-history.html?order=' + encodeURIComponent(ref);
+                }
+            } else if (type === 'password_reset') {
+                this.openChangePasswordModal();
+            }
         },
 
         // Mobile App Layout Bottom Navigation Bar Component
@@ -651,6 +748,7 @@ KpopStore.onLoadStatus(function (status) {
 KpopStore.ready(function () {
     KpopStore.renderNavbarAuth();
     KpopStore.renderMobileBottomNav();
+    KpopStore.renderAdminNotificationBell();
 });
 
 })(window);

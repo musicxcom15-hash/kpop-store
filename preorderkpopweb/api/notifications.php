@@ -73,6 +73,15 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    /* กดแจ้งเตือนใบเดียว (ก่อนพาไปหน้าที่เกี่ยวข้อง) — WHERE ผูกอีเมลของ session ไว้ กดของคนอื่นไม่ได้ */
+    case 'read-one': {
+        $user = require_login();
+        $st = db()->prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_email = ?');
+        $st->execute([(int) ($in['id'] ?? 0), $user['email']]);
+        ok();
+    }
+
+    /* ---------------------------------------------------------- */
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

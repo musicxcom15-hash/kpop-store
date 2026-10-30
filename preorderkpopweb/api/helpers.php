@@ -57,6 +57,10 @@ header('Cache-Control: no-store');
  */
 set_exception_handler(function (Throwable $e): void {
     error_log('[kpop-api] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    // คอลัมน์หาย (เช่น import .sql รุ่นเก่าทับตอน container ยังรัน) — ลืมว่าเคยเช็คแล้ว คำขอถัดไปจะเติมให้เอง
+    if ($e instanceof PDOException && $e->getCode() === '42S22') {
+        @unlink(SCHEMA_FLAG_FILE);
+    }
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -65,6 +69,10 @@ set_exception_handler(function (Throwable $e): void {
             : $e->getMessage(),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });
+
+// ก่อน endpoint ใดจะเปิด transaction — เติมคอลัมน์ใหม่ให้ DB ที่ import ไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
+define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-notifications-v1');
+ensure_schema_once();
 
 /* ------------------------------------------------------------------ */
 /* ตาราง ORDER_STATUS — ต้องตรงกับ js/store.js เป๊ะ                    */
@@ -359,6 +367,9 @@ function map_notification(array $r): array
         'userEmail' => $r['user_email'],
         'title'     => $r['title'],
         'message'   => $r['message'],
+        // ใช้ ?? เพราะ DB รุ่นเก่ายังไม่มีคอลัมน์นี้จนกว่าจะมีแจ้งเตือนใบแรกที่มี type (ดู push_notification)
+        'type'      => $r['type'] ?? null,
+        'ref'       => $r['ref'] ?? null,
         'date'      => stamp($r['created_at']),
         'read'      => (bool) $r['is_read'],
     ];
@@ -483,14 +494,68 @@ function fetch_round(?string $roundId): ?array
 /* แจ้งเตือน                                                           */
 /* ------------------------------------------------------------------ */
 
-/** เพิ่มแจ้งเตือนหนึ่งใบ */
-function push_notification(string $userEmail, string $title, string $message): void
+/**
+ * เพิ่มแจ้งเตือนหนึ่งใบ
+ *
+ * $type บอกว่าเป็นเรื่องอะไร และ $ref บอกว่าอ้างถึงอะไร (เลขออเดอร์ / id ผู้ใช้)
+ * หน้าเว็บใช้คู่นี้ตัดสินว่ากดแจ้งเตือนแล้วพาไปหน้าไหน — ห้ามไปเดาจากหัวข้อภาษาไทย
+ *   admin_new_order | admin_new_slip | admin_order_cancelled  (ref = เลขออเดอร์, กล่องร้าน)
+ *   admin_password_request                                    (ref = id ผู้ใช้, กล่องร้าน)
+ *   order                                                     (ref = เลขออเดอร์, กล่องลูกค้า)
+ *   password_reset                                            (ไม่มี ref, กล่องลูกค้า)
+ * ไม่ส่ง $type (เช่น ข่าวสารที่แอดมิน broadcast) = แจ้งเตือนทั่วไป กดแล้วไม่ไปไหน
+ */
+function push_notification(string $userEmail, string $title, string $message, ?string $type = null, ?string $ref = null): void
 {
-    $st = db()->prepare(
-        'INSERT INTO notifications (user_email, title, message, created_at, is_read)
-         VALUES (?, ?, ?, ?, 0)'
-    );
-    $st->execute([$userEmail, $title, $message, date('Y-m-d H:i:s')]);
+    $insert = function () use ($userEmail, $title, $message, $type, $ref): void {
+        $st = db()->prepare(
+            'INSERT INTO notifications (user_email, title, message, type, ref, created_at, is_read)
+             VALUES (?, ?, ?, ?, ?, ?, 0)'
+        );
+        $st->execute([$userEmail, $title, $message, $type, $ref, date('Y-m-d H:i:s')]);
+    };
+
+    try {
+        $insert();
+    } catch (PDOException $e) {
+        // ทางสำรองเผื่อ ensure_schema_once() ยังไม่ได้ทำงาน: 42S22 = unknown column
+        // ห้าม ALTER ระหว่าง transaction เพราะ MySQL จะ commit ของที่ค้างอยู่ให้ทันที (เช่นออเดอร์ที่สร้างไม่เสร็จ)
+        if ($e->getCode() !== '42S22' || db()->inTransaction()) {
+            throw $e;
+        }
+        ensure_notification_columns();
+        $insert();
+    }
+}
+
+/**
+ * อัปเกรดโครงสร้างตารางที่ต้องมีให้ DB รุ่นเก่า (เช่นบน Railway ที่ import ไว้ก่อน) — เรียกตอนต้นทุกคำขอ
+ * ทำงานจริงแค่ครั้งแรกหลัง container/เซิร์ฟเวอร์เริ่ม แล้วจำไว้ด้วยไฟล์ใน temp ครั้งต่อไปเช็คแค่ไฟล์
+ * ต้องเรียกก่อนเปิด transaction ใด ๆ เพราะ ALTER TABLE ทำให้ MySQL commit transaction ที่ค้างอยู่
+ */
+function ensure_schema_once(): void
+{
+    if (is_file(SCHEMA_FLAG_FILE)) {
+        return;
+    }
+    ensure_notification_columns();
+    @touch(SCHEMA_FLAG_FILE);
+}
+
+/** เติมคอลัมน์ type/ref ให้ตาราง notifications ที่สร้างจาก .sql รุ่นเก่า (เรียกซ้ำได้ ไม่เพิ่มซ้ำ) */
+function ensure_notification_columns(): void
+{
+    $have = db()->query(
+        "SELECT COLUMN_NAME FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifications'"
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!in_array('type', $have, true)) {
+        db()->exec('ALTER TABLE notifications ADD COLUMN `type` VARCHAR(32) NULL AFTER message');
+    }
+    if (!in_array('ref', $have, true)) {
+        db()->exec('ALTER TABLE notifications ADD COLUMN `ref` VARCHAR(64) NULL AFTER `type`');
+    }
 }
 
 /** อีเมลกลางของร้าน ใช้เป็นปลายทางแจ้งเตือนฝั่งแอดมิน */

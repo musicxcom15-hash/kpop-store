@@ -30,7 +30,53 @@ function checkAdminAuth() {
         renderUsersTable();
         populateNotificationUserSelect();
         populateReportProductSelect();
+
+        // มาจากการกดแจ้งเตือนบนหน้าอื่น: admin.html?noti=<type>&ref=<ref> — ทำแล้วล้าง query ทิ้ง กันรีเฟรชแล้วเปิดซ้ำ
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('noti')) {
+            history.replaceState(null, '', 'admin.html');
+            handleAdminNotification(params.get('noti'), params.get('ref') || '');
+        }
     }
+}
+
+// กดแจ้งเตือนในกล่องของร้าน (ui.js เรียกตรงถ้าอยู่หน้านี้อยู่แล้ว) → สลับไปแท็บที่เกี่ยวข้องแล้วชี้รายการนั้นให้เห็น
+function handleAdminNotification(type, ref) {
+    if (type === 'admin_password_request') {
+        switchTab('tab-users-tab');
+        flashRow(`#usersTableBody tr[data-user-id="${CSS.escape(ref)}"]`, 'ไม่พบบัญชีนี้แล้ว (อาจถูกลบไป)');
+        return;
+    }
+
+    const order = KpopStore.getOrderById(ref);
+    if (!order) {
+        alert('ไม่พบคำสั่งซื้อ #' + ref + ' ในระบบแล้ว (อาจถูกลบไป)');
+        return;
+    }
+    // ออเดอร์/สลิปใหม่ที่ยังรอตรวจ → เปิดสลิปให้ตัดสินเลย ถ้าตรวจไปแล้วก็แค่เปิดดูรายละเอียดออเดอร์
+    if ((type === 'admin_new_order' || type === 'admin_new_slip') && KpopStore.getStatusMeta(order).group === 'pending') {
+        switchTab('tab-slips-tab');
+        inspectSlip(ref);
+    } else {
+        switchTab('tab-orders-tab');
+        openOrderEditModal(ref);
+    }
+}
+
+// เลื่อนไปหาแถวแล้วกะพริบสีให้เห็นว่าคือรายการไหน
+function flashRow(selector, notFoundMessage) {
+    // รอแท็บสลับเสร็จก่อน ไม่งั้นแถวยังซ่อนอยู่และ scroll ไปผิดที่
+    setTimeout(function () {
+        const row = document.querySelector(selector);
+        if (!row) {
+            if (notFoundMessage) alert(notFoundMessage);
+            return;
+        }
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.remove('kpop-row-flash');
+        void row.offsetWidth; // รีสตาร์ทแอนิเมชันถ้ากดซ้ำ
+        row.classList.add('kpop-row-flash');
+    }, 300);
 }
 
 // เติม dropdown สถานะทั้ง 2 ตัวจากตารางกลาง เพิ่มสถานะใหม่ในอนาคตแล้วโผล่เองทั้งคู่
@@ -1109,7 +1155,7 @@ function renderUsersTable() {
     const tbody = document.getElementById('usersTableBody');
 
     tbody.innerHTML = users.map(u => `
-                <tr>
+                <tr data-user-id="${esc(u.id)}">
                     <td class="fw-bold">${esc(u.name)}</td>
                     <td>${esc(u.email)}</td>
                     <td>${esc(u.phone) || '-'}</td>

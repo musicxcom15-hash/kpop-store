@@ -1,6 +1,13 @@
 KpopStore.ready(function () {
     renderCustomerProfile();
     renderCustomerOrders();
+
+    // มาจากการกดแจ้งเตือนเรื่องออเดอร์: order-history.html?order=<id> → เปิดรายละเอียดใบนั้นเลย
+    const orderId = new URLSearchParams(window.location.search).get('order');
+    if (orderId && KpopStore.getCurrentUser()) {
+        history.replaceState(null, '', 'order-history.html');
+        viewCustomerOrderDetail(orderId);
+    }
 });
 
 const FALLBACK_IMAGE = 'images/mapsoul7.jpg';

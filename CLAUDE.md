@@ -54,6 +54,12 @@ Script load order on every page is fixed: `js/api.js` → `js/store.js` → `js/
 
 `ORDER_STATUS` in `js/store.js` is a lookup table of flags (`revenue`, `quota`, `canCancel`, `canReuploadSlip`, etc.) keyed by status code. The Thai `text`/`short` fields are display-only. This replaced an earlier design that matched on Thai status *strings* scattered across files, which broke when one status's text was a substring of another's. Never branch on the display text; always branch on the status code's flags.
 
+### Notifications are typed and clickable
+
+`push_notification($email, $title, $message, $type, $ref)` in `helpers.php` stores what the notification is about (`type`) and what it points to (`ref`: order id or user id); the documented list of types is on that function. `ui.js` maps `type` → icon/colour (`NOTIFICATION_KINDS`) and, in `openNotification()`, → where a click goes (admin types → `handleAdminNotification()` in `js/pages/admin.js`, or `admin.html?noti=…&ref=…` from other pages; `order` → `order-history.html?order=…`; `password_reset` → change-password modal). Same rule as order status: never infer the kind from the Thai title. Admin broadcasts have no type and aren't clickable. The admin backoffice has its own bell (`renderAdminNotificationBell()`), since its header doesn't go through `renderNavbarAuth()`.
+
+Schema upgrade for DBs imported before `type`/`ref` existed (e.g. Railway) is automatic: `ensure_schema_once()` runs at the top of every API request (before any transaction — `ALTER TABLE` implicitly commits in MySQL) and only does work once per container, remembered by a flag file in the temp dir; any "unknown column" error deletes the flag so the next request re-checks. Follow this pattern for future additive columns instead of asking for a manual migration.
+
 ### Exchange rate (KRW → THB)
 
 The rate is a hardcoded constant, `CENTRAL_RATE` in `preorderkpopweb/api/config.php` (mirrored client-side as `CENTRAL_RATE` at the top of `js/store.js`). `current_rate()` in `helpers.php` and `KpopStore.getCurrentRate()` in `store.js` both just return this fixed value — no database lookup, no admin UI, no history. To change the rate, edit the constant in both files and deploy/redeploy.

@@ -188,6 +188,9 @@ CREATE TABLE `notifications` (
     `user_email` VARCHAR(255) NOT NULL,
     `title`      VARCHAR(255) NOT NULL,
     `message`    TEXT         NOT NULL,
+    -- เรื่องอะไร + อ้างถึงอะไร: หน้าเว็บใช้ตัดสินว่ากดแจ้งเตือนแล้วพาไปไหน (ดู push_notification ใน helpers.php)
+    `type`       VARCHAR(32)  NULL,
+    `ref`        VARCHAR(64)  NULL,
     `created_at` DATETIME     NOT NULL,
     `is_read`    TINYINT(1)   NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
@@ -304,10 +307,10 @@ INSERT INTO `order_items` (`order_id`, `product_id`, `title`, `qty`, `price`, `p
 ('ORD-2026070102', 'blackpink', 'BLACKPINK - BORN PINK Limited Vinyl',        1, 1290, 42000, 177, 'images/placeholder-album.svg');
 
 -- แจ้งเตือนตัวอย่าง -----------------------------------------------------
-INSERT INTO `notifications` (`user_email`, `title`, `message`, `created_at`, `is_read`) VALUES
+INSERT INTO `notifications` (`user_email`, `title`, `message`, `type`, `ref`, `created_at`, `is_read`) VALUES
 ('user@kpopstore.com', 'อัปเดตสถานะคำสั่งซื้อ #ORD-2026062815',
  'คำสั่งซื้อของคุณปรับสถานะเป็น "กำลังจัดเตรียมสินค้า" เลขพัสดุ: TH0192837465TH',
- '2026-06-29 09:00:00', 0),
+ 'order', 'ORD-2026062815', '2026-06-29 09:00:00', 0),
 ('user@kpopstore.com', 'ได้รับการแจ้งชำระเงิน #ORD-2026071301',
  'ขอบคุณสำหรับการสั่งซื้อ ระบบกำลังเสนอสลิปให้ผู้ดูแลระบบตรวจสอบค่ะ',
- '2026-07-13 14:31:00', 1);
+ 'order', 'ORD-2026071301', '2026-07-13 14:31:00', 1);

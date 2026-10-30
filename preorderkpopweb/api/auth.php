@@ -170,17 +170,17 @@ switch (action()) {
 
         if ($target) {
             // endpoint นี้ไม่ต้องล็อกอิน — ส่งซ้ำอีเมลเดิมภายใน 15 นาทีไม่สร้างแจ้งเตือนใหม่ กันกล่องร้านโดนถล่ม
-            $title = 'คำขอรีเซ็ตรหัสผ่าน';
             $st = db()->prepare(
-                'SELECT COUNT(*) FROM notifications
-                 WHERE user_email = ? AND title = ? AND LOCATE(?, message) > 0 AND created_at >= ?'
+                "SELECT COUNT(*) FROM notifications
+                 WHERE user_email = ? AND type = 'admin_password_request' AND ref = ? AND created_at >= ?"
             );
-            $st->execute([SHOP_EMAIL, $title, $target['email'], date('Y-m-d H:i:s', time() - 15 * 60)]);
+            $st->execute([SHOP_EMAIL, $target['id'], date('Y-m-d H:i:s', time() - 15 * 60)]);
 
             if ((int) $st->fetchColumn() === 0) {
-                push_notification(SHOP_EMAIL, $title,
-                    "ลูกค้า {$target['name']} ({$target['email']}) โทร " . ($target['phone'] ?: '-') . ' แจ้งลืมรหัสผ่าน — '
-                    . 'ไปที่แท็บจัดการผู้ใช้งาน กดปุ่มรีเซ็ตรหัสผ่าน แล้วโทรแจ้งรหัสชั่วคราวให้ลูกค้า');
+                push_notification(SHOP_EMAIL, "คำขอรีเซ็ตรหัสผ่าน: {$target['name']}",
+                    "{$target['email']} · โทร " . ($target['phone'] ?: '-')
+                    . ' — กดเพื่อไปรีเซ็ตรหัสผ่าน แล้วโทรแจ้งรหัสชั่วคราวให้ลูกค้า',
+                    'admin_password_request', $target['id']);
             }
         }
 

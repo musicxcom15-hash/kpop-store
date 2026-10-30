@@ -138,7 +138,7 @@ switch (action()) {
         $st->execute([password_hash($temp, PASSWORD_BCRYPT), $id]);
 
         push_notification($target['email'], 'รหัสผ่านของคุณถูกรีเซ็ตแล้ว',
-            'ร้านได้ตั้งรหัสผ่านชั่วคราวให้คุณตามคำขอ กรุณาเปลี่ยนรหัสผ่านใหม่ทันทีที่เมนูบัญชี → เปลี่ยนรหัสผ่าน');
+            'ร้านได้ตั้งรหัสผ่านชั่วคราวให้คุณตามคำขอ กดที่นี่เพื่อเปลี่ยนรหัสผ่านใหม่ทันที', 'password_reset');
 
         ok(['users' => all_users(), 'tempPassword' => $temp]);
     }
