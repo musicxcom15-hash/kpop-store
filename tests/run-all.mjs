@@ -21,7 +21,8 @@ const FILES = [
     'daily-orders.test.mjs',
     'save-failure.test.mjs',
     'admin-product.test.mjs',
-    'auth-gate.test.mjs'
+    'auth-gate.test.mjs',
+    'product-category.test.mjs'
 ];
 
 const failed = [];

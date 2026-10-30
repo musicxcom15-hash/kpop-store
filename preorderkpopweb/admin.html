@@ -683,13 +683,18 @@
                     <div class="modal-body p-4">
                         <input type="hidden" id="pId">
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-bold">ชื่อศิลปิน / ศิลปินกลุ่ม</label>
                                 <input type="text" id="pArtist" class="form-control" placeholder="เช่น BTS, NEWJEANS, BLACKPINK" required>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">ชื่ออัลบั้ม / สินค้า</label>
-                                <input type="text" id="pTitle" class="form-control" placeholder="เช่น Map of the Soul: 7" required>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold">ชื่อสินค้า</label>
+                                <input type="text" id="pTitle" class="form-control" placeholder="เช่น Map of the Soul: 7 / Official Lightstick" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">หมวดหมู่</label>
+                                <!-- ตัวเลือกเติมจาก KpopStore.PRODUCT_CATEGORIES (populateCategorySelect ใน admin.js) -->
+                                <select id="pCategory" class="form-select"></select>
                             </div>
                         </div>
                         <div class="row g-3 mb-3">

@@ -40,6 +40,16 @@
     // เดิมโค้ดตัดสินสถานะด้วยข้อความไทยกระจายอยู่ 22 จุดใน 4 ไฟล์ ทั้งเทียบตรง ๆ และ includes()
     // ซึ่งพังทันทีที่ข้อความมีคำซ้อนกัน (เช่น "กดไม่สำเร็จ" มีคำว่า "สำเร็จ" อยู่ข้างใน)
     //
+    // หมวดหมู่สินค้า: รหัสต้องตรงกับ PRODUCT_CATEGORIES ใน api/helpers.php (ฝั่ง PHP ตรวจซ้ำตอนบันทึก)
+    // ตัดสินด้วยรหัสหรือ flag เท่านั้น ข้อความไทยมีไว้แสดงผล — หลักเดียวกับ ORDER_STATUS ด้านล่าง
+    //   chart = นับยอดเข้าชาร์ต HANTEO & GAON (จริงเฉพาะอัลบั้ม ห้ามเขียนเหมารวมกับสินค้าอื่น)
+    const PRODUCT_CATEGORIES = {
+        album:      { label: 'อัลบั้ม',       icon: 'fa-compact-disc', chart: true },
+        lightstick: { label: 'แท่งไฟ',        icon: 'fa-wand-magic-sparkles', chart: false },
+        photocard:  { label: 'โฟโต้การ์ด',    icon: 'fa-id-card', chart: false },
+        merch:      { label: 'สินค้าอื่น ๆ',   icon: 'fa-shirt', chart: false }
+    };
+
     // ความหมายของแต่ละ flag:
     //   revenue         - นับเข้ายอดขายรวมในแดชบอร์ดหรือไม่
     //   quota           - กินโควตารับพรีออเดอร์ของรอบอยู่หรือไม่
@@ -1186,6 +1196,16 @@
             const res = await global.KpopApi.post('auth.php?action=reset-with-token', { token, newPassword });
             // code === 'invalid_link' = ลิงก์หมดอายุ/ถูกใช้แล้ว (ห้ามเดาจากข้อความไทย)
             return { success: !!(res && res.success), message: (res && res.message) || '', code: res && res.code, email: res && res.email };
+        },
+
+        // --- Product categories ---
+        PRODUCT_CATEGORIES: PRODUCT_CATEGORIES,
+
+        // คืน { code, label, icon, chart } ของสินค้า — สินค้าที่ไม่มีหมวด (ข้อมูลก่อนมีหมวดหมู่) นับเป็นอัลบั้ม
+        getProductCategory(productOrId) {
+            const p = typeof productOrId === 'string' ? this.getProductById(productOrId) : productOrId;
+            const code = p && PRODUCT_CATEGORIES[p.category] ? p.category : 'album';
+            return Object.assign({ code: code }, PRODUCT_CATEGORIES[code]);
         },
 
         // --- Order status ---

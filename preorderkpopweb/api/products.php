@@ -39,6 +39,11 @@ switch (action()) {
             $status = 'PRE-ORDER';
         }
 
+        $category = (string) ($in['category'] ?? 'album');
+        if (!in_array($category, PRODUCT_CATEGORIES, true)) {
+            fail('หมวดหมู่สินค้าไม่ถูกต้องค่ะ', 200, ['products' => all_products()]);
+        }
+
         // '' หรือ null = รับไม่จำกัด ห้ามแปลงเป็น 0 เพราะ 0 แปลว่า "เต็มแล้ว"
         $quotaRaw = $in['quotaPerRound'] ?? null;
         $quota = ($quotaRaw === null || $quotaRaw === '') ? null : max(0, (int) $quotaRaw);
@@ -62,20 +67,20 @@ switch (action()) {
 
         if ($exists) {
             $st = db()->prepare(
-                'UPDATE products SET artist = ?, title = ?, price_krw = ?, service_fee = ?, price = ?,
+                'UPDATE products SET artist = ?, title = ?, category = ?, price_krw = ?, service_fee = ?, price = ?,
                                      round_id = ?, quota_per_round = ?, image = ?, status = ?,
                                      est_delivery = ?, description = ?
                  WHERE id = ?'
             );
-            $st->execute([$artist, $title, $priceKRW, $serviceFee, $price, $roundId, $quota,
+            $st->execute([$artist, $title, $category, $priceKRW, $serviceFee, $price, $roundId, $quota,
                           $image, $status, $estDelivery, $desc, $id]);
         } else {
             $st = db()->prepare(
-                'INSERT INTO products (id, artist, title, price_krw, service_fee, price, round_id,
+                'INSERT INTO products (id, artist, title, category, price_krw, service_fee, price, round_id,
                                        quota_per_round, image, status, est_delivery, description)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
             );
-            $st->execute([$id, $artist, $title, $priceKRW, $serviceFee, $price, $roundId, $quota,
+            $st->execute([$id, $artist, $title, $category, $priceKRW, $serviceFee, $price, $roundId, $quota,
                           $image, $status, $estDelivery, $desc]);
         }
 

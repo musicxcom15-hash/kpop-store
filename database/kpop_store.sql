@@ -81,6 +81,8 @@ CREATE TABLE `products` (
     `id`              VARCHAR(50)   NOT NULL,
     `artist`          VARCHAR(150)  NOT NULL,
     `title`           VARCHAR(255)  NOT NULL,
+    -- album | lightstick | photocard | merch (ชื่อไทยอยู่ที่ PRODUCT_CATEGORIES ใน js/store.js)
+    `category`        VARCHAR(32)   NOT NULL DEFAULT 'album',
     `price_krw`       INT           NOT NULL DEFAULT 0,
     `service_fee`     DECIMAL(10,2) NOT NULL DEFAULT 0,
     `price`           DECIMAL(10,2) NULL,

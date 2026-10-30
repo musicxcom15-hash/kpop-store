@@ -340,8 +340,8 @@
                                             <div class="p-3 bg-white rounded-3 border h-100 shadow-sm d-flex gap-3 align-items-start">
                                                 <div class="badge rounded-circle p-3 text-white fw-bold fs-5" style="background: #ff3399; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">1</div>
                                                 <div>
-                                                    <h6 class="fw-bold mb-1 text-dark">เลือกอัลบั้มพรีออเดอร์</h6>
-                                                    <p class="text-muted m-0" style="font-size: 0.85rem; line-height: 1.4;">เลือกสินค้าอัลบั้มศิลปิน K-POP แท้ 100% จากเกาหลี ระบุจำนวนที่ต้องการ แล้วกดปุ่ม "ดูเพิ่มเติม" หรือ "สั่งซื้อทันที"</p>
+                                                    <h6 class="fw-bold mb-1 text-dark">เลือกสินค้าพรีออเดอร์</h6>
+                                                    <p class="text-muted m-0" style="font-size: 0.85rem; line-height: 1.4;">เลือกอัลบั้ม แท่งไฟ โฟโต้การ์ด หรือสินค้าศิลปิน K-POP ของแท้ 100% จากเกาหลี ระบุจำนวนที่ต้องการ แล้วกดปุ่ม "ดูเพิ่มเติม" หรือ "สั่งซื้อทันที"</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -389,7 +389,7 @@
                                             <li>อัตราแลกเปลี่ยน KRW/THB ใช้เรทราคากลางที่ร้านกำหนด ราคาบนเว็บคำนวณจากเรทนี้ทุกชิ้น</li>
                                             <li>ระบบใช้การแนบสลิปการโอนเงิน (Slip Upload) และตรวจสอบโดยผู้ขาย (Manual Verification)</li>
                                             <li>การรับพรีออเดอร์แบ่งเป็นรอบตามรอบของเว็บไซต์เกาหลีหรือรอบขนส่งรวม สินค้าคนละรอบจะถึงมือลูกค้าคนละเวลาและคิดค่าจัดส่งแยกกัน</li>
-                                            <li>สินค้าพรีออเดอร์ของแท้ 100% นับเข้าชาร์ต HANTEO & GAON ทุกอัลบั้ม</li>
+                                            <li>สินค้าพรีออเดอร์ของแท้ 100% (เฉพาะอัลบั้มนับยอดเข้าชาร์ต HANTEO & GAON)</li>
                                         </ul>
                                     </div>
                                 </div>

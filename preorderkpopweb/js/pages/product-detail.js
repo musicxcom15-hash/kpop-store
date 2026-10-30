@@ -29,7 +29,11 @@ KpopStore.ready(function () {
 
     const breakdown = KpopStore.getPriceBreakdown(currentProduct);
 
-    document.getElementById('display-artist').innerText = currentProduct.artist;
+    // ศิลปิน · หมวดหมู่ และป้ายนับชาร์ตเฉพาะหมวดที่นับได้จริง (ตัดสินด้วย flag chart ไม่ใช่ชื่อหมวด)
+    const category = KpopStore.getProductCategory(currentProduct);
+    document.getElementById('display-artist').innerHTML =
+        `${KpopStore.esc(currentProduct.artist)} · <i class="fa-solid ${category.icon}"></i> ${KpopStore.esc(category.label)}` +
+        (category.chart ? ' <span class="badge bg-success ms-1" style="font-size: 0.7rem;">นับเข้าชาร์ต HANTEO & GAON</span>' : '');
     document.getElementById('display-title').innerText = currentProduct.title;
     document.getElementById('display-price').innerText = '฿' + breakdown.total.toLocaleString();
     document.getElementById('display-desc').innerText = currentProduct.desc || 'ไม่มีรายละเอียดเพิ่มเติม';

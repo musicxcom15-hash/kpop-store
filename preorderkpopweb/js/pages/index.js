@@ -1,10 +1,49 @@
 // ชื่อสินค้า/ศิลปินมาจากการพิมพ์ของแอดมิน ต้องล้างก่อนต่อเป็น HTML
 const esc = KpopStore.esc;
 
+// หมวดที่เลือกอยู่ ('' = ทั้งหมด)
+let selectedCategory = '';
+
 KpopStore.ready(function () {
     renderRateBanner();
+    renderCategoryChips();
     renderCatalog();
 });
+
+// ปุ่มกรองหมวดหมู่ — โชว์เฉพาะหมวดที่มีสินค้าจริง ถ้ามีหมวดเดียว (เช่นมีแต่อัลบั้ม) ไม่ต้องโชว์ปุ่มเลย
+function renderCategoryChips() {
+    const box = document.getElementById('categoryChips');
+    if (!box) return;
+
+    const counts = {};
+    KpopStore.getProducts().forEach(p => {
+        const code = KpopStore.getProductCategory(p).code;
+        counts[code] = (counts[code] || 0) + 1;
+    });
+    const present = Object.keys(KpopStore.PRODUCT_CATEGORIES).filter(code => counts[code]);
+    if (present.length < 2) {
+        box.innerHTML = '';
+        return;
+    }
+
+    const chip = (code, label, icon, count) => `
+        <button type="button" class="btn btn-sm rounded-pill px-3 ${selectedCategory === code ? 'btn-dark' : 'btn-outline-secondary'}"
+            onclick="selectCategory('${code}')">
+            ${icon ? `<i class="fa-solid ${icon} me-1"></i>` : ''}${esc(label)} <span class="opacity-75">(${count})</span>
+        </button>`;
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    box.innerHTML = chip('', 'ทั้งหมด', '', total) +
+        present.map(code => {
+            const c = KpopStore.PRODUCT_CATEGORIES[code];
+            return chip(code, c.label, c.icon, counts[code]);
+        }).join('');
+}
+
+function selectCategory(code) {
+    selectedCategory = code;
+    renderCategoryChips();
+    renderCatalog();
+}
 
 function renderCatalog() {
     const grid = document.getElementById('productsCatalogGrid');
@@ -14,6 +53,7 @@ function renderCatalog() {
     const search = (document.getElementById('storeSearchInput')?.value || '').toLowerCase();
 
     const filtered = products.filter(p => {
+        if (selectedCategory && KpopStore.getProductCategory(p).code !== selectedCategory) return false;
         return !search || p.title.toLowerCase().includes(search) || p.artist.toLowerCase().includes(search);
     });
 
@@ -41,7 +81,7 @@ function renderCatalog() {
                         <span class="badge-pink">${esc(p.status) || 'PRE-ORDER'}</span>
                         <img src="${esc(p.image)}" class="card-img-top product-img" alt="${esc(p.title)}" onerror="this.onerror=null; this.src='images/mapsoul7.jpg'">
                         <div class="card-body d-flex flex-column">
-                            <div class="artist-name">${esc(p.artist)}</div>
+                            <div class="artist-name">${esc(p.artist)} · <i class="fa-solid ${KpopStore.getProductCategory(p).icon}"></i> ${esc(KpopStore.getProductCategory(p).label)}</div>
                             <h5 class="product-title">${esc(p.title)}</h5>
                             <div class="mb-2" style="font-size: 0.75rem;">
                                 ${renderRoundChip(round, state)}

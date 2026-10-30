@@ -607,6 +607,7 @@ function renderProductsTable() {
                     <td><span class="badge bg-secondary">${esc(p.artist)}</span></td>
                     <td>
                         <div class="fw-bold">${esc(p.title)}</div>
+                        <span class="badge bg-light text-dark border me-1"><i class="fa-solid ${KpopStore.getProductCategory(p).icon} me-1"></i>${esc(KpopStore.getProductCategory(p).label)}</span>
                         <small class="text-muted">${round ? esc(round.name) : 'ยังไม่ผูกรอบ'} ${renderRoundStateBadge(state)}</small>
                     </td>
                     <td>
@@ -823,11 +824,19 @@ function updateProductPricePreview() {
         `₩${krw.toLocaleString()} x ${rate.rate} = ฿${bd.converted.toLocaleString()} บวกค่าบริการ ฿${fee.toLocaleString()}`;
 }
 
+// ตัวเลือกหมวดหมู่มาจากตารางกลางใน store.js — เพิ่มหมวดใหม่ที่นั่นที่เดียว (และใน api/helpers.php)
+function populateCategorySelect(selected) {
+    document.getElementById('pCategory').innerHTML = Object.entries(KpopStore.PRODUCT_CATEGORIES)
+        .map(([code, c]) => `<option value="${code}" ${code === selected ? 'selected' : ''}>${esc(c.label)}</option>`)
+        .join('');
+}
+
 function openAddProductModal() {
     document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-plus me-2 text-pink"></i>เพิ่มสินค้าใหม่';
     document.getElementById('pId').value = '';
     document.getElementById('pArtist').value = '';
     document.getElementById('pTitle').value = '';
+    populateCategorySelect('album');
     document.getElementById('pPriceKRW').value = '25000';
     document.getElementById('pServiceFee').value = '170';
     document.getElementById('pQuota').value = '50';
@@ -852,6 +861,7 @@ function openEditProductModal(productId) {
     document.getElementById('pId').value = p.id;
     document.getElementById('pArtist').value = p.artist;
     document.getElementById('pTitle').value = p.title;
+    populateCategorySelect(KpopStore.getProductCategory(p).code);
     document.getElementById('pPriceKRW').value = p.priceKRW || '';
     document.getElementById('pServiceFee').value = p.serviceFee || 0;
     // ว่าง = รับไม่จำกัด จึงต้องแยก null ออกจาก 0 ให้ชัด
@@ -882,6 +892,7 @@ async function saveProductForm(e) {
         id: id,
         artist: document.getElementById('pArtist').value,
         title: document.getElementById('pTitle').value,
+        category: document.getElementById('pCategory').value,
         priceKRW: parseFloat(document.getElementById('pPriceKRW').value) || 0,
         serviceFee: parseFloat(document.getElementById('pServiceFee').value) || 0,
         roundId: document.getElementById('pRoundId').value,

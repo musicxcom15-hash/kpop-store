@@ -72,7 +72,7 @@ set_exception_handler(function (Throwable $e): void {
 
 // ก่อน endpoint ใดจะเปิด transaction — เติมตาราง/คอลัมน์ใหม่ให้ DB ที่ import ไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
 // เปลี่ยนชื่อไฟล์ (v2, v3, ...) ทุกครั้งที่เพิ่มของใน ensure_schema() เพื่อให้ container ที่เคยเช็คแล้วเช็คใหม่
-define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-v2');
+define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-v3');
 ensure_schema_once();
 
 /* ------------------------------------------------------------------ */
@@ -253,8 +253,16 @@ function map_product(array $r): array
         'status'        => $r['status'],
         'estDelivery'   => $r['est_delivery'],
         'desc'          => $r['description'],
+        // ?? เผื่อ DB เก่าก่อนมีคอลัมน์ (ensure_product_category_column เติมให้ตอนต้นคำขอ)
+        'category'      => $r['category'] ?? 'album',
     ];
 }
+
+/**
+ * หมวดหมู่สินค้า — เก็บเป็นรหัส ชื่อไทย/ไอคอนอยู่ที่ PRODUCT_CATEGORIES ใน js/store.js (ต้องตรงกัน)
+ * สินค้าเดิมก่อนมีหมวดหมู่ทั้งหมดเป็นอัลบั้ม จึงใช้ album เป็นค่าตั้งต้น
+ */
+const PRODUCT_CATEGORIES = ['album', 'lightstick', 'photocard', 'merch'];
 
 function map_round(array $r): array
 {
@@ -541,7 +549,20 @@ function ensure_schema_once(): void
     }
     ensure_notification_columns();
     ensure_password_resets_table();
+    ensure_product_category_column();
     @touch(SCHEMA_FLAG_FILE);
+}
+
+/** คอลัมน์หมวดหมู่สินค้า — DB ที่ import ก่อนมีหมวดหมู่ ได้ค่า album ให้สินค้าเดิมทุกชิ้น */
+function ensure_product_category_column(): void
+{
+    $has = db()->query(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'category'"
+    )->fetchColumn();
+    if ((int) $has === 0) {
+        db()->exec("ALTER TABLE products ADD COLUMN `category` VARCHAR(32) NOT NULL DEFAULT 'album' AFTER title");
+    }
 }
 
 /**
