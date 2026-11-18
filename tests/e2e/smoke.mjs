@@ -2,10 +2,10 @@
 //
 //   node tests/e2e/smoke.mjs http://localhost:8080
 //
-// ต้องมีเว็บรันอยู่ (docker compose / MAMP) และมี Chrome ในเครื่อง จึงไม่อยู่ใน `npm test`
+// ต้องมีเว็บรันอยู่ (docker compose) และมี Chrome ในเครื่อง จึงไม่อยู่ใน `npm test`
 // ไม่เขียนข้อมูลลง DB นอกจาก session ล็อกอิน (คำขอแอดมินที่ยิงทดสอบสิทธิ์ถูกปฏิเสธก่อนถึงขั้นเขียน)
 //
-// ค่าตั้งต้นคือบัญชีตัวอย่างใน database/kpop_store.sql — บนเว็บจริงให้ส่งบัญชีของจริงผ่าน env:
+// ค่าตั้งต้นคือบัญชีตัวอย่างใน database/seed.sql — บนเว็บจริงให้ส่งบัญชีของจริงผ่าน env:
 //   SMOKE_CUSTOMER_EMAIL / SMOKE_CUSTOMER_PASSWORD / SMOKE_ADMIN_EMAIL / SMOKE_ADMIN_PASSWORD
 //   SMOKE_SKIP_ADMIN=1   ข้ามส่วนแอดมิน   ·   CHROME_PATH=...   ถ้า Chrome ไม่ได้อยู่ที่ตำแหน่งปกติ
 import { spawn } from 'node:child_process';

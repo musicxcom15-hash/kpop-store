@@ -1,427 +1,341 @@
-# คู่มือขึ้นเว็บ + วิธีใช้ — KPOP STORE
-
-เอกสารนี้ไล่ทีละขั้นจนได้ URL สาธารณะ แล้วต่อด้วยวิธีใช้งานจริง
+# คู่มือขึ้นเว็บ + ย้ายระบบ + วิธีใช้ — KPOP STORE
 
 | ภาค | เรื่อง |
 |---|---|
-| A | ขึ้นเว็บบน Railway (ขั้น A1–A9) |
-| B | วิธีใช้เว็บ ทั้งฝั่งลูกค้าและหลังบ้าน |
-| C | กลับมารันบนเครื่องตัวเอง (MAMP PRO) |
+| A | ตั้งค่า Supabase (ฐานข้อมูล + ที่เก็บไฟล์) |
+| B | ย้ายข้อมูลจากระบบเดิม (Railway MySQL) |
+| C | Deploy ตัวเว็บบน Vercel |
+| D | ปิดระบบเดิมบน Railway |
+| E | วิธีใช้เว็บ ทั้งฝั่งลูกค้าและหลังบ้าน |
+| F | รันบนเครื่องตัวเอง + สำรองข้อมูล + แก้ปัญหา |
 
 ---
 
-## สถานะตอนนี้ — ✅ ขึ้นเว็บเรียบร้อยแล้ว
+## ภาพรวมระบบ
 
-### 🌐 https://web-production-6fbe4.up.railway.app
+```
+เบราว์เซอร์ลูกค้า
+   │  https
+   ▼
+Vercel  ── Container Runtime: build จาก Dockerfile (php:8.3-apache) ตัวเดียวกับที่รันบนเครื่อง
+   │        ทั้งหน้าเว็บ (HTML/JS/CSS) และ api/*.php อยู่ใน container นี้
+   │
+   ├──► Supabase Postgres   ข้อมูลทั้งหมด + session ล็อกอิน (ตาราง sessions)
+   └──► Supabase Storage    สลิป · รูปสินค้า · หลักฐานการกดสั่ง (bucket "uploads")
+```
 
-| รายการ | สถานะ |
-|---|---|
-| service `web` (php:8.3-apache) | ✅ Online |
-| MySQL + ข้อมูลตั้งต้น (8 ตาราง) | ✅ Online |
-| Volume ที่ `/var/www/html/uploads` | ✅ ติดแล้ว |
-| Domain | ✅ generate แล้ว |
-| รหัสแอดมิน | ✅ เปลี่ยนจาก `admin123` แล้ว |
-| `uploads/` เปิดตรง ๆ | ✅ ได้ `403` |
-| Document Root ใน MAMP PRO (เครื่องตัวเอง) | ⬜ ยังต้องตั้งเอง — ดูภาค C |
+**ทำไม session และไฟล์ต้องอยู่ Supabase:** container บน Vercel ปิดตัวเองเมื่อไม่มีคนใช้ 5 นาที
+และมีได้หลายตัวพร้อมกัน ไฟล์ที่เขียนลงเครื่องไม่ถาวรและมองไม่เห็นข้ามตัว
+(เอกสาร Vercel: "Files written inside a function container are not durable or shared between instances")
+
+**ภูมิภาค (region) ต้องอยู่ที่เดียวกัน** — หน้าเว็บหนึ่งหน้าคุยกับฐานข้อมูลหลายรอบ
+ถ้า Vercel กับ Supabase อยู่คนละทวีป ทุกหน้าจะช้าลงชัดเจน แนะนำ **สิงคโปร์ทั้งคู่** (ใกล้ลูกค้าในไทยที่สุด)
+
+> ⚠️ **Container Runtime ของ Vercel ยังเป็น Beta** (ใช้ได้ทุกแพ็กเกจรวม Hobby)
+> ทางเลือก `vercel-php` (runtime ชุมชน) ถูก archive ไปแล้วเมื่อ 29 ต.ค. 2026 และ Vercel แนะนำ container แทน
 
 ---
 
-# ภาค A — ขึ้นเว็บบน Railway
+# ภาค A — ตั้งค่า Supabase
 
-ปลายทางคือ Railway project 1 อัน มี 2 service
+## A1 — สร้างโปรเจกต์
 
-```
-project
-├── web     ← Docker (php:8.3-apache) + Volume ที่ uploads/
-└── MySQL   ← ฐานข้อมูล คุยกันผ่าน private network
-```
+supabase.com → **New project**
 
-> **ทำไมต้องใช้ Dockerfile:** โปรเจกต์นี้เป็น PHP + Apache ถ้าปล่อยให้ Railway เดาเอง
-> มันจะใช้ **Railpack** สร้าง image ของตัวเอง ซึ่งของเวอร์ชันที่เจอมี MPM ของ Apache ชนกัน
-> จน Apache ไม่ยอม start เลย (`AH00534`) — และ `railway.json` **ไม่พอ** ที่จะบังคับ
-> ต้องไปตั้ง **Dockerfile Path** ที่ตัว service ด้วย (อ่านกล่องแดงในขั้น A3)
+- **Region:** `Southeast Asia (Singapore)` — เปลี่ยนทีหลังไม่ได้ ต้องสร้างโปรเจกต์ใหม่
+- **Database Password:** ตั้งแล้ว**เก็บในที่ปลอดภัย** (ใช้ในขั้น A4) — ห้ามใส่ในโค้ดหรือ commit
 
-## A1 — commit ✅ ทำให้แล้ว
+## A2 — สร้างตาราง
 
-ตั้ง `user.name` / `user.email` แบบเฉพาะ repo นี้ และ commit ไป 57 ไฟล์เรียบร้อย
-ตรวจได้ด้วย `git log --oneline`
+**SQL Editor → New query** → เปิดไฟล์ [`database/schema.sql`](../database/schema.sql) ก๊อปทั้งไฟล์มาวาง → **Run**
 
-## A2 — สร้าง repo บน GitHub แล้ว push
+ตรวจ: **Table Editor** ต้องเห็น 9 ตาราง (`rounds users products orders order_items notifications password_resets cart_items sessions`)
+ทุกตารางขึ้นว่าเปิด RLS แล้ว
 
-1. ไปที่ **github.com → New repository**
-2. ตั้งชื่อ เช่น `kpop-store`
-3. ⚠️ **อย่าติ๊ก** "Add a README file", "Add .gitignore", "Choose a license"
-   — repo ต้องว่างเปล่า ไม่งั้นจะชนกับไฟล์ที่ commit ไว้แล้ว แล้ว push ไม่ผ่าน
-4. กด **Create repository** แล้วก๊อป URL ที่ได้
+> ⚠️ `schema.sql` **ลบตารางเดิมทิ้งก่อนสร้างใหม่** — รันซ้ำหลังเปิดใช้จริง = ข้อมูลหายทั้งหมด
+>
+> 🔒 ทำไมต้องเปิด RLS: Supabase เปิด REST API ให้ทุกตารางอัตโนมัติ และ publishable/anon key ไม่ใช่ความลับ
+> ถ้าไม่เปิด RLS ใครมี key ก็อ่านตาราง `users` (รวม hash รหัสผ่าน) ได้ตรง ๆ
+> `schema.sql` เปิด RLS ทุกตารางและถอนสิทธิ์ role `anon`/`authenticated` ให้แล้ว
+> PHP ต่อเข้ามาเป็นเจ้าของตารางจึงไม่ติด RLS
+>
+> **ห้ามรัน `database/seed.sql` บน Supabase** — มีบัญชีแอดมินรหัส `admin123` ที่ทุกคนรู้
 
-จากนั้นรันในโฟลเดอร์โปรเจกต์:
+## A3 — สร้างที่เก็บไฟล์
+
+**Storage → New bucket**
+
+- ชื่อ: `uploads`
+- **Public bucket: เปิด** (หน้าเว็บแสดงรูปด้วย URL ตรง ๆ)
+- (แนะนำ) Allowed MIME types: `image/jpeg, image/png, image/webp` · File size limit: `3 MB`
+
+> ชื่อไฟล์ที่ระบบตั้งมีส่วนสุ่ม 96 บิต จึงเดา URL ของสลิปคนอื่นไม่ได้
+> (เทียบเท่าของเดิมที่โฟลเดอร์ `uploads/` เปิดไฟล์ได้ถ้ารู้ชื่อ แต่ไล่ดูรายชื่อไม่ได้)
+
+## A4 — เก็บค่าที่ต้องใช้ 3 ค่า
+
+| ค่า | หาจากไหน | ใช้เป็นตัวแปร |
+|---|---|---|
+| Connection string | ปุ่ม **Connect** ด้านบน → **Transaction pooler** → URI (พอร์ต `6543`) แทน `[YOUR-PASSWORD]` ด้วยรหัสจาก A1 แล้วต่อท้าย `?sslmode=require` | `DATABASE_URL` |
+| Project URL | **Project Settings → API** (`https://<ref>.supabase.co`) | `SUPABASE_URL` |
+| Secret key | **Project Settings → API Keys** → Secret keys (`sb_secret_...`) | `SUPABASE_SECRET_KEY` |
+
+- รหัสผ่านที่มีอักขระพิเศษ (`@ : / ? #` ฯลฯ) ต้อง URL-encode ก่อนใส่ใน URI
+- ใช้ **Transaction pooler** เพราะ container บน Vercel เปิด-ปิดบ่อยและมีได้หลายตัว — `config.php` เห็นพอร์ต 6543 แล้วสลับไปใช้ prepared statement แบบจำลองให้เอง (pooler แบบนี้ใช้ของจริงไม่ได้) ถ้าเลือก Session pooler (พอร์ต 5432) ก็ใช้ได้เหมือนกัน
+- **Secret key = กุญแจใหญ่ของทั้งโปรเจกต์** เก็บใน Environment Variables ของ Vercel เท่านั้น ห้ามใส่ในโค้ด หน้าเว็บ หรือแชต
+
+---
+
+# ภาค B — ย้ายข้อมูลจากระบบเดิม (Railway MySQL → Supabase)
+
+ทำครั้งเดียวตอนย้ายระบบ ใช้เวลาประมาณ 20–30 นาที **ทำช่วงที่ไม่มีคนสั่งของ**
+
+ต้องมี: Docker Desktop เปิดอยู่ · `railway login` แล้ว · build image ไว้แล้ว (`docker compose build web`) · ทำ A1–A4 เสร็จแล้ว
+
+## B0 — ปิดรับออเดอร์ชั่วคราว
+
+หลังบ้านเว็บเดิม → **จัดการรอบพรีออเดอร์** → ตั้งรอบที่เปิดอยู่ทุกรอบเป็น **ปิดรับ**
+กันออเดอร์ใหม่เข้า MySQL เดิมระหว่างย้าย (ออเดอร์ที่เข้ามาหลัง B1 จะไม่ตามมาที่ระบบใหม่)
+จดไว้ว่าปิดรอบไหนไปบ้าง จะเปิดคืนในขั้น C5
+
+## B1 — dump ข้อมูลล่าสุดจาก MySQL บน Railway
+
+Git Bash ที่โฟลเดอร์โปรเจกต์ (ต้องเปิด TCP proxy ของ service MySQL ไว้ — ปิดทิ้งหลังทำเสร็จ):
 
 ```bash
-git remote add origin https://github.com/<username>/<ชื่อ-repo>.git
-git push -u origin main
+railway run --service MySQL -- bash -c 'docker run --rm -e MYSQL_PWD="$MYSQLPASSWORD" mysql:9.4 mysqldump -h "$RAILWAY_TCP_PROXY_DOMAIN" -P "$RAILWAY_TCP_PROXY_PORT" -u root --single-transaction --no-tablespaces --set-gtid-purged=OFF "$MYSQLDATABASE"' > /d/kpop-store-backups/railway-$(date +%Y%m%d-%H%M)-final.sql
 ```
 
-> ถ้า push แล้วถูกถามรหัสผ่าน: GitHub ไม่รับรหัสผ่านบัญชีแล้ว ต้องใช้ **Personal Access Token**
-> (GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-> → Generate new token → ติ๊กสิทธิ์ `repo`) แล้วเอา token มาวางแทนรหัสผ่าน
+> ไฟล์ dump มีข้อมูลลูกค้า — เก็บใน `D:\kpop-store-backups\` เท่านั้น ห้ามอยู่ใน repo
 
-## A3 — สร้าง project บน Railway
+## B2 — แปลงเป็น SQL ของ PostgreSQL
 
-> ⚠️ **ทำขั้นนี้หลัง A2 push สำเร็จแล้วเท่านั้น**
-> Railway อ่าน commit ตอนที่เชื่อม repo ถ้าสร้าง project ตอน repo ยังว่าง จะติดค้างที่ข้อความ
-> `Could not find latest commit for repo` หรือ `Branch 'main' not found` ทันที
-> และไม่มีปุ่มไหนในหน้า Railway แก้ได้ ต้อง push ก่อนอย่างเดียว
-> ถ้าเผลอสร้างไปแล้ว ลบทิ้ง (Settings → Danger → Delete Project) แล้วสร้างใหม่หลัง push ง่ายกว่ามานั่งไล่แก้
-
-**railway.app → New Project → Deploy from GitHub repo → เลือก repo ที่เพิ่ง push**
-
-Railway จะเริ่ม build ทันที
-
-> ### 🔴 กับดักตัวจริงที่เจอตอนทำ — Railway ไม่ใช้ Dockerfile ให้อัตโนมัติ
->
-> ตอน deploy จริงพบว่า Railway ตั้ง builder เป็น **`RAILPACK`** และ **ไม่อ่าน `railway.json`**
-> (`railwayConfigFile: null`) Railpack เห็นว่าเป็นโปรเจกต์ PHP แล้วสร้าง image Apache ของตัวเอง
-> ที่มี MPM ชนกัน → Apache ตายด้วย `AH00534: More than one MPM loaded.` วนไม่หยุด
->
-> อาการหลอกมาก เพราะแก้ `Dockerfile` เท่าไหร่ก็ไม่มีอะไรเปลี่ยน — **ไฟล์นั้นไม่ได้ถูกใช้เลย**
->
-> **วิธีเช็ก:** build log ที่ใช้ Dockerfile จริงจะขึ้น `[internal] load build definition from Dockerfile`
-> และ `FROM docker.io/library/php:8.3-apache` ถ้าไม่เห็นสองบรรทัดนี้ = ไม่ได้ใช้ Dockerfile
->
-> **วิธีแก้:** service `web` → **Settings → Build** → ตั้ง **Dockerfile Path** = `Dockerfile`
-> แล้ว Redeploy (ทำผ่าน CLI ก็ได้ ดูหัวข้อ "ทำผ่าน Railway CLI" ท้ายเอกสาร)
->
-> `railway.json` ยังใช้ได้ถึง **2026-12-01** แต่ Railway แนะนำให้ย้ายไป `.railway/railway.ts`
-> (`railway config migrate`) — ของโปรเจกต์นี้ตั้งค่าที่ตัว service ไปแล้ว จึงไม่ต้องพึ่งไฟล์นั้น
-
-> ⚠️ **deploy รอบแรกจะพัง — เป็นเรื่องปกติ ไม่ต้องไปรื้อ Dockerfile**
-> เพราะยังไม่มี MySQL service ให้ต่อ ตัว image build ผ่านแต่ทุก request จะขึ้น error
-> เดี๋ยวหายเองหลังทำขั้น A4–A5 เสร็จ
-> (คนละเรื่องกับ error ด้านบน — อันนี้แปลว่า Railway เจอโค้ดแล้วและกำลังทำงานอยู่)
-
-## A4 — เพิ่ม MySQL
-
-ในหน้า project กด **`+ Create` → Database → MySQL**
-
-รอจนขึ้นสถานะเขียว แล้วจะมี service ชื่อ `MySQL` โผล่มาข้าง ๆ service ของเว็บ
-
-> 📌 **เรื่องชื่อ service:** Railway ตั้งชื่อ service ตามชื่อ repo ให้อัตโนมัติ ของโปรเจกต์นี้จึงชื่อ
-> **`kpop-store`** ไม่ใช่ `web` เอกสารนี้เรียกมันว่า `web` เพื่อให้อ่านง่าย —
-> เจอคำว่า `web` ที่ไหนให้หมายถึง **service ที่ชื่อตาม repo ของคุณ** (อีกอันคือ `MySQL`)
-> จะเปลี่ยนชื่อให้เป็น `web` จริง ๆ ก็ได้ที่ Settings → Service Name
-
-## A5 — ตั้ง Variables ที่ service `web`
-
-คลิก service **`web`** → แท็บ **Variables** → ใส่ทีละตัว **6 ตัว**
-
-| ชื่อตัวแปร | ค่า |
-|---|---|
-| `MYSQLHOST` | `${{MySQL.MYSQLHOST}}` |
-| `MYSQLPORT` | `${{MySQL.MYSQLPORT}}` |
-| `MYSQLDATABASE` | `${{MySQL.MYSQLDATABASE}}` |
-| `MYSQLUSER` | `${{MySQL.MYSQLUSER}}` |
-| `MYSQLPASSWORD` | `${{MySQL.MYSQLPASSWORD}}` |
-| `APP_ENV` | `production` |
-
-ค่า `${{MySQL.…}}` ให้ **พิมพ์ตรง ๆ แบบนั้นเลย** — Railway จะแทนค่าจริงให้เอง
-ข้อดีคือถ้ารหัสผ่านฐานข้อมูลเปลี่ยน ค่าตรงนี้ตามให้อัตโนมัติ ไม่ต้องมาแก้เอง
-
-> `APP_ENV=production` มีผลจริง: ทำให้ข้อความ error ที่เคยบอก host/port/ชื่อฐานข้อมูล
-> ไม่ถูกส่งออกไปหน้าเว็บอีก (ไปโผล่ในแท็บ Logs แทน)
-
-## A6 — เพิ่ม Volume
-
-**`web` → Settings → Volumes → Add Volume** → ช่อง Mount path ใส่:
-
-```
-/var/www/html/uploads
+```bash
+bash database/tools/mysql-dump-to-postgres.sh /d/kpop-store-backups/railway-<วันที่>-final.sql
 ```
 
-> ⚠️ **ทำขั้นนี้ก่อนเปิดให้คนอื่นใช้** ระบบไฟล์ของคอนเทนเนอร์หายทุกครั้งที่ deploy ใหม่
-> ถ้ามาเพิ่ม volume ทีหลัง สลิปและรูปสินค้าที่อัปโหลดไปแล้วจะหายหมด และ path ที่เก็บใน
-> ฐานข้อมูลจะชี้ไปยังไฟล์ที่ไม่มีอยู่ (หน้าเว็บขึ้นรูปแตก)
+สคริปต์เปิด MySQL ชั่วคราวในเครื่อง import dump แล้วเขียนไฟล์ `...-final-postgres.sql` ข้าง ๆ
+(บรรทัดสุดท้ายบอกจำนวนแถวต่อตาราง) — ไม่แตะ Railway และไม่แตะ Docker ของเว็บ
+ไม่ย้าย: ตาราง `rates` (เลิกใช้แล้ว) และ `password_resets` (ลิงก์หมดอายุใน 30 นาทีอยู่แล้ว)
 
-## A7 — เปิด domain
+## B3 — นำเข้า Supabase
 
-**`web` → Settings → Networking → Generate Domain**
+**SQL Editor → New query** → เปิดไฟล์ `...-final-postgres.sql` ก๊อปทั้งไฟล์มาวาง → **Run**
 
-จะได้ URL หน้าตาแบบ `https://xxxx.up.railway.app` — นี่คือลิงก์ที่เอาไปส่งอาจารย์
+- ทั้งไฟล์อยู่ใน transaction เดียว — ถ้าจำนวนแถวไม่ตรงกับต้นทาง หรือตารางมีข้อมูลอยู่แล้ว จะยกเลิกทั้งหมด ไม่มีข้อมูลครึ่ง ๆ กลาง ๆ
+- ถ้าขึ้น "ตารางปลายทางมีข้อมูลอยู่แล้ว": รัน `schema.sql` (A2) ใหม่ก่อน แล้วรันไฟล์นี้อีกครั้ง
+- ทางเลือกแทน SQL Editor (ไฟล์ใหญ่): `docker run --rm -i postgres:17-alpine psql "$DATABASE_URL" < ไฟล์.sql`
 
-## A8 — import ฐานข้อมูล (ทำครั้งเดียว)
+## B4 — ย้ายสลิปและรูปสินค้าขึ้น Supabase Storage
 
-ต้องใช้ไฟล์ **`database/kpop_store_railway.sql`** — ⚠️ **ไม่ใช่ `kpop_store.sql`**
-(ตัวเดิมมีคำสั่ง `CREATE DATABASE` ซึ่ง Railway ไม่ให้สิทธิ์ user ทำ จะ error ทันที)
+ไฟล์เดิมอยู่ใน volume ของ Railway สคริปต์ดึงผ่าน URL ของเว็บเดิม (ต้องยังเปิดอยู่) แล้วแก้ path ในฐานข้อมูลให้ชี้ที่ใหม่:
 
-**หาค่าเชื่อมต่อ:** คลิก service `MySQL` → แท็บ **Variables** → ดูค่าฝั่ง **public / proxy**
-(`RAILWAY_TCP_PROXY_DOMAIN`, `RAILWAY_TCP_PROXY_PORT`, `MYSQLPASSWORD`)
-
-### วิธีที่ 1 — command line (แนะนำ)
-
-เปิด PowerShell ที่โฟลเดอร์โปรเจกต์ แล้วรัน (แทนค่าในวงเล็บมุม):
-
-```powershell
-& "C:\MAMP\bin\mysql\bin\mysql.exe" -h <proxy-domain> -P <proxy-port> -u root -p --default-character-set=utf8mb4 railway -e "source database/kpop_store_railway.sql"
+```bash
+export DATABASE_URL='<จาก A4>'
+export SUPABASE_URL='<จาก A4>'
+export SUPABASE_SECRET_KEY='<จาก A4>'
+export OLD_SITE_URL='https://web-production-6fbe4.up.railway.app'
+bash database/tools/copy-uploads-to-storage.sh
 ```
 
-แล้วพิมพ์รหัสผ่านที่ก๊อปมาจาก `MYSQLPASSWORD`
+- ต้องจบด้วย "ย้ายเสร็จ N / N ไฟล์" — ถ้ามีรายการ "ย้ายไม่ได้" รูปนั้นจะแตก (ส่วนใหญ่คือไฟล์ที่หายไปตั้งแต่ก่อนมี volume)
+- รันซ้ำได้ ไฟล์ที่ย้ายแล้วจะไม่ถูกย้ายซ้ำ
+- ปิดหน้าต่าง Git Bash หลังเสร็จ (ค่า secret อยู่ในตัวแปรของหน้าต่างนั้น)
 
-> `--default-character-set=utf8mb4` สำคัญ ไม่ใส่แล้วชื่อศิลปิน/สินค้าภาษาไทยจะเพี้ยน
+---
 
-### วิธีที่ 2 — ไม่อยากใช้ command line
+# ภาค C — Deploy บน Vercel
 
-คลิก service `MySQL` → แท็บ **Data** → **Query** → เปิดไฟล์
-`database/kpop_store_railway.sql` ด้วย Notepad → ก๊อปทั้งไฟล์ไปวาง → กดรัน
+## C1 — import โปรเจกต์
 
-> ⚠️⚠️ ไฟล์นี้ขึ้นต้นด้วย `DROP TABLE IF EXISTS` ทุกตาราง
-> **รันซ้ำหลังเปิดใช้จริง = ออเดอร์ บัญชีลูกค้า และสลิปทั้งหมดหายเกลี้ยง**
-> ให้รันครั้งเดียวตอนตั้งค่าเท่านั้น
+vercel.com → **Add New → Project** → เลือก GitHub repo `kpop-store` → **Import**
 
-## A9 — เปลี่ยนรหัสแอดมิน
+- **Root Directory:** รากของ repo (ค่าตั้งต้น)
+- **Framework Preset:** ควรขึ้นเป็น Container — `vercel.json` บังคับไว้แล้ว (`"framework": "container"`)
+  เพราะใน repo มี `package.json`/`server.js` ของเก่า ถ้าไม่บังคับ Vercel อาจเดาว่าเป็นแอป Node แล้วรัน PHP ไม่ได้
 
-รหัส `admin123` ที่มากับข้อมูลตั้งต้นใช้บนเว็บสาธารณะไม่ได้ — ใครก็เดาได้และเข้าหลังบ้านได้ทันที
-
-สร้าง hash ก่อน (ใช้ php ที่มากับ MAMP):
-
-```powershell
-& "C:\MAMP\bin\php\php8.3.1\php.exe" -r "echo password_hash('รหัสใหม่ของคุณ', PASSWORD_DEFAULT);"
-```
-
-แล้วเอา hash ที่ได้ไปรันใน Query editor ของ Railway:
-
-```sql
-UPDATE users SET password_hash = '<hash ที่ได้>' WHERE email = 'admin@kpopstore.com';
-```
-
-## A10 — ตั้งค่าส่งอีเมล (ลิงก์ลืมรหัสผ่าน)
-
-ปุ่ม "ลืมรหัสผ่าน?" ส่งลิงก์ตั้งรหัสใหม่ทางอีเมล — **Railway แพ็กเกจ Free/Hobby ปิด SMTP**
-("SMTP is only available on the Pro plan and above") จึงต้องใช้บริการส่งอีเมลแบบ HTTPS API
-
-**ยังไม่ตั้งค่า = เว็บยังใช้ได้:** คำขอลืมรหัสจะเข้ากล่องแจ้งเตือนแอดมินแทน (แอดมินกดปุ่มกุญแจในแท็บผู้ใช้ → ได้รหัสชั่วคราวไปโทรแจ้งลูกค้า)
-
-เลือกอย่างใดอย่างหนึ่ง:
-
-| บริการ | ต้องมีโดเมนของตัวเองไหม | หมายเหตุ |
-|---|---|---|
-| **Brevo** | ยืนยันอีเมลผู้ส่งที่ account.brevo.com/senders (ดูในหน้าเว็บของ Brevo ว่าใช้อีเมลทั่วไปได้หรือต้องยืนยันโดเมน) | API key: Brevo → SMTP & API → API Keys |
-| **Resend** | **ต้องมี** — เอกสารของ Resend: "You must add and verify at least one domain to send emails" | ฟรี 100 ฉบับ/วัน, 3,000/เดือน |
-
-แล้วตั้ง Variables ที่ service **web** (ไม่ใช่ MySQL):
+## C2 — ตั้ง Environment Variables (ก่อนกด Deploy)
 
 | ชื่อ | ค่า |
 |---|---|
-| `MAIL_PROVIDER` | `brevo` หรือ `resend` |
-| `MAIL_API_KEY` | API key ของบริการ (ความลับ — ห้ามใส่ในโค้ดหรือ commit) |
-| `MAIL_FROM` | อีเมลผู้ส่งที่ยืนยันกับบริการแล้ว |
-| `MAIL_FROM_NAME` | (ไม่บังคับ) ชื่อผู้ส่ง ค่าตั้งต้น `KPOP STORE` |
+| `DATABASE_URL` | จาก A4 |
+| `SUPABASE_URL` | จาก A4 |
+| `SUPABASE_SECRET_KEY` | จาก A4 (ความลับ) |
+| `APP_ENV` | `production` |
+| `MAIL_PROVIDER` / `MAIL_API_KEY` / `MAIL_FROM` | (ไม่บังคับ) ส่งอีเมลลืมรหัสผ่านจริง — ดูหัวข้อ "ส่งอีเมล" ใน F |
 
-ลิงก์ในอีเมลใช้โดเมนจาก `RAILWAY_PUBLIC_DOMAIN` ที่ Railway ใส่ให้เอง ถ้าย้ายไปใช้โดเมนของตัวเอง ให้ตั้ง `APP_BASE_URL=https://โดเมนของคุณ` เพิ่ม
+แล้วเปิด **Settings → Environment Variables → Automatically expose System Environment Variables**
+(ระบบใช้ `VERCEL_PROJECT_PRODUCTION_URL` สร้างลิงก์รีเซ็ตรหัสผ่านในอีเมล — หรือตั้ง `APP_BASE_URL=https://โดเมนของคุณ` เองแทน)
 
-**ทดสอบ:** หน้าเข้าสู่ระบบ → ลืมรหัสผ่าน? → ใส่อีเมลบัญชีของคุณเอง → ต้องได้อีเมล "ตั้งรหัสผ่านใหม่ — KPOP STORE"
-ถ้าไม่ได้ ดู `railway logs --service web` หาบรรทัด `[kpop-mail] ส่งไม่สำเร็จ` ซึ่งบอกเหตุผลจากบริการ (เช่น key ผิด / ผู้ส่งยังไม่ยืนยัน)
+## C3 — ตั้ง region ให้ตรงกับ Supabase
 
-## เช็กว่าสำเร็จจริง
+**Settings → Functions → Function Region** → `Singapore (sin1)` (หรือ region ที่ใกล้ Supabase จาก A1 ที่สุด)
+แพ็กเกจ Hobby เลือกได้ 1 region · ค่าตั้งต้นคือ Washington D.C. (`iad1`) ซึ่งไกลจากสิงคโปร์มาก
 
-เปิด URL ที่ได้จาก A7 แล้วไล่ 6 ข้อนี้
+> ถ้า build/deploy ครั้งแรกเกิดก่อนตั้งค่านี้ ให้ Redeploy หลังตั้ง
 
-| # | ทำอะไร | ต้องได้ | ถ้าไม่ได้แปลว่า |
+## C4 — Deploy แล้วตรวจ
+
+กด **Deploy** (ครั้งต่อไป push ขึ้น `main` แล้ว Vercel deploy เอง)
+build log ต้องมี `FROM docker.io/library/php:8.3-apache` — แปลว่าใช้ Dockerfile จริง
+
+ตรวจที่ URL ที่ได้:
+
+| # | ทำอะไร | ต้องได้ | ถ้าไม่ได้ |
 |---|---|---|---|
-| 1 | เปิดหน้าแรก | สินค้าขึ้นครบ 4 รายการ | PHP ไม่ถูกรัน — เช็กว่า Railway ใช้ Dockerfile จริง |
-| 2 | F12 → Network → `api/bootstrap.php` | `200` + `application/json` | ถ้าเป็น `text/html` แปลว่าโดนเสิร์ฟเป็นไฟล์ธรรมดา |
-| 3 | ล็อกอิน แล้ว refresh | ยังล็อกอินอยู่ | คุกกี้ `secure` ตั้งผิด |
-| 4 | แนบสลิป → **Redeploy** → เปิดออเดอร์เดิม | รูปยังอยู่ | ลืมตั้ง Volume (A6) |
-| 5 | แอดมินตั้งเรทใหม่ ณ เวลาปัจจุบัน → refresh | ราคาขยับทันที | เขตเวลาเพี้ยน 7 ชั่วโมง |
-| 6 | เปิด `<domain>/uploads/` ตรง ๆ | `403` | โฟลเดอร์สลิปเปิดโล่ง — อันตราย |
+| 1 | เปิด `/api/bootstrap.php` | JSON `"success":true` + สินค้าครบ | ดู Logs: ต่อฐานข้อมูลไม่ได้ → เช็ก `DATABASE_URL` / รหัสผ่าน URL-encode |
+| 2 | เปิดหน้าแรก | สินค้า + รูปขึ้น | รูปแตก → B4 ยังไม่ครบ หรือ bucket ไม่ได้ตั้ง Public |
+| 3 | ล็อกอินแอดมิน แล้วรีเฟรช / เปิดแท็บใหม่ | ยังล็อกอินอยู่ | ตาราง `sessions` ไม่มี → รัน A2 ไม่ครบ |
+| 4 | ลูกค้าแนบสลิปทดสอบ | สลิปขึ้นในหลังบ้าน URL เป็น `...supabase.co/storage/...` | ดู Logs หา `[kpop-storage]` (key ผิด / ไม่มี bucket) |
+| 5 | ประวัติสั่งซื้อของลูกค้าเดิม | ออเดอร์เก่าครบ สลิปเก่าเปิดได้ | B3/B4 |
+| 6 | `curl "https://<ref>.supabase.co/rest/v1/users?select=*" -H "apikey: <publishable key>"` | `[]` หรือ permission denied — **ห้ามเห็นรายชื่อ** | RLS/สิทธิ์ไม่ได้ตั้ง → รันส่วน "ความปลอดภัยบน Supabase" ท้าย `schema.sql` ใน SQL Editor |
+
+smoke test จากเครื่อง (ใช้บัญชีจริง ไม่ใช่บัญชีตัวอย่าง):
+
+```bash
+SMOKE_CUSTOMER_EMAIL=... SMOKE_CUSTOMER_PASSWORD=... SMOKE_SKIP_ADMIN=1 node tests/e2e/smoke.mjs https://<โดเมน-vercel>
+```
+
+## C5 — เปิดรับออเดอร์คืน
+
+หลังบ้านเว็บใหม่ → **จัดการรอบพรีออเดอร์** → เปิดรอบที่ปิดไว้ใน B0
+
+---
+
+# ภาค D — ปิดระบบเดิมบน Railway
+
+> ⚠️ ตราบใดที่ service `web` บน Railway ยังผูกกับ GitHub อยู่ **ทุกครั้งที่ push จะ deploy ขึ้น Railway ด้วย**
+> โค้ดใหม่ไม่มี `DATABASE_URL` บน Railway → เว็บเก่าจะขึ้น "ระบบขัดข้องชั่วคราว" (ไฟล์ใน `uploads/` ยังเปิดได้ปกติ B4 จึงไม่กระทบ)
+
+1. หลัง C4 ผ่าน: แจ้ง URL ใหม่กับลูกค้า
+2. Railway → service `web` → **Settings → Disconnect** repo (หยุด deploy อัตโนมัติ) — เว็บเก่าค้างเป็นโค้ดเดิมไว้ให้ B4 รันซ้ำได้
+3. เก็บ service `MySQL` ไว้ 1–2 สัปดาห์เผื่อต้องย้อนกลับ แล้ว dump สำรองครั้งสุดท้ายเก็บไว้ใน `D:\kpop-store-backups\`
+4. ลบ project บน Railway (ปิด TCP proxy ของ MySQL ก่อนถ้ายังเปิดอยู่)
+5. แจ้ง Claude ให้ลบของที่เหลือจากยุค Railway/MySQL: `railway.json`, `pdo_mysql` ใน `Dockerfile`, สคริปต์ใน `database/tools/`
+
+**ย้อนกลับ (ถ้า Vercel มีปัญหาก่อนข้อ 4):** เชื่อม repo กับ Railway คืน แล้ว deploy commit ก่อนย้ายระบบ —
+ข้อมูลที่เกิดบนระบบใหม่หลังย้ายจะไม่ตามกลับไป
+
+---
+
+# ภาค E — วิธีใช้เว็บ
+
+## บัญชี
+
+รหัสผ่านถูกตรวจจริงด้วย `password_verify()` — อีเมลที่ยังไม่สมัครเข้าไม่ได้ ระบบไม่สร้างบัญชีให้อัตโนมัติ
+อีเมลไม่สนตัวพิมพ์เล็ก/ใหญ่ (`Somi@x.com` กับ `somi@x.com` คือบัญชีเดียวกัน)
+
+> ⚠️ ข้อมูลที่ย้ายมาจากเว็บเดิมมีบัญชีตัวอย่าง `user@kpopstore.com` / `somi@kpopstore.com` ที่ใช้รหัส `123456`
+> (รหัสนี้อยู่ใน repo สาธารณะ) — เปลี่ยนรหัสหรือลบบัญชีทิ้งที่แท็บ **จัดการผู้ใช้งาน** หลังย้ายเสร็จ
+
+## ฝั่งลูกค้า
+
+```
+ดูแคตตาล็อก (ไม่ต้องล็อกอิน · กรองตามหมวดได้)
+   → เลือกไซซ์ (ถ้ามี) → "เพิ่มลงตะกร้า" หรือ "สั่งซื้อทันที"   ← กำแพงล็อกอินอยู่ตรงนี้
+   → ตะกร้า (แยกกลุ่มตามรอบพรีออเดอร์)
+   → เช็คเอาต์ + แนบสลิป                                    ← ราคาถูกล็อกทันทีที่แนบ
+   → ติดตามสถานะในหน้าประวัติการสั่งซื้อ (มีแจ้งเตือนที่กระดิ่ง)
+```
+
+- **ทำไมตะกร้าแยกเป็นกลุ่ม** — ของคนละรอบถึงไทยคนละเวลา จึงคิดค่าส่งแยกรอบ
+- **สลิปไม่ผ่านทำยังไง** — สถานะจะเป็น "สลิปไม่ถูกต้อง" แล้วลูกค้าส่งสลิปใบใหม่ได้เองถ้ารอบยังเปิด
+- **ยกเลิกได้ถึงเมื่อไหร่** — ยกเลิกเองได้จนถึงก่อนร้านกดสั่งกับเกาหลี หลังจากนั้นต้องคุยกับแอดมิน
+
+## หลังบ้าน (`/admin.html`) — 8 แท็บ
+
+ต้องล็อกอินด้วยบัญชี role `admin` (หน้าเว็บซ่อนปุ่มให้เฉย ๆ ด่านจริงคือ `require_admin()` ฝั่ง PHP)
+
+| แท็บ | ใช้ตอนไหน |
+|---|---|
+| ภาพรวมระบบ | ยอดขาย จำนวนออเดอร์ ออเดอร์ล่าสุด พื้นที่เก็บไฟล์ |
+| ตรวจสอบสลิป | **งานประจำวัน** — ไล่ดูสลิปทีละใบ กดอนุมัติหรือปฏิเสธ |
+| คำสั่งซื้อทั้งหมด | แก้สถานะ ใส่เลขพัสดุ บันทึกโน้ต แนบหลักฐานการกดสั่ง |
+| จัดการสินค้า | เพิ่ม/แก้/ลบสินค้า หมวดหมู่ ไซซ์ ราคาวอน ค่าบริการ โควตาต่อรอบ ลิงก์ร้านต้นทาง |
+| รายงานคำสั่งซื้อ | ยอดต่อสินค้ารายวัน · ดาวน์โหลด Excel |
+| จัดการรอบพรีออเดอร์ | เปิด/ปิดรอบ ตั้งวันเปิด-ปิด · ใบสรุปยอดที่ต้องกดสั่ง (แยกไซซ์) |
+| จัดการผู้ใช้งาน | ดูรายชื่อ เปลี่ยนบทบาท รีเซ็ตรหัสผ่านให้ลูกค้า |
+| แจ้งเตือนลูกค้า | ส่งข้อความถึงลูกค้าคนเดียวหรือทุกคน |
+
+## ลำดับงานจริงของร้าน
+
+```
+1. ตั้งรอบพรีออเดอร์                    (จัดการรอบพรีออเดอร์)
+2. เพิ่มสินค้า ผูกกับรอบ + ตั้งโควตา      (จัดการสินค้า)
+3. ── ลูกค้าสั่งซื้อและแนบสลิป ──
+4. ตรวจสลิป อนุมัติทีละใบ                (ตรวจสอบสลิป)
+5. ปิดรอบ → เปิดใบสรุปยอด → ไปกดสั่งกับเว็บเกาหลี
+6. อัปเดตสถานะจนถึง "จัดส่งสำเร็จ"        (คำสั่งซื้อทั้งหมด)
+```
+
+ถ้ากดสั่งไม่สำเร็จ (ของหมด): `ร้านกดสั่งไม่สำเร็จ` → `รอคืนเงิน` → `คืนเงินเรียบร้อยแล้ว`
+สามสถานะนี้ไม่นับเข้ายอดขายและคืนโควตาให้รอบทันที
+
+**เรทเงินวอน** เป็นค่าคงที่ 0.028 บาท/วอน ในโค้ด (`CENTRAL_RATE` ใน `api/config.php` และ `js/store.js`)
+ไม่มีหน้าให้ตั้ง — เปลี่ยนเรทต้องแก้โค้ดแล้ว deploy · ออเดอร์เก่าเก็บเรทที่ใช้ตอนสั่งไว้ จึงไม่เปลี่ยนตาม
+
+---
+
+# ภาค F — รันบนเครื่อง · สำรองข้อมูล · แก้ปัญหา
+
+## รันบนเครื่องตัวเอง
+
+```
+docker compose up -d --build
+```
+
+หน้าร้าน http://localhost:8080 · Adminer (ดูฐานข้อมูล) http://localhost:8081
+ฐานข้อมูลเป็น PostgreSQL 17 สร้างจาก `schema.sql` + `seed.sql` ให้เอง ไฟล์อัปโหลดอยู่ใน volume ของ Docker
+ไม่ต้องมีบัญชี Supabase หรือ Vercel — รายละเอียดใน [README](../README.md)
+
+## เครื่องตัวเอง vs เว็บจริง
+
+| | เครื่องตัวเอง (Docker) | เว็บจริง |
+|---|---|---|
+| เว็บเซิร์ฟเวอร์ | `php:8.3-apache` ใน Docker | Dockerfile เดียวกัน บน Vercel Container Runtime |
+| ฐานข้อมูล | PostgreSQL 17 ใน container `db` | Supabase Postgres |
+| ค่าเชื่อมต่อ DB | `DATABASE_URL` ใน docker-compose.yml | `DATABASE_URL` ใน Vercel |
+| ข้อมูลตั้งต้น | `schema.sql` + `seed.sql` | `schema.sql` + ข้อมูลที่ย้ายมา (ภาค B) |
+| ไฟล์อัปโหลด | volume `uploads` (`uploads/...`) | Supabase Storage (URL เต็ม) |
+| session ล็อกอิน | ตาราง `sessions` | ตาราง `sessions` |
+| ข้อความ error | ละเอียดเพื่อ debug | ข้อความกลาง ๆ (`APP_ENV=production`) — ของจริงอยู่ใน Logs ของ Vercel |
+
+## สำรองข้อมูล
+
+แพ็กเกจฟรีของ Supabase ไม่ได้ให้ดาวน์โหลด backup ย้อนหลังได้ตามใจ — สำรองเองเป็นระยะ:
+
+```bash
+docker run --rm postgres:17-alpine pg_dump --no-owner --no-privileges "$DATABASE_URL" > /d/kpop-store-backups/supabase-$(date +%Y%m%d-%H%M).sql
+```
+
+(ใช้ Session pooler พอร์ต 5432 หรือ Direct connection — `pg_dump` ผ่าน Transaction pooler ไม่ได้)
+ไฟล์ใน Storage ดาวน์โหลดได้จากหน้า Storage ของ Supabase
+
+## ส่งอีเมล (ลิงก์ลืมรหัสผ่าน)
+
+ส่งผ่าน HTTPS API ของ **Brevo** หรือ **Resend** — ตั้ง `MAIL_PROVIDER` (`brevo`/`resend`), `MAIL_API_KEY`, `MAIL_FROM`
+(+ `MAIL_FROM_NAME` ไม่บังคับ) ใน Environment Variables ของ Vercel
+
+- **ยังไม่ตั้ง = เว็บยังใช้ได้:** คำขอลืมรหัสเข้ากล่องแจ้งเตือนแอดมินแทน (แอดมินกดปุ่มกุญแจในแท็บผู้ใช้ → ได้รหัสชั่วคราวไปแจ้งลูกค้า)
+- Resend ต้องยืนยันโดเมนของตัวเองก่อน · Brevo ยืนยันอีเมลผู้ส่งที่หน้า Senders
+- ทดสอบ: ลืมรหัสผ่าน? → ใส่อีเมลของคุณเอง → ถ้าไม่ได้รับ ดู Logs ของ Vercel หา `[kpop-mail]`
 
 ## แก้ปัญหาที่เจอบ่อย
 
 | อาการ | สาเหตุ | ทางแก้ |
 |---|---|---|
-| เปิดเว็บแล้วเห็นโค้ด PHP เป็นตัวหนังสือ | Railway build เป็น Node app | เช็กว่า `railway.json` ถูก push ขึ้นไปแล้ว → Redeploy |
-| ทุกหน้าขึ้น "ระบบขัดข้องชั่วคราว" | ต่อฐานข้อมูลไม่ได้ | ดูแท็บ **Logs** ของ `web` · เช็ก Variables ทั้ง 6 ตัว · ยัง import (A8) หรือยัง |
-| สินค้าไม่ขึ้นแต่ไม่มี error | ยังไม่ได้ import | ทำขั้น A8 |
-| ชื่อสินค้าเป็น `???` | import โดยไม่ได้ระบุ charset | import ใหม่พร้อม `--default-character-set=utf8mb4` |
-| ล็อกอินแล้วเด้งออกทันที | คุกกี้ session ถูกทิ้ง | เปิดผ่าน `https://` ไม่ใช่ `http://` |
-| รูปหายหลัง deploy | ไม่มี Volume | ทำขั้น A6 (รูปเดิมกู้ไม่ได้) |
+| ทุกหน้าขึ้น "ระบบขัดข้องชั่วคราว" | ต่อฐานข้อมูลไม่ได้ | Logs ของ Vercel · เช็ก `DATABASE_URL` (รหัสผ่าน URL-encode? `?sslmode=require`?) · โปรเจกต์ Supabase ถูกพักไว้หรือเปล่า |
+| เปิดเว็บครั้งแรกขึ้น "กำลังเชื่อมต่อ…" สักพัก | container ตื่นจากการปิดตัวตอนว่าง (cold start) | ปกติ — หน้าเว็บลองซ้ำเองราว 20 วินาที |
+| หน้าแรกช้าทุกหน้า | Vercel กับ Supabase อยู่คนละ region | C3 |
+| ล็อกอินแล้วหลุดเอง | ตาราง `sessions` ไม่มี / ต่อ DB ไม่ได้ | A2 · ดู Logs |
+| แนบสลิปไม่ได้ "บันทึกไฟล์รูปไม่สำเร็จ" | key ผิด / ไม่มี bucket `uploads` | Logs หา `[kpop-storage]` · A3 · A4 |
+| รูปเก่าแตก | ยังไม่ได้ย้ายไฟล์ / bucket ไม่ Public | B4 · A3 |
+| Vercel build เป็นแอป Node / หา PHP ไม่เจอ | ไม่ได้ใช้ Container preset | เช็ก `vercel.json` (`"framework": "container"`) · Settings → Framework Preset |
+| รูปใหญ่ส่งไม่ผ่าน (413) | Vercel รับ request ได้ไม่เกิน 4.5MB | เบราว์เซอร์ย่อรูปให้ก่อนอยู่แล้ว — เกิดได้กับรูปที่ย่อแล้วยังใหญ่มาก |
 
----
+## ข้อจำกัดที่ควรรู้
 
-# ภาค B — วิธีใช้เว็บ
-
-## บัญชีตั้งต้น
-
-| บทบาท | อีเมล | รหัสผ่าน |
-|---|---|---|
-| ผู้ดูแลระบบ | `admin@kpopstore.com` | `admin123` → **เปลี่ยนแล้วตามขั้น A9** |
-| ลูกค้า (สมชาย) | `user@kpopstore.com` | `123456` → **ต้องเปลี่ยนหรือลบบนเว็บจริง** |
-| ลูกค้า (โซมี) | `somi@kpopstore.com` | `123456` → **ต้องเปลี่ยนหรือลบบนเว็บจริง** |
-
-> รหัสตัวอย่างทั้งหมดถูกเผยแพร่ใน repo สาธารณะ ใครก็ล็อกอินบัญชีที่ยังใช้รหัสเหล่านี้ได้
-> ตรวจ (ต.ค. 2026) พบว่าบนเว็บจริง `user@` และ `somi@` ยังใช้ `123456` อยู่
-
-> รหัสผ่านถูกตรวจจริงด้วย `password_verify()` — อีเมลที่ยังไม่สมัครจะเข้าไม่ได้
-> และระบบไม่สร้างบัญชีให้อัตโนมัติ
-
-## ฝั่งลูกค้า
-
-```
-ดูแคตตาล็อก (ไม่ต้องล็อกอิน)
-   → กด "เพิ่มลงตะกร้า" หรือ "สั่งซื้อทันที"   ← กำแพงล็อกอินอยู่ตรงนี้
-   → ตะกร้า (แยกกลุ่มตามรอบพรีออเดอร์)
-   → เช็คเอาต์ + แนบสลิป                      ← เรทถูกล็อกที่ค่าวันนั้นทันทีที่แนบ
-   → ติดตามสถานะในหน้าประวัติการสั่งซื้อ
-```
-
-จุดที่คนใช้มักสงสัย:
-
-- **ทำไมตะกร้าแยกเป็นกลุ่ม** — ของคนละรอบถึงไทยคนละเวลา จึงคิดค่าส่งแยกรอบ
-- **เรทล็อกตอนไหน** — ตอนแนบสลิป ไม่ใช่ตอนกดสั่ง หลังจากนั้นเรทขยับก็ไม่กระทบใบนั้น
-- **สลิปไม่ผ่านทำยังไง** — สถานะจะเป็น "สลิปไม่ถูกต้อง" แล้วลูกค้าส่งสลิปใบใหม่ได้เอง
-- **ยกเลิกได้ถึงเมื่อไหร่** — ยกเลิกเองได้จนถึงก่อนร้านกดสั่งกับเกาหลี หลังจากนั้นต้องคุยกับแอดมิน
-- **ตะกร้าผูกกับบัญชี** ล็อกอินคนละบัญชีบนเครื่องเดียวกันจะเห็นตะกร้าคนละใบ
-
-## หลังบ้าน (`/admin.html`) — 8 แท็บ
-
-ต้องล็อกอินด้วยบัญชี role `admin` ก่อนถึงจะเข้าได้
-(หน้าเว็บซ่อนปุ่มให้เฉย ๆ ด่านจริงอยู่ที่ `require_admin()` ฝั่ง PHP ยิง endpoint ตรงก็ไม่ผ่าน)
-
-| แท็บ | ใช้ตอนไหน |
-|---|---|
-| ภาพรวมระบบ | ดูยอดขาย จำนวนออเดอร์ ของที่ต้องจัดการวันนี้ |
-| ตรวจสอบสลิป | **งานประจำวัน** — ไล่ดูสลิปทีละใบ กดอนุมัติหรือปฏิเสธ |
-| คำสั่งซื้อทั้งหมด | แก้สถานะ ใส่เลขพัสดุ บันทึกโน้ต แนบหลักฐานการกดสั่ง |
-| จัดการสินค้า | เพิ่ม/แก้/ลบสินค้า ตั้งราคาวอน ค่าบริการ โควตาต่อรอบ |
-| จัดการรอบพรีออเดอร์ | เปิด/ปิดรอบ ตั้งวันเปิด-ปิด กำหนดวันของถึงไทย |
-| เรทเงินวอน | ตั้งเรทใหม่ ดูประวัติเรทย้อนหลัง |
-| จัดการผู้ใช้งาน | ดูรายชื่อลูกค้า เปลี่ยนบทบาท |
-| แจ้งเตือนลูกค้า | ส่งข้อความถึงลูกค้า |
-
-## ลำดับงานจริงของร้าน
-
-```
-1. ตั้งรอบพรีออเดอร์                  (แท็บ จัดการรอบพรีออเดอร์)
-2. ตั้งเรทเงินวอนของวันนั้น            (แท็บ เรทเงินวอน)
-3. เพิ่มสินค้า ผูกกับรอบ + ตั้งโควตา    (แท็บ จัดการสินค้า)
-4. ── ลูกค้าสั่งซื้อและแนบสลิป ──
-5. ตรวจสลิป อนุมัติทีละใบ              (แท็บ ตรวจสอบสลิป)
-6. ปิดรอบ                             (แท็บ จัดการรอบพรีออเดอร์)
-7. เอาใบสรุปรอบไปกดสั่งกับเว็บเกาหลี
-8. อัปเดตสถานะจนถึง "จัดส่งสำเร็จ"      (แท็บ คำสั่งซื้อทั้งหมด)
-```
-
-**ถ้ากดสั่งกับเกาหลีไม่สำเร็จ (ของหมด):**
-`ร้านกดสั่งไม่สำเร็จ` → `รอคืนเงิน` → `คืนเงินเรียบร้อยแล้ว`
-สามสถานะนี้ไม่นับเข้ายอดขายและคืนโควตาให้รอบทันที
-
-## เรื่องเรท 22:00
-
-ระบบ **ไม่มี cron** — เรทที่มีผลคือ "แถวล่าสุดที่ `effective_from` ถึงเวลาแล้ว"
-(ดู `current_rate()` ใน `preorderkpopweb/api/helpers.php`)
-
-ผลที่ได้คือ **ตั้งเรทล่วงหน้าได้** เช่นตั้งตอนบ่ายให้มีผล 22:00 คืนนี้ พอถึงเวลาระบบสลับเอง
-ไม่ต้องมานั่งกดตอนสี่ทุ่ม
-
-## ข้อจำกัดที่ควรรู้ตอนใช้จริง
-
-- **deploy ใหม่ทีไร ทุกคนหลุดล็อกอิน** — session เก็บเป็นไฟล์ในคอนเทนเนอร์ซึ่งหายตอน deploy
-  (ตะกร้ากับออเดอร์ไม่หาย เพราะอยู่ในฐานข้อมูล) เว็บระดับเดโมยอมรับได้
-- **ห้ามเพิ่ม replica เกิน 1** ด้วยเหตุผลเดียวกัน — `railway.json` ล็อก `numReplicas: 1` ไว้แล้ว
-- **Railway ไม่มี free tier** — Trial ให้เครดิต $5 หลังจากนั้น Hobby $5/เดือน
-
----
-
-# ภาค C — กลับมารันบนเครื่องตัวเอง (MAMP PRO)
-
-โค้ดที่แก้ไปเพื่อขึ้น Railway **ไม่กระทบการรันบนเครื่อง**
-`api/config.php` จะตกไปใช้ค่า MAMP เดิม (`root/root @ 127.0.0.1`) เมื่อไม่เจอ environment variable
-
-## ฐานข้อมูล ✅ import ให้แล้ว
-
-`kpop_store` มีครบ 8 ตารางพร้อมข้อมูลตั้งต้น (สินค้า 4 · ผู้ใช้ 3 · ออเดอร์ 3 · รอบ 3 · เรท 1)
-
-อยากรีเซ็ตกลับเป็นค่าตั้งต้นเมื่อไหร่ ให้รันซ้ำ:
-
-```powershell
-& "C:\MAMP\bin\mysql\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -proot --default-character-set=utf8mb4 -e "source database/kpop_store.sql"
-```
-
-## ⬜ ที่ยังต้องทำ — ตั้ง Document Root ใน MAMP PRO
-
-**นี่คือเหตุผลที่เปิด `http://localhost` ตอนนี้แล้วเจอหน้า MAMP PRO แทนหน้าร้าน**
-
-1. เปิดโปรแกรม **MAMP PRO**
-2. ไปแท็บ **Hosts**
-3. เลือก host `localhost` (ถ้ายังไม่มีให้กด `+` สร้าง)
-4. ช่อง **Document Root** กดเลือกโฟลเดอร์ → `D:\ProjectPreorder\preorderkpopweb`
-5. กด **Stop** แล้ว **Start Servers** ใหม่ (ต้อง restart ค่าถึงจะมีผล)
-
-> ⚠️ **อย่าไปแก้ `C:\MAMP\conf\apache\httpd.conf`**
-> ค่าในไฟล์นั้นชี้มาที่โปรเจกต์ถูกต้องอยู่แล้ว แต่เว็บก็ยังไม่ขึ้น เพราะ **MAMP PRO
-> เขียนไฟล์ config ของตัวเองทับใหม่ทุกครั้งที่ Start Servers** โดยอ่านค่าจากหน้าต่างโปรแกรมเท่านั้น
-> แก้ในไฟล์เท่าไหร่ก็ไม่มีผล (ข้อนี้ต่างจาก MAMP รุ่นธรรมดา)
-
-## เช็กว่าสำเร็จ
-
-| เปิด | ต้องได้ |
-|---|---|
-| `http://localhost/index.html` | หน้าร้าน มีสินค้า 4 รายการ |
-| `http://localhost/api/bootstrap.php` | ข้อความ JSON (ไม่ใช่หน้า 404 ของ MAMP) |
-| ล็อกอิน `user@kpopstore.com` / `123456` | เข้าได้ |
-
-## ชุดทดสอบ
-
-```
-npm test
-```
-
-รันได้เลยโดย **ไม่ต้องเปิด MAMP** และไม่ต้อง `npm install` ก่อน (ใช้แต่ของที่มากับ Node)
-รายละเอียดอยู่ใน [`docs/TESTING.md`](TESTING.md)
-
-## เครื่องตัวเอง vs Railway ต่างกันตรงไหน
-
-| | เครื่องตัวเอง (MAMP PRO) | Railway |
-|---|---|---|
-| เว็บเซิร์ฟเวอร์ | Apache ของ MAMP PRO | Apache ใน Docker (`php:8.3-apache`) |
-| ไฟล์ SQL ที่ใช้ | `kpop_store.sql` | `kpop_store_railway.sql` |
-| ชื่อฐานข้อมูล | `kpop_store` | `railway` |
-| ค่าเชื่อมต่อ DB | ค่า default ใน `config.php` | environment variable `MYSQL*` |
-| รูปที่อัปโหลด | `preorderkpopweb/uploads/` | Volume ที่ `/var/www/html/uploads` |
-| ข้อความ error | บอกละเอียดเพื่อ debug | ข้อความกลาง ๆ (`APP_ENV=production`) |
-| เขตเวลา | ตาม php.ini ของ MAMP | `Asia/Bangkok` (ตั้งใน Dockerfile) |
-
-
----
-
-# ภาคผนวก — ทำผ่าน Railway CLI
-
-ทั้งหมดในภาค A ทำผ่าน CLI ได้โดยไม่ต้องกดหน้าเว็บ ยกเว้นการ login ครั้งแรก
-
-```bash
-npm install -g @railway/cli
-railway login                       # หรือ --browserless ถ้าเปิดเบราว์เซอร์เองไม่ได้
-
-railway init --name kpop-store
-railway add --service web --repo <user>/<repo> --branch main
-railway add --database mysql
-
-railway variables --service web   --set 'MYSQLHOST=${{MySQL.MYSQLHOST}}'   --set 'MYSQLPORT=${{MySQL.MYSQLPORT}}'   --set 'MYSQLDATABASE=${{MySQL.MYSQLDATABASE}}'   --set 'MYSQLUSER=${{MySQL.MYSQLUSER}}'   --set 'MYSQLPASSWORD=${{MySQL.MYSQLPASSWORD}}'   --set 'APP_ENV=production'
-
-railway volume --service <SERVICE_ID> add --mount-path /var/www/html/uploads
-railway domain --service web
-railway redeploy --service web --yes
-railway logs --build --service web        # ดู build log
-railway logs --deployment --service web   # ดู runtime log
-```
-
-## กับดักของ CLI ที่เจอมาแล้ว
-
-| อาการ | สาเหตุ / ทางแก้ |
-|---|---|
-| `Builder` enum ไม่มีค่า `DOCKERFILE` | Railway ไม่ได้มองว่า Dockerfile เป็น builder — ตั้งผ่าน `dockerfilePath` ที่ service แทน |
-| `railway volume add --service web` → `unexpected argument` | `--service` ต้องอยู่ **ก่อน** `add` และต้องเป็น **Service ID** ไม่ใช่ชื่อ ไม่งั้น CLI panic |
-| `Mount path must start with a /` ทั้งที่ใส่ `/` แล้ว | Git Bash บน Windows แปลง `/var/...` เป็น Windows path — นำหน้าด้วย `MSYS_NO_PATHCONV=1` |
-| `railway connect --tunnel-only` บอกว่าไม่มี SSH key | ต้องมี key ใน `~/.ssh` — หรือเปิด TCP proxy ให้ MySQL แทนแล้วต่อตรง |
-| import ด้วย mysql client ของ MAMP → `SSL connection error` | client 5.7 คุย TLS กับ MySQL 9 ไม่ได้ — ใช้ Node + `mysql2` แทน ดีกว่าปิด SSL เพราะรหัสผ่านจะไม่วิ่งเป็น plaintext |
-
-> เปิด TCP proxy ให้ MySQL ไว้ชั่วคราวตอน import ได้ **แต่ปิดทิ้งหลังใช้เสร็จ**
-> ไม่งั้น MySQL จะเปิดรับ connection จากอินเทอร์เน็ตด้วยบัญชี root ตลอดเวลา
+- **Vercel Container Runtime ยังเป็น Beta** — ติดตามประกาศของ Vercel
+- **Cold start:** ไม่มีคนใช้ 5 นาที container ปิดตัว คนแรกที่เข้ามารอนานกว่าปกติ
+- **Supabase แพ็กเกจฟรีพักโปรเจกต์อัตโนมัติเมื่อไม่มีการใช้งานนาน** — ถ้าเว็บขึ้น "ระบบขัดข้อง" ทั้งที่ไม่ได้แก้อะไร ให้เข้าไปกด Restore ที่หน้า Supabase (ดูเงื่อนไขปัจจุบันในหน้าราคาของ Supabase)
+- **Vercel Hobby สำหรับใช้ส่วนตัว/ไม่ใช่เชิงพาณิชย์** ตามเงื่อนไขของ Vercel — ถ้าเปิดขายจริงควรดูแพ็กเกจ Pro

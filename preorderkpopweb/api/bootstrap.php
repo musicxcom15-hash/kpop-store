@@ -45,7 +45,7 @@ foreach ($orderRows as $row) {
 /* --- แจ้งเตือน : เฉพาะของตัวเอง (แอดมินเห็นของกล่องร้านด้วย) --- */
 $notifications = [];
 if ($user) {
-    $st = db()->prepare('SELECT * FROM notifications WHERE user_email = ? ORDER BY created_at DESC, id DESC');
+    $st = db()->prepare('SELECT * FROM notifications WHERE lower(user_email) = lower(?) ORDER BY created_at DESC, id DESC');
     $st->execute([$user['email']]);
     $notifications = array_map('map_notification', $st->fetchAll());
 }

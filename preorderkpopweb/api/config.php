@@ -1,33 +1,24 @@
 <?php
 /**
- * การเชื่อมต่อฐานข้อมูล (PDO)
+ * การเชื่อมต่อฐานข้อมูล (PDO → PostgreSQL / Supabase)
  *
  * ค่าคอนฟิกทั้งหมดอยู่ในไฟล์นี้ไฟล์เดียว ย้ายเครื่องแล้วแก้ที่นี่ที่เดียวจบ
  *
- * ไฟล์นี้ต้องรันได้สองที่โดยไม่ต้องแก้อะไร
- *   - เครื่องพัฒนา (MAMP)  : ไม่มี environment variable → ใช้ค่า default ด้านล่าง
- *   - Railway (production) : MySQL service ผูกค่า MYSQL* มาให้ทาง environment
+ * อ่านที่อยู่ฐานข้อมูลจาก environment variable DATABASE_URL รูปแบบเดียวกับที่ Supabase ให้มา
+ *   postgresql://USER:PASSWORD@HOST:PORT/DBNAME?sslmode=require
+ *   - Railway (production) : ตั้งใน Variables ของ service web = Connection string ของ Supabase
+ *   - Docker บนเครื่อง     : docker-compose.yml ตั้งให้แล้ว (ชี้ไปที่ container db)
+ *   - ไม่ตั้งเลย          : ใช้ Postgres บนเครื่องตัวเองที่ 127.0.0.1:5432 (ค่า default ด้านล่าง)
+ *
+ * บน Supabase ให้ใช้ "Session pooler" (พอร์ต 5432) — ต่อผ่าน IPv4 ได้ และรองรับ prepared statement
+ * ถ้าใช้ "Transaction pooler" (พอร์ต 6543) ระบบจะสลับไปใช้ prepared statement แบบจำลองให้เอง
+ * (pooler แบบนั้นส่งคำสั่งแต่ละคำสั่งไปคนละ connection ได้ prepared statement ของจริงจึงหาย)
  *
  * ใช้ define() ไม่ใช่ const เพราะ `const X = getenv(...)` เป็น parse error
- * (constant expression ของ PHP เรียกฟังก์ชันไม่ได้) ชื่อค่าคงที่ยังเหมือนเดิมทุกตัว
+ * (constant expression ของ PHP เรียกฟังก์ชันไม่ได้)
  */
 
-define('DB_HOST', getenv('MYSQLHOST') ?: '127.0.0.1');
-define('DB_NAME', getenv('MYSQLDATABASE') ?: 'kpop_store');
-define('DB_USER', getenv('MYSQLUSER') ?: 'root');
-// เช็ก !== false แทน ?: เพราะรหัสผ่านที่เป็นสตริงว่างก็เป็นค่าที่ตั้งใจตั้งได้
-define('DB_PASS', getenv('MYSQLPASSWORD') !== false ? getenv('MYSQLPASSWORD') : 'root');
-
-/**
- * เรื่องพอร์ต (เฉพาะตอนรันบน MAMP):
- * MAMP บนเครื่องนี้ให้พอร์ตไม่คงที่ บางครั้งเปิดมาที่ 3306 บางครั้ง 3307
- * (ตัว mysqld ที่รันจริงไม่ได้ยึดตาม my.ini เสมอไป) ถ้าฮาร์ดโค้ดไว้ตัวเดียว
- * จะเจออาการ "เมื่อวานใช้ได้ วันนี้ใช้ไม่ได้" จึงไล่ลองตามลำดับแล้วจำตัวที่ต่อติด
- * ดูพอร์ตจริงได้จากหน้าต่าง MAMP > MySQL หรือจาก phpMyAdmin
- *
- * บน Railway พอร์ตมาจาก environment แน่นอนอยู่แล้ว จึงไม่ต้องเดา
- */
-define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 3306]);
+define('DATABASE_URL', getenv('DATABASE_URL') ?: 'postgresql://postgres:postgres@127.0.0.1:5432/kpop_store');
 
 /** true เมื่อรันบนเว็บจริง ใช้ตัดสินว่าจะบอกรายละเอียด error กับผู้ใช้แค่ไหน */
 define('IS_PRODUCTION', getenv('APP_ENV') === 'production');
@@ -39,9 +30,40 @@ define('IS_PRODUCTION', getenv('APP_ENV') === 'production');
 define('CENTRAL_RATE', 0.028);
 
 /**
+ * แยก DATABASE_URL เป็น [dsn, user, password, port]
+ * รหัสผ่านที่มีอักขระพิเศษต้อง URL-encode มาใน URL (Supabase ให้มาแบบนั้นอยู่แล้ว) จึงต้อง decode กลับ
+ */
+function db_config(): array
+{
+    $url = parse_url(DATABASE_URL);
+    if ($url === false || !isset($url['host'])) {
+        throw new PDOException('DATABASE_URL ไม่ถูกรูปแบบ (ต้องเป็น postgresql://user:pass@host:port/dbname)');
+    }
+
+    parse_str($url['query'] ?? '', $query);
+    $port = (int) ($url['port'] ?? 5432);
+    $name = ltrim(rawurldecode($url['path'] ?? '/postgres'), '/') ?: 'postgres';
+    // Supabase บังคับ SSL — ถ้า URL ไม่ได้บอก ใช้ prefer (ได้ SSL ถ้าปลายทางรองรับ)
+    $sslmode = $query['sslmode'] ?? 'prefer';
+
+    $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s;sslmode=%s', $url['host'], $port, $name, $sslmode);
+
+    return [
+        $dsn,
+        rawurldecode($url['user'] ?? 'postgres'),
+        rawurldecode($url['pass'] ?? ''),
+        $port,
+    ];
+}
+
+/**
  * คืน PDO ตัวเดิมเสมอ (สร้างครั้งเดียวต่อ 1 request)
  *
- * @throws PDOException เมื่อต่อไม่ได้ทุกพอร์ต พร้อมข้อความที่บอกวิธีแก้
+ * เวลาทุกคอลัมน์เป็น TIMESTAMP แบบไม่มีเขตเวลา เก็บ "เวลาไทย" ที่ PHP เขียนลงไปด้วย date()
+ * (date.timezone = Asia/Bangkok ใน Dockerfile) SQL ไม่ได้ใช้ NOW()/CURRENT_DATE เลย
+ * จึงไม่ต้อง SET TIME ZONE ให้เสีย 1 รอบเครือข่ายต่อคำขอ
+ *
+ * @throws PDOException เมื่อต่อไม่ได้ พร้อมข้อความที่บอกวิธีแก้ (เฉพาะตอนไม่ใช่ production)
  */
 function db(): PDO
 {
@@ -50,55 +72,36 @@ function db(): PDO
         return $pdo;
     }
 
-    $options = [
-        // ให้ error เป็น exception ไม่ใช่ค่า false เงียบ ๆ
-        // สำคัญกับงานที่เกี่ยวกับเงิน — ถ้าเขียนไม่ลงต้องรู้ทันที ไม่ใช่บอกลูกค้าว่าสำเร็จ
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        // ปิด emulation เพื่อให้ prepared statement เป็นของจริงที่ฝั่งเซิร์ฟเวอร์
-        // ไม่ใช่การต่อสตริงในไดรเวอร์ ซึ่งเป็นการป้องกัน SQL injection ที่แท้จริง
-        PDO::ATTR_EMULATE_PREPARES   => false,
-        PDO::ATTR_TIMEOUT            => 5,
-        /**
-         * ตรึงเขตเวลาของ connection ไว้ที่เวลาไทย
-         *
-         * ทุกคอลัมน์ DATETIME ในระบบเก็บ "เวลาไทย" ที่ PHP เขียนลงไปด้วย date()
-         * แต่เซิร์ฟเวอร์ MySQL ที่โฮสต์ให้ (รวมถึงของ Railway) เดินเป็น UTC
-         * ถ้าไม่ตั้งค่านี้ SQL ที่ใช้ NOW()/CURDATE() จะเห็นเวลาคลาดจากข้อมูลจริง 7 ชั่วโมง
-         * (ตอนนี้ PHP ไม่ได้ใช้แล้ว แต่ไฟล์ .sql ใช้ CURDATE() สร้างรอบตัวอย่าง — คงไว้กันพลาด)
-         */
-        PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+07:00'",
-    ];
-
-    $lastError = null;
-
-    foreach (DB_PORTS as $port) {
-        $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', DB_HOST, $port, DB_NAME);
-        try {
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-            return $pdo;
-        } catch (PDOException $e) {
-            $lastError = $e;
-            // ต่อพอร์ตติดแต่ไม่มีฐานข้อมูลชื่อนี้ = เจอ MySQL ตัวถูกแล้ว แค่ยังไม่ได้ import
-            // ไม่ต้องไล่พอร์ตต่อ เพราะข้อความที่ถูกต้องคือ "ยังไม่ได้ import"
-            if ($e->getCode() === 1049) {
-                break;
-            }
-        }
+    try {
+        [$dsn, $user, $pass, $port] = db_config();
+        $pdo = new PDO($dsn, $user, $pass, [
+            // ให้ error เป็น exception ไม่ใช่ค่า false เงียบ ๆ
+            // สำคัญกับงานที่เกี่ยวกับเงิน — ถ้าเขียนไม่ลงต้องรู้ทันที ไม่ใช่บอกลูกค้าว่าสำเร็จ
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            // prepared statement ของจริงที่ฝั่งเซิร์ฟเวอร์ ยกเว้นต่อผ่าน transaction pooler ของ Supabase (ดูหัวไฟล์)
+            // แบบจำลองก็ยัง escape ค่าให้ถูกต้อง ไม่ได้เปิดช่อง SQL injection
+            // DB_EMULATE_PREPARES=1 บังคับโหมดนี้ได้ (ใช้ทดสอบบนเครื่อง หรือ pooler ที่ไม่ได้อยู่พอร์ต 6543)
+            PDO::ATTR_EMULATE_PREPARES   => $port === 6543 || getenv('DB_EMULATE_PREPARES') === '1',
+            PDO::ATTR_TIMEOUT            => 5,
+        ]);
+        return $pdo;
+    } catch (PDOException $e) {
+        $lastError = $e;
     }
 
     // บนเว็บจริง ข้อความชี้ทางแก้ไม่มีประโยชน์กับลูกค้า และการบอก host/port/ชื่อ DB
     // ออกไปหน้าเว็บคือการยื่นข้อมูลให้คนที่กำลังหาช่องอยู่ — รายละเอียดไปอยู่ใน log แทน
     if (IS_PRODUCTION) {
-        error_log('[kpop-api] เชื่อมต่อฐานข้อมูลไม่ได้: ' . ($lastError ? $lastError->getMessage() : 'ไม่ทราบสาเหตุ'));
+        error_log('[kpop-api] เชื่อมต่อฐานข้อมูลไม่ได้: ' . $lastError->getMessage());
         throw new PDOException('ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งในภายหลังค่ะ', 0, $lastError);
     }
 
-    $ports = implode(' หรือ ', DB_PORTS);
-    $hint = ($lastError && $lastError->getCode() === 1049)
-        ? "ยังไม่มีฐานข้อมูล '" . DB_NAME . "' — กรุณา import ไฟล์ database/kpop_store.sql ใน phpMyAdmin ก่อนค่ะ"
-        : "ต่อ MySQL ไม่ได้ (ลองพอร์ต {$ports} แล้ว) — กรุณาตรวจว่าเปิด MAMP และกด Start Servers แล้ว "
-          . 'ถ้าพอร์ตไม่ตรง ให้แก้ DB_PORTS ใน api/config.php';
+    // 3D000 = มี Postgres แต่ยังไม่มีฐานข้อมูลชื่อนี้
+    $hint = str_contains($lastError->getMessage(), '3D000') || str_contains($lastError->getMessage(), 'does not exist')
+        ? 'ยังไม่มีฐานข้อมูลตามที่ระบุใน DATABASE_URL — สร้างฐานข้อมูลแล้วรัน database/schema.sql (และ seed.sql บนเครื่องพัฒนา) ก่อนค่ะ'
+        : 'ต่อ PostgreSQL ไม่ได้ — ตรวจว่า DATABASE_URL ถูกต้องและฐานข้อมูลเปิดอยู่ (Docker: docker compose up -d) '
+          . '[' . $lastError->getMessage() . ']';
 
     throw new PDOException($hint, 0, $lastError);
 }

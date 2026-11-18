@@ -98,7 +98,7 @@ switch (action()) {
         $st = db()->prepare(
             'INSERT INTO cart_items (user_id, product_id, size, qty, added_at)
              VALUES (?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE qty = VALUES(qty)'
+             ON CONFLICT (user_id, product_id, size) DO UPDATE SET qty = EXCLUDED.qty'
         );
         $st->execute([$user['id'], $productId, $size, $finalQty, date('Y-m-d H:i:s')]);
 
@@ -149,9 +149,9 @@ switch (action()) {
     case 'clear-round': {
         $roundId = (string) ($in['roundId'] ?? '');
         $st = db()->prepare(
-            'DELETE ci FROM cart_items ci
-               JOIN products p ON p.id = ci.product_id
-              WHERE ci.user_id = ? AND p.round_id = ?'
+            'DELETE FROM cart_items ci
+              USING products p
+              WHERE p.id = ci.product_id AND ci.user_id = ? AND p.round_id = ?'
         );
         $st->execute([$user['id'], $roundId]);
         ok(['cart' => cart_of($user['id'])]);

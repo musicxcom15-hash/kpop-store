@@ -10,6 +10,8 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/storage.php';
+require_once __DIR__ . '/session.php';
 
 /**
  * php.ini ของ MAMP ตั้ง serialize_precision = 100 ซึ่งทำให้ json_encode พ่นทศนิยม
@@ -22,24 +24,6 @@ require_once __DIR__ . '/config.php';
  */
 ini_set('serialize_precision', '-1');
 
-/**
- * คุกกี้ session ต้องตั้งค่าก่อน session_start() เท่านั้น เรียกทีหลังไม่มีผล
- *
- * secure: Railway ตัด TLS ทิ้งที่ขอบเครือข่ายแล้วส่งต่อเข้ามาเป็น HTTP ธรรมดา
- * $_SERVER['HTTPS'] จึงว่างเปล่าทั้งที่ผู้ใช้เข้าผ่าน https จริง ต้องดูจาก
- * header ที่ proxy แปะมาแทน — ถ้าตั้ง secure ตายตัวเป็น true จะล็อกอินบน
- * localhost (http) ไม่ได้เลย
- */
-if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'httponly' => true,               // JS อ่านคุกกี้นี้ไม่ได้
-        'samesite' => 'Lax',              // กัน CSRF ขั้นพื้นฐาน (ทุก request เป็น same-origin อยู่แล้ว)
-        'secure'   => (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
-                      || (($_SERVER['HTTPS'] ?? '') !== ''),
-    ]);
-    session_start();
-}
-
 header('Content-Type: application/json; charset=utf-8');
 // ข้อมูลผู้ใช้/ออเดอร์ห้ามถูกแคช
 header('Cache-Control: no-store');
@@ -48,17 +32,18 @@ header('Cache-Control: no-store');
  * ข้อผิดพลาดที่ไม่ได้ดักไว้ต้องออกไปเป็น JSON เสมอ
  *
  * ถ้าปล่อยให้ PHP พ่น fatal error เป็น HTML ออกไป ฝั่งเบราว์เซอร์จะ parse JSON ไม่ผ่าน
- * แล้วผู้ใช้จะเห็นแค่หน้าค้างโดยไม่รู้ว่าเกิดอะไรขึ้น (เคสที่เจอบ่อยสุดคือลืมเปิด MAMP
- * หรือยังไม่ได้ import ฐานข้อมูล ซึ่งทั้งคู่แก้ได้ง่ายถ้ารู้สาเหตุ)
+ * แล้วผู้ใช้จะเห็นแค่หน้าค้างโดยไม่รู้ว่าเกิดอะไรขึ้น (เคสที่เจอบ่อยสุดคือฐานข้อมูลไม่ได้เปิด
+ * หรือยังไม่ได้รัน database/schema.sql ซึ่งทั้งคู่แก้ได้ง่ายถ้ารู้สาเหตุ)
  *
  * แต่บนเว็บจริงข้อความพวกนั้นไม่ช่วยลูกค้า และมักพ่วงชื่อโฮสต์ พอร์ต ชื่อฐานข้อมูล
  * หรือ path ของไฟล์ออกไปด้วย ซึ่งเป็นข้อมูลตั้งต้นชั้นดีให้คนที่กำลังหาช่องอยู่
- * บน production จึงตอบข้อความกลาง ๆ แล้วเก็บของจริงไว้ใน log (ดูได้ที่แท็บ Logs ของ Railway)
+ * บน production จึงตอบข้อความกลาง ๆ แล้วเก็บของจริงไว้ใน log (ดูได้ที่หน้า Logs ของ Vercel)
  */
 set_exception_handler(function (Throwable $e): void {
     error_log('[kpop-api] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-    // คอลัมน์หาย (เช่น import .sql รุ่นเก่าทับตอน container ยังรัน) — ลืมว่าเคยเช็คแล้ว คำขอถัดไปจะเติมให้เอง
-    if ($e instanceof PDOException && $e->getCode() === '42S22') {
+    // ตาราง/คอลัมน์หาย (42P01 / 42703 เช่นรัน schema.sql รุ่นเก่าทับตอน container ยังรัน)
+    // — ลืมว่าเคยเช็คแล้ว คำขอถัดไปจะเติมให้เอง
+    if ($e instanceof PDOException && in_array($e->getCode(), ['42P01', '42703'], true)) {
         @unlink(SCHEMA_FLAG_FILE);
     }
     http_response_code(500);
@@ -70,10 +55,34 @@ set_exception_handler(function (Throwable $e): void {
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });
 
-// ก่อน endpoint ใดจะเปิด transaction — เติมตาราง/คอลัมน์ใหม่ให้ DB ที่ import ไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
-// เปลี่ยนชื่อไฟล์ (v2, v3, ...) ทุกครั้งที่เพิ่มของใน ensure_schema() เพื่อให้ container ที่เคยเช็คแล้วเช็คใหม่
-define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-v4');
+// ตอนต้นทุกคำขอ — เติมตาราง/คอลัมน์ใหม่ให้ DB ที่สร้างไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
+// เปลี่ยนชื่อไฟล์ (pg1, pg2, ...) ทุกครั้งที่เพิ่มของใน ensure_schema_once() เพื่อให้ container ที่เคยเช็คแล้วเช็คใหม่
+// ทำก่อน session_start() เพราะ session ก็อ่านจากฐานข้อมูล (ตาราง sessions)
+define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-pg1');
+// คำสั่งอัปเกรดโครงสร้าง (เรียงตามเวลาที่เพิ่ม) เช่น 'ALTER TABLE products ADD COLUMN IF NOT EXISTS x TEXT'
+// ต้องประกาศก่อนบรรทัด ensure_schema_once() ด้านล่าง — const ระดับไฟล์ของ PHP มีตัวตนเมื่อรันมาถึงบรรทัดนั้นเท่านั้น
+const SCHEMA_UPGRADES = [];
 ensure_schema_once();
+
+/**
+ * คุกกี้ session ต้องตั้งค่าก่อน session_start() เท่านั้น เรียกทีหลังไม่มีผล
+ *
+ * secure: Vercel (และ proxy ทั่วไป) ตัด TLS ทิ้งที่ขอบเครือข่ายแล้วส่งต่อเข้ามาเป็น HTTP ธรรมดา
+ * $_SERVER['HTTPS'] จึงว่างเปล่าทั้งที่ผู้ใช้เข้าผ่าน https จริง ต้องดูจาก
+ * header ที่ proxy แปะมาแทน — ถ้าตั้ง secure ตายตัวเป็น true จะล็อกอินบน
+ * localhost (http) ไม่ได้เลย
+ */
+if (session_status() === PHP_SESSION_NONE) {
+    // เก็บ session ในฐานข้อมูล ไม่ใช่ไฟล์ — container บน Vercel ไม่มีดิสก์ถาวรและมีได้หลายตัวพร้อมกัน (ดู session.php)
+    session_set_save_handler(new DbSessionHandler(), true);
+    session_set_cookie_params([
+        'httponly' => true,               // JS อ่านคุกกี้นี้ไม่ได้
+        'samesite' => 'Lax',              // กัน CSRF ขั้นพื้นฐาน (ทุก request เป็น same-origin อยู่แล้ว)
+        'secure'   => (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+                      || (($_SERVER['HTTPS'] ?? '') !== ''),
+    ]);
+    session_start();
+}
 
 /* ------------------------------------------------------------------ */
 /* ตาราง ORDER_STATUS — ต้องตรงกับ js/store.js เป๊ะ                    */
@@ -212,7 +221,7 @@ function random_temp_password(int $length = 10): string
 /* รูปแบบวันเวลา                                                       */
 /*                                                                     */
 /* ทั้งระบบฝั่ง JS ใช้ 'YYYY-MM-DD HH:mm' แล้วเทียบกันเป็น "สตริง" ตรง ๆ  */
-/* (เช่น หาเรทที่มีผล ณ ตอนนี้) ถ้าปล่อยวินาทีจาก MySQL ติดมาด้วย       */
+/* (เช่น หาเรทที่มีผล ณ ตอนนี้) ถ้าปล่อยวินาทีจาก DB ติดมาด้วย          */
 /* การเทียบจะเพี้ยน จึงต้องตัดให้เหลือระดับนาทีเสมอ                      */
 /* ------------------------------------------------------------------ */
 
@@ -234,8 +243,8 @@ function now_stamp(): string
 /* ------------------------------------------------------------------ */
 /* แปลงแถว DB -> รูปทรงที่ js/store.js คาดหวัง                          */
 /*                                                                     */
-/* ต้องแคสต์ชนิดให้ตรงด้วย ไม่ใช่แค่เปลี่ยนชื่อคีย์ เพราะ MySQL คืน       */
-/* DECIMAL มาเป็นสตริง ถ้าปล่อยไว้ JS จะเอาไปบวกกันแล้วได้สตริงต่อกัน     */
+/* ต้องแคสต์ชนิดให้ตรงด้วย ไม่ใช่แค่เปลี่ยนชื่อคีย์ เพราะ PostgreSQL คืน  */
+/* NUMERIC มาเป็นสตริง ถ้าปล่อยไว้ JS จะเอาไปบวกกันแล้วได้สตริงต่อกัน     */
 /* ------------------------------------------------------------------ */
 
 function map_product(array $r): array
@@ -253,7 +262,7 @@ function map_product(array $r): array
         'status'        => $r['status'],
         'estDelivery'   => $r['est_delivery'],
         'desc'          => $r['description'],
-        // ?? เผื่อ DB เก่าก่อนมีคอลัมน์ (ensure_product_columns เติมให้ตอนต้นคำขอ)
+        // ?? เผื่อ DB เก่าก่อนมีคอลัมน์ (ensure_schema_once เติมให้ตอนต้นคำขอ)
         'category'      => $r['category'] ?? 'album',
         'sizes'         => parse_sizes((string) ($r['sizes'] ?? '')),
         // ร้านต้นทางที่แอดมินไปกดสั่ง — ข้อมูลภายในร้าน ต้องตัดออกก่อนส่งให้คนที่ไม่ใช่แอดมิน (ดู bootstrap.php)
@@ -482,7 +491,7 @@ function remaining_quota(string $productId): ?int
               FROM order_items oi
               JOIN orders o ON o.id = oi.order_id
              WHERE oi.product_id = ?
-               AND o.round_id <=> ?
+               AND o.round_id IS NOT DISTINCT FROM ?
                AND o.status_code IN ($ph)";
     $st = db()->prepare($sql);
     $st->execute(array_merge([$productId, $p['round_id']], $codes));
@@ -548,100 +557,30 @@ function fetch_round(?string $roundId): ?array
  */
 function push_notification(string $userEmail, string $title, string $message, ?string $type = null, ?string $ref = null): void
 {
-    $insert = function () use ($userEmail, $title, $message, $type, $ref): void {
-        $st = db()->prepare(
-            'INSERT INTO notifications (user_email, title, message, type, ref, created_at, is_read)
-             VALUES (?, ?, ?, ?, ?, ?, 0)'
-        );
-        $st->execute([$userEmail, $title, $message, $type, $ref, date('Y-m-d H:i:s')]);
-    };
-
-    try {
-        $insert();
-    } catch (PDOException $e) {
-        // ทางสำรองเผื่อ ensure_schema_once() ยังไม่ได้ทำงาน: 42S22 = unknown column
-        // ห้าม ALTER ระหว่าง transaction เพราะ MySQL จะ commit ของที่ค้างอยู่ให้ทันที (เช่นออเดอร์ที่สร้างไม่เสร็จ)
-        if ($e->getCode() !== '42S22' || db()->inTransaction()) {
-            throw $e;
-        }
-        ensure_notification_columns();
-        $insert();
-    }
+    $st = db()->prepare(
+        'INSERT INTO notifications (user_email, title, message, type, ref, created_at, is_read)
+         VALUES (?, ?, ?, ?, ?, ?, 0)'
+    );
+    $st->execute([$userEmail, $title, $message, $type, $ref, date('Y-m-d H:i:s')]);
 }
 
 /**
- * อัปเกรดโครงสร้างตารางที่ต้องมีให้ DB รุ่นเก่า (เช่นบน Railway ที่ import ไว้ก่อน) — เรียกตอนต้นทุกคำขอ
+ * เติมโครงสร้างที่เพิ่มทีหลังให้ DB ที่สร้างไว้ก่อน (เช่นบน Supabase) — เรียกตอนต้นทุกคำขอ
  * ทำงานจริงแค่ครั้งแรกหลัง container/เซิร์ฟเวอร์เริ่ม แล้วจำไว้ด้วยไฟล์ใน temp ครั้งต่อไปเช็คแค่ไฟล์
- * ต้องเรียกก่อนเปิด transaction ใด ๆ เพราะ ALTER TABLE ทำให้ MySQL commit transaction ที่ค้างอยู่
+ *
+ * ทุกคำสั่งต้องรันซ้ำได้ (IF NOT EXISTS) เพราะ DB ที่สร้างจาก schema.sql ล่าสุดมีครบอยู่แล้ว
+ * เพิ่มคอลัมน์ใหม่ในอนาคต: ใส่ใน schema.sql + เพิ่มบรรทัดที่นี่ + เปลี่ยนชื่อ SCHEMA_FLAG_FILE
+ * ตอนนี้ยังว่าง — schema.sql ฉบับ PostgreSQL เป็นฉบับแรก มีทุกคอลัมน์ครบแล้ว
  */
 function ensure_schema_once(): void
 {
     if (is_file(SCHEMA_FLAG_FILE)) {
         return;
     }
-    ensure_notification_columns();
-    ensure_password_resets_table();
-    ensure_product_columns();
+    foreach (SCHEMA_UPGRADES as $sql) {
+        db()->exec($sql);
+    }
     @touch(SCHEMA_FLAG_FILE);
-}
-
-/** เพิ่มคอลัมน์ถ้ายังไม่มี ($definition = ส่วนหลังชื่อคอลัมน์ใน ALTER TABLE ... ADD COLUMN) */
-function ensure_column(string $table, string $column, string $definition): void
-{
-    $st = db()->prepare(
-        'SELECT COUNT(*) FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
-    );
-    $st->execute([$table, $column]);
-    if ((int) $st->fetchColumn() === 0) {
-        db()->exec("ALTER TABLE `$table` ADD COLUMN `$column` $definition");
-    }
-}
-
-/**
- * คอลัมน์ที่เพิ่มทีหลังของสินค้า/ตะกร้า/ออเดอร์ — DB ที่ import ไว้ก่อนได้ค่าที่ทำให้ของเดิมทำงานเหมือนเดิม
- * (สินค้าเดิมเป็นอัลบั้ม ไม่มีไซซ์ ไม่มีลิงก์ร้านต้นทาง)
- */
-function ensure_product_columns(): void
-{
-    ensure_column('products', 'category', "VARCHAR(32) NOT NULL DEFAULT 'album' AFTER title");
-    ensure_column('products', 'sizes', "VARCHAR(255) NOT NULL DEFAULT '' AFTER category");
-    ensure_column('products', 'source_url', "VARCHAR(500) NOT NULL DEFAULT '' AFTER description");
-    ensure_column('order_items', 'size', "VARCHAR(32) NOT NULL DEFAULT '' AFTER title");
-    ensure_column('cart_items', 'size', "VARCHAR(32) NOT NULL DEFAULT '' AFTER product_id");
-
-    // ตะกร้า 1 แถว = สินค้า + ไซซ์ (เสื้อตัวเดียวกันคนละไซซ์ต้องอยู่คนละแถว)
-    // สร้าง unique ตัวใหม่ก่อนลบตัวเก่า เพราะ FK ของ user_id ต้องมี index ที่ขึ้นต้นด้วย user_id อยู่ตลอด
-    $indexes = db()->query("SHOW INDEX FROM cart_items")->fetchAll(PDO::FETCH_COLUMN, 2);
-    if (!in_array('uniq_cart_user_product_size', $indexes, true)) {
-        db()->exec('ALTER TABLE cart_items ADD UNIQUE KEY `uniq_cart_user_product_size` (`user_id`, `product_id`, `size`)');
-    }
-    if (in_array('uniq_cart_user_product', $indexes, true)) {
-        db()->exec('ALTER TABLE cart_items DROP INDEX `uniq_cart_user_product`');
-    }
-}
-
-/**
- * ตารางลิงก์รีเซ็ตรหัสผ่าน (ต้องตรงกับ database/*.sql)
- * เก็บแค่ hash ของ token — ถ้า DB หลุด คนได้ไปก็เอาไปเปิดลิงก์ไม่ได้
- * ไม่ใส่ foreign key: ถ้า collation ของ users บน DB เก่าไม่ตรง การสร้างจะล้มแล้วพาทุกคำขอล้มตาม
- * (users.php ลบ token ของผู้ใช้ที่ถูกลบเองแทน)
- */
-function ensure_password_resets_table(): void
-{
-    db()->exec(
-        'CREATE TABLE IF NOT EXISTS password_resets (
-            id         INT         NOT NULL AUTO_INCREMENT,
-            user_id    VARCHAR(50) NOT NULL,
-            token_hash CHAR(64)    NOT NULL,
-            expires_at DATETIME    NOT NULL,
-            used_at    DATETIME    NULL,
-            created_at DATETIME    NOT NULL,
-            PRIMARY KEY (id),
-            UNIQUE KEY uniq_reset_token (token_hash),
-            KEY idx_reset_user (user_id, created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-    );
 }
 
 /* ------------------------------------------------------------------ */
@@ -730,14 +669,15 @@ function send_mail(string $toEmail, string $toName, string $subject, string $htm
 /**
  * URL หน้าแรกของเว็บ สำหรับประกอบลิงก์ในอีเมล
  * บนเว็บจริงห้ามเชื่อ Host header — ใครก็ส่งมาเป็นโดเมนตัวเองได้ แล้วลิงก์รีเซ็ตในอีเมลจะชี้ไปเว็บปลอม
- * จึงใช้ APP_BASE_URL ถ้าตั้งไว้ ไม่งั้นใช้โดเมนที่ Railway ฉีดมาให้ (RAILWAY_PUBLIC_DOMAIN)
+ * จึงใช้ APP_BASE_URL ถ้าตั้งไว้ ไม่งั้นใช้โดเมนหลักที่ Vercel ฉีดมาให้ (VERCEL_PROJECT_PRODUCTION_URL ไม่มี https:// นำหน้า
+ * ต้องเปิด "Automatically expose System Environment Variables" ในโปรเจกต์ Vercel ก่อน)
  */
 function app_base_url(): string
 {
     if ($u = getenv('APP_BASE_URL')) {
         return rtrim($u, '/');
     }
-    if ($d = getenv('RAILWAY_PUBLIC_DOMAIN')) {
+    if ($d = getenv('VERCEL_PROJECT_PRODUCTION_URL')) {
         return 'https://' . $d;
     }
     if (IS_PRODUCTION) {
@@ -745,22 +685,6 @@ function app_base_url(): string
     }
     $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
     return ($https ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-}
-
-/** เติมคอลัมน์ type/ref ให้ตาราง notifications ที่สร้างจาก .sql รุ่นเก่า (เรียกซ้ำได้ ไม่เพิ่มซ้ำ) */
-function ensure_notification_columns(): void
-{
-    $have = db()->query(
-        "SELECT COLUMN_NAME FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifications'"
-    )->fetchAll(PDO::FETCH_COLUMN);
-
-    if (!in_array('type', $have, true)) {
-        db()->exec('ALTER TABLE notifications ADD COLUMN `type` VARCHAR(32) NULL AFTER message');
-    }
-    if (!in_array('ref', $have, true)) {
-        db()->exec('ALTER TABLE notifications ADD COLUMN `ref` VARCHAR(64) NULL AFTER `type`');
-    }
 }
 
 /** อีเมลกลางของร้าน ใช้เป็นปลายทางแจ้งเตือนฝั่งแอดมิน */

@@ -1,0 +1,17 @@
+# ไฟล์ที่ไม่ต้องส่งขึ้น Vercel (มีผลตอนสั่ง `vercel deploy` จากเครื่อง — deploy ผ่าน Git ใช้เฉพาะไฟล์ใน repo อยู่แล้ว)
+# Vercel build จาก Dockerfile ซึ่งใช้แค่ preorderkpopweb/ กับ docker-entrypoint.sh
+
+# สลิป/รูปที่อัปโหลดตอนทดสอบบนเครื่อง — ข้อมูลส่วนตัว ห้ามหลุดขึ้นไป (.htaccess ต้องไปด้วย Dockerfile ใช้)
+preorderkpopweb/uploads/*
+!preorderkpopweb/uploads/.htaccess
+
+# ความลับ / ของเครื่อง
+.env
+.vscode/
+node_modules/
+รูป/
+
+# ไม่เกี่ยวกับตัวเว็บ
+tests/
+docs/
+database/

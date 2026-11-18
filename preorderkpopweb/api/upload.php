@@ -1,6 +1,6 @@
 <?php
 /**
- * รับรูปที่ย่อแล้วจากฝั่งเบราว์เซอร์ แล้วเขียนเป็นไฟล์จริงใน uploads/
+ * รับรูปที่ย่อแล้วจากฝั่งเบราว์เซอร์ แล้วเก็บเป็นไฟล์จริง (Supabase Storage บนเว็บจริง · uploads/ บนเครื่อง — ดู storage.php)
  *
  * ฝั่ง JS ยังใช้ compressImage()/compressSlipImage()/compressProductImage() เหมือนเดิม
  * (ย่อด้วย canvas แล้วได้ data URL) เปลี่ยนแค่ปลายทาง — จากที่เคยยัด base64
@@ -10,14 +10,16 @@
  *   - ยอมรับเฉพาะ data URL ที่เป็น jpeg/png/webp
  *   - ตรวจซ้ำด้วย getimagesizefromstring() ว่าเป็นรูปจริง ไม่ใช่สคริปต์ที่แปะหัวมาหลอก
  *   - นามสกุลไฟล์กำหนดเองจากชนิดที่ตรวจได้ ไม่เอาชื่อไฟล์ที่ผู้ใช้ส่งมา
+ *   - ชื่อไฟล์สุ่ม 96 บิต: ไฟล์เปิดได้ด้วย URL ตรง ๆ (Public bucket) สลิปมีชื่อบัญชีลูกค้า จึงต้องเดาชื่อไม่ได้
+ *
+ * ขนาด: Vercel รับ request body ได้ไม่เกิน 4.5MB — รูปที่ย่อด้วย canvas ในเบราว์เซอร์แล้วเล็กกว่านั้นมาก
  */
 
 require_once __DIR__ . '/helpers.php';
 
 require_login();
 
-const UPLOAD_DIR      = __DIR__ . '/../uploads';
-const MAX_UPLOAD_BYTE = 8 * 1024 * 1024;   // 8MB หลังย่อแล้ว เหลือเฟือ
+const MAX_UPLOAD_BYTE = 3 * 1024 * 1024;   // 3MB หลังย่อแล้ว เหลือเฟือ (base64 โตขึ้นอีก 1/3 ยังไม่ชนเพดาน 4.5MB ของ Vercel)
 
 $in      = body();
 $dataUrl = (string) ($in['dataUrl'] ?? '');
@@ -63,16 +65,12 @@ if ($ext === null) {
     fail('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WEBP ค่ะ');
 }
 
-if (!is_dir(UPLOAD_DIR) && !mkdir(UPLOAD_DIR, 0775, true) && !is_dir(UPLOAD_DIR)) {
-    fail('สร้างโฟลเดอร์เก็บรูปไม่สำเร็จ กรุณาตรวจสอบสิทธิ์เขียนไฟล์ค่ะ', 500);
-}
-
 $safeKind = preg_match('/^[a-z]+$/', $kind) ? $kind : 'img';
-$filename = sprintf('%s-%s-%s.%s', $safeKind, date('Ymd-His'), bin2hex(random_bytes(4)), $ext);
+$filename = sprintf('%s-%s-%s.%s', $safeKind, date('Ymd-His'), bin2hex(random_bytes(12)), $ext);
 
-if (file_put_contents(UPLOAD_DIR . '/' . $filename, $binary) === false) {
-    fail('บันทึกไฟล์รูปไม่สำเร็จ กรุณาลองใหม่อีกครั้งค่ะ', 500);
+try {
+    // คืน URL เต็ม (Supabase) หรือ 'uploads/...' (เครื่องพัฒนา) — ใส่ src ของรูปได้ตรง ๆ ทั้งคู่
+    ok(['path' => storage_put($filename, $binary, $info['mime'])]);
+} catch (RuntimeException $e) {
+    fail($e->getMessage(), 500);
 }
-
-// คืน path แบบสัมพัทธ์กับรากเว็บ ใช้ใส่ src ได้ตรง ๆ เหมือน 'images/...' เดิม
-ok(['path' => 'uploads/' . $filename]);

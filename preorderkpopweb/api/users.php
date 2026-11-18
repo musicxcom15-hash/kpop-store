@@ -39,7 +39,7 @@ switch (action()) {
         }
 
         // อีเมลซ้ำกับ "คนอื่น" ไม่ได้ (แก้ของตัวเองโดยไม่เปลี่ยนอีเมลต้องผ่าน)
-        $st = db()->prepare('SELECT id FROM users WHERE email = ? AND id <> ?');
+        $st = db()->prepare('SELECT id FROM users WHERE lower(email) = lower(?) AND id <> ?');
         $st->execute([$email, $id]);
         if ($st->fetch()) {
             fail("อีเมล {$email} ถูกใช้ไปแล้วโดยบัญชีอื่นค่ะ", 200, ['users' => all_users()]);
@@ -106,7 +106,7 @@ switch (action()) {
 
         $st = db()->prepare('DELETE FROM users WHERE id = ?');
         $st->execute([$id]);
-        // password_resets ไม่มี foreign key (ดู ensure_password_resets_table) จึงต้องลบลิงก์ค้างเอง
+        // password_resets ไม่มี foreign key (ดู database/schema.sql) จึงต้องลบลิงก์ค้างเอง
         $st = db()->prepare('DELETE FROM password_resets WHERE user_id = ?');
         $st->execute([$id]);
 

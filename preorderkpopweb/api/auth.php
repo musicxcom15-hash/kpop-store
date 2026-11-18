@@ -55,7 +55,7 @@ switch (action()) {
             fail('กรุณากรอกอีเมลและรหัสผ่านค่ะ');
         }
 
-        $st = db()->prepare('SELECT * FROM users WHERE email = ?');
+        $st = db()->prepare('SELECT * FROM users WHERE lower(email) = lower(?)');
         $st->execute([$email]);
         $row = $st->fetch();
 
@@ -91,7 +91,7 @@ switch (action()) {
 
         // อีเมลคือคีย์ที่ผูกออเดอร์กับเจ้าของ ถ้าปล่อยให้ซ้ำได้
         // การสมัครด้วยอีเมลแอดมินจะกลายเป็นการยึดบัญชี
-        $st = db()->prepare('SELECT id FROM users WHERE email = ?');
+        $st = db()->prepare('SELECT id FROM users WHERE lower(email) = lower(?)');
         $st->execute([$email]);
         if ($st->fetch()) {
             fail("อีเมล {$email} มีบัญชีอยู่ในระบบแล้วค่ะ\nกรุณาเข้าสู่ระบบด้วยอีเมลนี้แทน");
@@ -110,8 +110,8 @@ switch (action()) {
                 $phone, $address, 'customer', date('Y-m-d'),
             ]);
         } catch (PDOException $e) {
-            // ชนกับ UNIQUE ตอนมีคนสมัครอีเมลเดียวกันพร้อมกัน
-            if ($e->getCode() === '23000') {
+            // ชนกับ UNIQUE ตอนมีคนสมัครอีเมลเดียวกันพร้อมกัน (23505 = unique_violation)
+            if ($e->getCode() === '23505') {
                 fail("อีเมล {$email} มีบัญชีอยู่ในระบบแล้วค่ะ");
             }
             throw $e;
@@ -191,7 +191,7 @@ switch (action()) {
                . '(ลิงก์ใช้ได้ ' . RESET_TOKEN_TTL_MINUTES . ' นาที หากไม่พบให้ดูในโฟลเดอร์สแปม '
                . 'ถ้ายังไม่ได้รับภายใน 10 นาที ร้านจะติดต่อกลับทางเบอร์โทรที่ให้ไว้)';
 
-        $st = db()->prepare('SELECT * FROM users WHERE email = ?');
+        $st = db()->prepare('SELECT * FROM users WHERE lower(email) = lower(?)');
         $st->execute([$email]);
         $target = $st->fetch();
         if (!$target) {
@@ -200,7 +200,7 @@ switch (action()) {
 
         // endpoint นี้ไม่ต้องล็อกอิน — จำกัดอีเมลละ 1 ลิงก์ต่อ 2 นาที และ 5 ลิงก์ต่อชั่วโมง กันใช้ถล่มกล่องอีเมลคนอื่น
         $st = db()->prepare(
-            'SELECT SUM(created_at >= ?) AS recent, COUNT(*) AS hour FROM password_resets WHERE user_id = ? AND created_at >= ?'
+            'SELECT COUNT(*) FILTER (WHERE created_at >= ?) AS recent, COUNT(*) AS hour FROM password_resets WHERE user_id = ? AND created_at >= ?'
         );
         $st->execute([date('Y-m-d H:i:s', time() - 120), $target['id'], date('Y-m-d H:i:s', time() - 3600)]);
         $rate = $st->fetch();

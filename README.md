@@ -1,8 +1,9 @@
 # KPOP STORE — ระบบรับพรีออเดอร์อัลบั้มเคป็อป
 
 เว็บรับพรีออเดอร์อัลบั้ม K-POP จากเกาหลี
-ข้อมูลทั้งหมดเก็บใน **MySQL** เชื่อมผ่าน **PHP API (PDO + prepared statements)**
-รันบน **MAMP** ตอนพัฒนา และ deploy ขึ้น **Railway** ด้วย Docker (php:8.3-apache)
+ข้อมูลทั้งหมดเก็บใน **PostgreSQL บน Supabase** เชื่อมผ่าน **PHP API (PDO + prepared statements)**
+รันบน **Docker** ตอนพัฒนา และ deploy ตัวเว็บขึ้น **Vercel** (Container Runtime — build จาก Dockerfile เดียวกัน php:8.3-apache)
+ไฟล์อัปโหลด (สลิป · รูปสินค้า) เก็บใน **Supabase Storage**
 
 📸 **ภาพสาธิตการใช้งานทีละขั้น** (ลูกค้าสั่งซื้อ → แนบสลิป → แอดมินอนุมัติ → จัดส่ง): [docs/demo](docs/demo/README.md)
 
@@ -20,68 +21,7 @@
 - ใบสรุปรอบสำหรับถือไปกดสั่งกับเว็บเกาหลี
 - กรณีกดของไม่สำเร็จ ปรับสถานะเป็นรอคืนเงินและบันทึกการคืนเงินได้
 
-## วิธีรัน (MAMP + MySQL)
-
-ต้องมี **MAMP** ติดตั้งไว้ (Apache + MySQL + PHP 8) ส่วน Node.js ใช้เฉพาะตอนรันชุดทดสอบ
-
-### 1. ตั้ง Document Root
-
-ตั้ง **Document Root** ให้ชี้มาที่โฟลเดอร์ `preorderkpopweb` ของโปรเจกต์นี้
-(เช่น `D:\ProjectPreorder\preorderkpopweb`)
-
-- **MAMP ธรรมดา** — ตั้งได้จากหน้าต่างโปรแกรมโดยตรง
-- **MAMP PRO** — ต้องตั้งที่แท็บ **Hosts** → เลือก host `localhost` → ช่อง **Document Root**
-
-> ⚠️ ถ้าใช้ **MAMP PRO** อย่าไปแก้ `C:\MAMP\conf\apache\httpd.conf` เอง
-> MAMP PRO เขียนไฟล์ config ของตัวเองทับใหม่ทุกครั้งที่ Start Servers โดยอ่านค่าจาก
-> หน้าต่างโปรแกรมเท่านั้น แก้ในไฟล์แล้วจะไม่มีผล และอาการที่เห็นคือเปิด `http://localhost`
-> แล้วได้หน้าต้อนรับของ MAMP PRO แทนหน้าร้าน
-
-### 2. เปิดเซิร์ฟเวอร์
-
-กด **Start Servers** ให้ทั้ง Apache และ MySQL ขึ้นสถานะเขียว
-
-### 3. นำเข้าฐานข้อมูล
-
-เปิด **phpMyAdmin** → แท็บ **Import** → เลือกไฟล์ [`database/kpop_store.sql`](database/kpop_store.sql) → กด **Go**
-
-ไฟล์นี้มีคำสั่ง `CREATE DATABASE` ให้แล้ว จึงไม่ต้องสร้างฐานข้อมูลเองก่อน
-และ import ซ้ำได้เรื่อย ๆ (มี `DROP TABLE IF EXISTS` นำหน้า) — แต่ข้อมูลเดิมจะหายทุกครั้ง
-
-### 4. เปิดเว็บ
-
-`http://localhost/index.html`
-
-### ถ้าต่อฐานข้อมูลไม่ติด
-
-แก้ค่าเชื่อมต่อได้ที่ [`preorderkpopweb/api/config.php`](preorderkpopweb/api/config.php) ที่เดียว
-
-```php
-define('DB_HOST', getenv('MYSQLHOST') ?: '127.0.0.1');
-define('DB_NAME', getenv('MYSQLDATABASE') ?: 'kpop_store');
-define('DB_USER', getenv('MYSQLUSER') ?: 'root');
-define('DB_PASS', getenv('MYSQLPASSWORD') !== false ? getenv('MYSQLPASSWORD') : 'root');
-define('DB_PORTS', getenv('MYSQLPORT') ? [(int) getenv('MYSQLPORT')] : [3307, 3306]);
-```
-
-ค่าหลัง `?:` คือค่าที่ใช้บนเครื่องตัวเอง ส่วน `getenv('MYSQL*')` มีค่าเฉพาะตอนรันบน Railway
-ถ้าพอร์ตของ MAMP ไม่ใช่ 3307 หรือ 3306 ให้เติมเลขพอร์ตจริงไว้ตัวแรกใน `DB_PORTS`
-
-> หมายเหตุ: ไฟล์ `C:\MAMP\conf\mysql\my.ini` อาจเขียนพอร์ตไว้ไม่ตรงกับที่ MySQL ฟังจริง
-> ถ้าไม่แน่ใจให้ดูเลขพอร์ตจากหน้าต่าง MAMP โดยตรง
-
-### บัญชีทดสอบ (เฉพาะฐานข้อมูลบนเครื่อง)
-
-บัญชีเหล่านี้มาจากข้อมูลตั้งต้นใน `database/*.sql` ใช้ทดสอบบน MAMP/Docker เท่านั้น
-รหัสผ่านถูกเผยแพร่อยู่ในไฟล์นี้แล้ว — **บนเว็บจริงต้องเปลี่ยนรหัสหรือลบบัญชีตัวอย่างทิ้งหลัง import ทุกครั้ง**
-
-| บทบาท | อีเมล | รหัสผ่าน |
-|---|---|---|
-| แอดมิน | `admin@kpopstore.com` | `admin123` |
-| ลูกค้า | `user@kpopstore.com` | `123456` |
-| ลูกค้า | `somi@kpopstore.com` | `123456` |
-
-## วิธีรันด้วย Docker (ทางเลือกแทน MAMP)
+## วิธีรันบนเครื่อง (Docker)
 
 ต้องมี **Docker Desktop** เปิดอยู่ แล้วรันที่รากโปรเจกต์:
 
@@ -92,42 +32,42 @@ docker compose up -d --build
 | | |
 |---|---|
 | หน้าร้าน | http://localhost:8080 |
-| phpMyAdmin | http://localhost:8081 |
+| Adminer (ดูฐานข้อมูล) | http://localhost:8081 — System `PostgreSQL` · Server `db` · User/Password `kpop` · Database `kpop_store` |
 
-- ใช้ image เดียวกับที่ Railway ใช้จริง (php:8.3-apache) และ MySQL 9.4 รุ่นเดียวกับบน Railway
-- ครั้งแรกจะ import `database/kpop_store.sql` ให้เอง บัญชีทดสอบชุดเดียวกับตารางด้านบน
+- ใช้ image เดียวกับที่ Vercel ใช้จริง (php:8.3-apache) และ PostgreSQL 17 รุ่นเดียวกับ Supabase
+- ครั้งแรกจะสร้างตารางจาก [`database/schema.sql`](database/schema.sql) แล้วใส่ข้อมูลตัวอย่างจาก [`database/seed.sql`](database/seed.sql) ให้เอง
 - โฟลเดอร์ `preorderkpopweb/` ผูกเข้าไปตรง ๆ แก้โค้ดแล้วรีเฟรชหน้าเห็นผลทันที ไม่ต้อง build ใหม่
   (ยกเว้นแก้ `Dockerfile` หรือ `docker-entrypoint.sh` ต้องรัน `docker compose up -d --build` ใหม่)
-- ใช้พอร์ต 8080/8081 จึงเปิดคู่กับ MAMP ได้ ข้อมูลใน Docker แยกจาก MAMP คนละชุด
 - `docker compose down` ปิด (ข้อมูลยังอยู่) · `docker compose down -v` ปิดและล้างข้อมูล
-  ครั้งต่อไปที่เปิดจะ import ข้อมูลตั้งต้นใหม่
+  ครั้งต่อไปที่เปิดจะสร้างข้อมูลตั้งต้นใหม่
 
-## Deploy ขึ้นเว็บจริง (Railway)
+ค่าเชื่อมต่อฐานข้อมูลมีตัวเดียวคือ `DATABASE_URL` (อ่านใน [`preorderkpopweb/api/config.php`](preorderkpopweb/api/config.php))
+รูปแบบเดียวกับ Connection string ที่ Supabase ให้มา: `postgresql://USER:PASSWORD@HOST:PORT/DBNAME`
 
-### 🌐 เว็บจริง: https://web-production-6fbe4.up.railway.app
+> MAMP ใช้ไม่ได้แล้ว — MAMP มีแต่ MySQL ส่วนระบบย้ายไป PostgreSQL แล้ว
 
+### บัญชีทดสอบ (เฉพาะฐานข้อมูลบนเครื่อง)
+
+บัญชีเหล่านี้มาจาก `database/seed.sql` ใช้ทดสอบบน Docker เท่านั้น
+**ห้ามรัน `seed.sql` บน Supabase ของเว็บจริง** — รหัสผ่านถูกเผยแพร่อยู่ในไฟล์นี้แล้ว
+
+| บทบาท | อีเมล | รหัสผ่าน |
+|---|---|---|
+| แอดมิน | `admin@kpopstore.com` | `admin123` |
+| ลูกค้า | `user@kpopstore.com` | `123456` |
+| ลูกค้า | `somi@kpopstore.com` | `123456` |
+
+## Deploy ขึ้นเว็บจริง (Vercel + Supabase)
 
 **📖 คู่มือฉบับเต็มไล่ทีละขั้น: [`docs/DEPLOY.md`](docs/DEPLOY.md)**
-(ครอบคลุมทั้งขั้นตอน deploy · วิธีใช้เว็บ · วิธีกลับมารันบนเครื่อง)
+(รวมขั้นตอนย้ายข้อมูลและไฟล์จากระบบเดิมบน Railway)
 
-สรุปสั้น ๆ — deploy ด้วย **Dockerfile** ที่รากโปรเจกต์ ไม่ใช่ `server.js`
+- **ฐานข้อมูล + ไฟล์** อยู่ที่ Supabase — สร้างตารางด้วยการวาง [`database/schema.sql`](database/schema.sql) ใน **SQL Editor** แล้วกด Run · สร้าง Public bucket ชื่อ `uploads`
+- **ตัวเว็บ (PHP)** อยู่ที่ Vercel — import repo แล้ว Vercel build จาก `Dockerfile` (`vercel.json` บังคับ Container preset ไว้)
+- Environment Variables ที่ Vercel: `DATABASE_URL` (Transaction pooler ของ Supabase) · `SUPABASE_URL` · `SUPABASE_SECRET_KEY` · `APP_ENV=production` (ดู [`.env.example`](.env.example))
+- ตั้ง Function Region ของ Vercel ให้ตรงกับ region ของ Supabase (แนะนำสิงคโปร์ทั้งคู่)
 
-> `server.js` เสิร์ฟได้แค่ไฟล์ static — **รัน `api/*.php` ไม่ได้**
->
-> ⚠️ `railway.json` **ไม่พอ** ที่จะบังคับให้ Railway ใช้ Dockerfile — ของจริงมันตั้ง builder
-> เป็น `RAILPACK` แล้วสร้าง image Apache เองที่ MPM ชนกันจน start ไม่ขึ้น (`AH00534`)
-> ต้องไปตั้ง **Settings → Build → Dockerfile Path = `Dockerfile`** ที่ตัว service ด้วย
-> รายละเอียดอยู่ใน [`docs/DEPLOY.md`](docs/DEPLOY.md)
-
-1. push ขึ้น GitHub (`.gitignore` กัน `node_modules/` และ `uploads/` ไว้แล้ว)
-2. railway.app → New Project → Deploy from GitHub repo
-3. `+ Create` → Database → **MySQL**
-4. ที่ service `web` ตั้ง Variables: `MYSQLHOST` `MYSQLPORT` `MYSQLDATABASE` `MYSQLUSER`
-   `MYSQLPASSWORD` (ใช้ค่า `${{MySQL.*}}`) และ `APP_ENV=production`
-5. **เพิ่ม Volume ที่ `/var/www/html/uploads`** — ไม่งั้นสลิปหายทุกครั้งที่ deploy
-6. Generate Domain แล้ว import [`database/kpop_store_railway.sql`](database/kpop_store_railway.sql)
-   (ฉบับตัด `CREATE DATABASE` ออก — **ไม่ใช่** `kpop_store.sql`)
-7. เปลี่ยนรหัสแอดมินจาก `admin123` และเปลี่ยนรหัสหรือลบบัญชีลูกค้าตัวอย่าง (`user@`, `somi@kpopstore.com`)
+> `server.js` เสิร์ฟได้แค่ไฟล์ static — **รัน `api/*.php` ไม่ได้** เป็นของเก่าที่เหลือไว้ให้ `npm test`
 
 ## ทดสอบ
 
@@ -135,7 +75,7 @@ docker compose up -d --build
 npm test
 ```
 
-รันชุดทดสอบตรรกะทั้งหมดโดยไม่ต้องเปิดเบราว์เซอร์และไม่ต้องเปิด MAMP
+รันชุดทดสอบตรรกะทั้งหมดโดยไม่ต้องเปิดเบราว์เซอร์และไม่ต้องเปิดฐานข้อมูล
 ใช้เวลาไม่ถึง 1 วินาที และไม่ต้อง `npm install` ก่อน (ใช้แต่ของที่มากับ Node)
 
 ชุดทดสอบโหลด `preorderkpopweb/js/store.js` **ตัวจริง** เข้าไปรันใน `localStorage` จำลอง
@@ -150,8 +90,9 @@ npm test
 
 ```
 database/
-  kpop_store.sql         สคริปต์สร้างฐานข้อมูล + ข้อมูลตั้งต้น (import ใน phpMyAdmin บนเครื่องตัวเอง)
-  kpop_store_railway.sql ฉบับเดียวกันแต่ตัด CREATE DATABASE ออก (import ขึ้น Railway)
+  schema.sql             โครงสร้างตาราง PostgreSQL — วางใน Supabase SQL Editor ได้ทั้งไฟล์
+  seed.sql               ข้อมูลตัวอย่าง (เฉพาะเครื่องพัฒนา — ห้ามรันบนเว็บจริง)
+  tools/                 สคริปต์ย้ายข้อมูลจาก MySQL เดิม → Supabase (ดู docs/DEPLOY.md)
 preorderkpopweb/
   index.html           หน้าแรก + แคตตาล็อกสินค้า
   product-detail.html  รายละเอียดสินค้า (ดูได้โดยไม่ต้องล็อกอิน)
@@ -162,13 +103,15 @@ preorderkpopweb/
   register.html        สมัครสมาชิก
   admin.html           หลังบ้าน 8 แท็บ
   api/                 PHP API ทั้งหมด (PDO + prepared statements)
-    config.php           ค่าเชื่อมต่อฐานข้อมูล — แก้ที่นี่ที่เดียว
+    config.php           ค่าเชื่อมต่อฐานข้อมูล (DATABASE_URL) — แก้ที่นี่ที่เดียว
+    session.php          เก็บ session ล็อกอินในฐานข้อมูล (container บน Vercel ไม่มีดิสก์ถาวร)
+    storage.php          เก็บไฟล์อัปโหลด: Supabase Storage บนเว็บจริง · โฟลเดอร์ uploads/ บนเครื่อง
     helpers.php          ตัวช่วยกลาง · ตรวจสิทธิ์ · แปลงแถว DB เป็นรูปทรงฝั่ง JS
     bootstrap.php        ดึงข้อมูลทั้งหมดของหน้าในคำขอเดียว
     auth.php             เข้าสู่ระบบ / สมัคร / ออก / แก้โปรไฟล์
     orders.php · cart.php · products.php · rounds.php
     users.php · notifications.php · upload.php · stats.php
-  uploads/             รูปที่อัปโหลด (สลิป · รูปสินค้า · หลักฐานการกดสั่ง)
+  uploads/             รูปที่อัปโหลดตอนรันบนเครื่อง (เว็บจริงอยู่ใน Supabase Storage)
   js/api.js            ตัวห่อการเรียก API (ต้องโหลดก่อน store.js)
   js/store.js          ข้อมูลและตรรกะทั้งหมด (data layer — ไม่แตะ DOM)
   js/ui.js             navbar · modal · แถบล่างมือถือ (ต้องโหลดหลัง store.js)
@@ -176,13 +119,14 @@ preorderkpopweb/
   css/common.css       สไตล์ที่ทุกหน้าฝั่งร้านค้าใช้ร่วมกัน (body · navbar)
   css/responsive.css   ปรับหน้าจอมือถือ ใช้ทุกหน้า
   css/pages/<หน้า>.css สไตล์เฉพาะของแต่ละหน้า
-Dockerfile             image สำหรับ deploy (php:8.3-apache) — ตัวที่ Railway ใช้จริง
-docker-entrypoint.sh   ตั้งพอร์ตตาม PORT ที่ Railway ฉีดมา + วาง .htaccess คืนให้โฟลเดอร์ uploads ที่ถูก volume บัง
-docker-compose.yml     รันทั้งระบบบนเครื่องด้วย Docker (web + MySQL + phpMyAdmin) — ไม่ได้ใช้บน Railway
-railway.json           บังคับให้ Railway build ด้วย Dockerfile ไม่ใช่เดาเป็น Node app
+Dockerfile             image สำหรับ deploy (php:8.3-apache) — ตัวที่ Vercel build จริง
+docker-entrypoint.sh   ตั้งพอร์ตตาม PORT + วาง .htaccess คืนให้โฟลเดอร์ uploads ที่ถูก volume บัง
+docker-compose.yml     รันทั้งระบบบนเครื่องด้วย Docker (web + PostgreSQL + Adminer) — ไม่ได้ใช้บนเว็บจริง
+vercel.json            บังคับให้ Vercel ใช้ Container preset (build จาก Dockerfile) ไม่ใช่เดาเป็น Node app
+railway.json           ของระบบเดิมบน Railway — ลบได้หลังปิด Railway (docs/DEPLOY.md ภาค D)
 server.js              express static server (ของเดิม — รัน PHP ไม่ได้ ใช้แค่ตอนเสิร์ฟ static เฉย ๆ)
 tests/                 ชุดทดสอบอัตโนมัติ
-docs/DEPLOY.md         คู่มือ deploy ขึ้น Railway + วิธีใช้เว็บ + วิธีรันบนเครื่อง
+docs/DEPLOY.md         คู่มือ deploy (Vercel + Supabase) + ย้ายข้อมูล + วิธีใช้เว็บ
 docs/TESTING.md        คู่มือทดสอบฉบับเต็ม
 ```
 
@@ -210,4 +154,4 @@ docs/TESTING.md        คู่มือทดสอบฉบับเต็ม
 - ระบบล็อกอิน **ตรวจรหัสผ่านจริง** ด้วย `password_hash()` / `password_verify()`
   ไม่มีการสร้างบัญชีอัตโนมัติให้อีกแล้ว — อีเมลที่ยังไม่สมัครจะเข้าไม่ได้
 - **ตะกร้าผูกกับบัญชีผู้ใช้** คนละบัญชีบนเครื่องเดียวกันจึงมีตะกร้าคนละใบ
-- รูปภาพถูกเก็บเป็น **ไฟล์จริง** ใน `preorderkpopweb/uploads/` ฐานข้อมูลเก็บแค่ path
+- รูปภาพถูกเก็บเป็น **ไฟล์จริง** (Supabase Storage บนเว็บจริง · `preorderkpopweb/uploads/` บนเครื่อง) ฐานข้อมูลเก็บแค่ URL/path

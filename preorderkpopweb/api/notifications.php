@@ -63,10 +63,10 @@ switch (action()) {
 
         // อ่านได้เฉพาะกล่องของตัวเอง — ไม่รับอีเมลจาก body มาใช้ตรง ๆ
         // ไม่งั้นใครก็สั่งให้กล่องคนอื่นถูกทำเครื่องหมายว่าอ่านแล้วได้
-        $st = db()->prepare('UPDATE notifications SET is_read = 1 WHERE user_email = ?');
+        $st = db()->prepare('UPDATE notifications SET is_read = 1 WHERE lower(user_email) = lower(?)');
         $st->execute([$user['email']]);
 
-        $st = db()->prepare('SELECT * FROM notifications WHERE user_email = ? ORDER BY created_at DESC, id DESC');
+        $st = db()->prepare('SELECT * FROM notifications WHERE lower(user_email) = lower(?) ORDER BY created_at DESC, id DESC');
         $st->execute([$user['email']]);
 
         ok(['notifications' => array_map('map_notification', $st->fetchAll())]);
@@ -76,7 +76,7 @@ switch (action()) {
     /* กดแจ้งเตือนใบเดียว (ก่อนพาไปหน้าที่เกี่ยวข้อง) — WHERE ผูกอีเมลของ session ไว้ กดของคนอื่นไม่ได้ */
     case 'read-one': {
         $user = require_login();
-        $st = db()->prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_email = ?');
+        $st = db()->prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND lower(user_email) = lower(?)');
         $st->execute([(int) ($in['id'] ?? 0), $user['email']]);
         ok();
     }

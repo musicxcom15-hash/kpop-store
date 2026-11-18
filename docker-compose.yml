@@ -1,15 +1,15 @@
 # =====================================================================
-# KPOP STORE — รันทั้งระบบบนเครื่องตัวเองด้วย Docker (ใช้แทน MAMP ได้)
+# KPOP STORE — รันทั้งระบบบนเครื่องตัวเองด้วย Docker
 #
-#   docker compose up -d --build    เปิด (ครั้งแรกจะ import database/kpop_store.sql ให้เอง)
+#   docker compose up -d --build    เปิด (ครั้งแรกจะสร้างตารางจาก database/schema.sql + ข้อมูลตัวอย่าง seed.sql)
 #   docker compose down             ปิด (ข้อมูลใน DB และไฟล์อัปโหลดยังอยู่)
-#   docker compose down -v          ปิดและล้างข้อมูลทั้งหมด (เปิดใหม่จะ import ข้อมูลตั้งต้นใหม่)
+#   docker compose down -v          ปิดและล้างข้อมูลทั้งหมด (เปิดใหม่จะสร้างข้อมูลตั้งต้นใหม่)
 #
-#   หน้าร้าน    http://localhost:8080
-#   phpMyAdmin  http://localhost:8081
+#   หน้าร้าน   http://localhost:8080
+#   Adminer   http://localhost:8081   (ดู/แก้ฐานข้อมูล: System = PostgreSQL, Server = db, User/Password = kpop, Database = kpop_store)
 #
-# ใช้พอร์ต 8080/8081 เพื่อไม่ชนกับ MAMP (80) ถ้าเปิด MAMP ค้างไว้ก็รันคู่กันได้
-# รหัสผ่านในไฟล์นี้ใช้บนเครื่องตัวเองเท่านั้น — เว็บจริงบน Railway ใช้ค่าจาก Variables ของ Railway
+# ฐานข้อมูลเป็น PostgreSQL รุ่นเดียวกับ Supabase — เว็บจริงต่อ Supabase ผ่าน DATABASE_URL ใน Railway
+# รหัสผ่านในไฟล์นี้ใช้บนเครื่องตัวเองเท่านั้น
 # =====================================================================
 
 services:
@@ -24,12 +24,8 @@ services:
     ports:
       - "8080:80"
     environment:
-      # config.php อ่านชื่อตัวแปรชุดเดียวกับที่ Railway ฉีดให้
-      MYSQLHOST: db
-      MYSQLPORT: "3306"
-      MYSQLDATABASE: kpop_store
-      MYSQLUSER: kpop
-      MYSQLPASSWORD: kpop
+      # รูปแบบเดียวกับ Connection string ที่ Supabase ให้มา (config.php อ่านตัวนี้ตัวเดียว)
+      DATABASE_URL: postgresql://kpop:kpop@db:5432/kpop_store
       # ไม่ใช่ production → API บอกสาเหตุ error ละเอียด (เช่น ต่อ DB ไม่ได้เพราะอะไร)
       APP_ENV: development
       # อีเมล (ลิงก์รีเซ็ตรหัสผ่าน): ไม่ตั้ง = เขียนลง /tmp/kpop-mail-outbox.log ใน container แทนการส่งจริง
@@ -38,51 +34,55 @@ services:
       MAIL_API_KEY: ${MAIL_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      # ไฟล์อัปโหลด: ไม่ตั้ง = เก็บใน volume uploads ด้านล่าง · ตั้งใน .env = ส่งขึ้น Supabase Storage เหมือนเว็บจริง
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-}
     volumes:
       # ผูกโค้ดเข้าไปตรง ๆ: แก้ไฟล์ในเครื่องแล้วรีเฟรชหน้าเห็นผลทันที ไม่ต้อง build ใหม่
       - ./preorderkpopweb:/var/www/html
       # ไฟล์อัปโหลดแยกไว้ใน volume เหมือนบน Railway (entrypoint วาง .htaccess คืนให้เอง)
-      # และไม่ปนกับ preorderkpopweb/uploads/ ในเครื่องที่ MAMP ใช้
       - uploads:/var/www/html/uploads
     depends_on:
       db:
         condition: service_healthy
 
   db:
-    # เวอร์ชันเดียวกับ MySQL บน Railway
-    image: mysql:9.4
+    # Supabase โปรเจกต์ใหม่ใช้ PostgreSQL 17
+    image: postgres:17-alpine
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: kpop_store
-      MYSQL_USER: kpop
-      MYSQL_PASSWORD: kpop
-      # ให้ CURDATE() ในไฟล์ .sql (ใช้สร้างรอบตัวอย่าง) เป็นวันที่ไทย
+      POSTGRES_DB: kpop_store
+      POSTGRES_USER: kpop
+      POSTGRES_PASSWORD: kpop
+      # ให้ CURRENT_DATE ใน seed.sql (ใช้สร้างรอบตัวอย่าง) เป็นวันที่ไทย
       TZ: Asia/Bangkok
+      PGTZ: Asia/Bangkok
     volumes:
-      - db-data:/var/lib/mysql
-      # รันเฉพาะตอน volume ยังว่าง (เปิดครั้งแรก หรือหลัง down -v)
-      - ./database/kpop_store.sql:/docker-entrypoint-initdb.d/01-kpop_store.sql:ro
+      # ชื่อ volume ใหม่ (ไม่ใช้ db-data ของ MySQL เดิม) — Postgres อ่านไฟล์ของ MySQL ไม่ได้
+      - pg-data:/var/lib/postgresql/data
+      # รันตามลำดับชื่อไฟล์ เฉพาะตอน volume ยังว่าง (เปิดครั้งแรก หรือหลัง down -v)
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     healthcheck:
-      # web ต้องรอจน import เสร็จ ไม่งั้นหน้าแรกจะเจอ "ต่อฐานข้อมูลไม่ได้"
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      # web ต้องรอจนสร้างตารางเสร็จ ไม่งั้นหน้าแรกจะเจอ "ต่อฐานข้อมูลไม่ได้"
+      test: ["CMD-SHELL", "pg_isready -U kpop -d kpop_store"]
       interval: 5s
       timeout: 5s
       retries: 30
-      start_period: 20s
+      start_period: 10s
 
-  phpmyadmin:
-    image: phpmyadmin:5.2
+  adminer:
+    # หน้าเว็บดูฐานข้อมูล (แทน phpMyAdmin ที่ใช้กับ MySQL ได้อย่างเดียว)
+    image: adminer:4
     restart: always
     ports:
-      - "8081:80"
+      - "8081:8080"
     environment:
-      PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: root
+      ADMINER_DEFAULT_SERVER: db
     depends_on:
       - db
 
 volumes:
-  db-data:
+  pg-data:
   uploads:

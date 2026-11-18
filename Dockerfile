@@ -1,10 +1,14 @@
 FROM php:8.3-apache
 
 # โค้ดใช้ never return type (8.1+), match (8.0+), str_starts_with (8.0+)
-# และคุย MySQL ผ่าน PDO เท่านั้น
+# และคุย PostgreSQL (Supabase) ผ่าน PDO เท่านั้น — pdo_pgsql ต้องใช้ libpq ทั้งตอน build และตอนรัน
+# pdo_mysql เหลือไว้ให้สคริปต์ย้ายข้อมูลจาก MySQL เดิม (database/tools/) ใช้ ลบออกได้หลังย้ายเสร็จ
 # opcache มีมากับ image แล้วแต่ยังไม่ถูกโหลด — ต้อง enable ก่อน ค่า opcache.* ด้านล่างถึงจะมีผล
-RUN docker-php-ext-install pdo_mysql \
-    && docker-php-ext-enable opcache
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install pdo_pgsql pdo_mysql \
+    && docker-php-ext-enable opcache \
+    && rm -rf /var/lib/apt/lists/*
 
 # Apache บน Debian ยอมให้เปิด MPM ได้ "ทีละตัวเดียว" ถ้ามีสองตัวจะตายตอน start ด้วย
 #   AH00534: apache2: Configuration error: More than one MPM loaded.
