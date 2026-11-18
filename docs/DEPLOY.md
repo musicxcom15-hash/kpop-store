@@ -152,7 +152,7 @@ vercel.com → **Add New → Project** → เลือก GitHub repo `kpop-sto
 
 - **Root Directory:** รากของ repo (ค่าตั้งต้น)
 - **Framework Preset:** ควรขึ้นเป็น Container — `vercel.json` บังคับไว้แล้ว (`"framework": "container"`)
-  เพราะใน repo มี `package.json`/`server.js` ของเก่า ถ้าไม่บังคับ Vercel อาจเดาว่าเป็นแอป Node แล้วรัน PHP ไม่ได้
+  เพราะใน repo มี `package.json` (ไว้สั่ง `npm test`) ถ้าไม่บังคับ Vercel อาจเดาว่าเป็นแอป Node แล้วรัน PHP ไม่ได้
 
 ## C2 — ตั้ง Environment Variables (ก่อนกด Deploy)
 

@@ -67,8 +67,6 @@ docker compose up -d --build
 - Environment Variables ที่ Vercel: `DATABASE_URL` (Transaction pooler ของ Supabase) · `SUPABASE_URL` · `SUPABASE_SECRET_KEY` · `APP_ENV=production` (ดู [`.env.example`](.env.example))
 - ตั้ง Function Region ของ Vercel ให้ตรงกับ region ของ Supabase (แนะนำสิงคโปร์ทั้งคู่)
 
-> `server.js` เสิร์ฟได้แค่ไฟล์ static — **รัน `api/*.php` ไม่ได้** เป็นของเก่าที่เหลือไว้ให้ `npm test`
-
 ## ทดสอบ
 
 ```
@@ -124,7 +122,7 @@ docker-entrypoint.sh   ตั้งพอร์ตตาม PORT + วาง .ht
 docker-compose.yml     รันทั้งระบบบนเครื่องด้วย Docker (web + PostgreSQL + Adminer) — ไม่ได้ใช้บนเว็บจริง
 vercel.json            บังคับให้ Vercel ใช้ Container preset (build จาก Dockerfile) ไม่ใช่เดาเป็น Node app
 railway.json           ของระบบเดิมบน Railway — ลบได้หลังปิด Railway (docs/DEPLOY.md ภาค D)
-server.js              express static server (ของเดิม — รัน PHP ไม่ได้ ใช้แค่ตอนเสิร์ฟ static เฉย ๆ)
+package.json           มีไว้สั่ง npm test อย่างเดียว (ไม่มี dependency)
 tests/                 ชุดทดสอบอัตโนมัติ
 docs/DEPLOY.md         คู่มือ deploy (Vercel + Supabase) + ย้ายข้อมูล + วิธีใช้เว็บ
 docs/TESTING.md        คู่มือทดสอบฉบับเต็ม

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A K-pop album preorder store: PHP 8.3 + Apache backend (`preorderkpopweb/api/`), vanilla HTML/CSS/JS frontend (`preorderkpopweb/`), PostgreSQL via PDO. Local dev runs on Docker. Production runs the same Dockerfile on Vercel (Container Runtime), with the database and uploaded files on Supabase (Postgres + Storage). It was migrated from MySQL on Railway in Nov 2026. Leftovers kept only for that migration are `railway.json`, `pdo_mysql` in the Dockerfile and `database/tools/`, all removable once Railway is shut down (`docs/DEPLOY.md` part D).
 
-There is a leftover `server.js` (Express) + `package.json` from an earlier prototype. It only serves static files and **cannot run the PHP API** — it exists solely so `npm test` has a runner; it is not the app server. The real backend is PHP+Apache (see Deployment below).
+`package.json` exists only so `npm test` works. It has no dependencies, and nothing here runs on Node. The old Express `server.js` and the Live Server setup were removed because neither can execute PHP, and opening the site through them shows the "failed to load" bar. Local dev is Docker only.
 
 ## Commands
 
@@ -108,6 +108,6 @@ Filenames get 96 random bits, because public-bucket URLs are readable by anyone 
 
 ## Deployment (Vercel + Supabase)
 
-Vercel builds the root `Dockerfile` (`php:8.3-apache`) with its Container Runtime, which is beta. `vercel.json` forces `"framework": "container"`, because the leftover `package.json`/`server.js` would otherwise be detected as a Node app. The community `vercel-php` runtime was archived on 2026-10-29, so don't switch to it. The Dockerfile forces Apache onto `mpm_prefork` only (required by `mod_php`; two loaded MPMs crash Apache at start with `AH00534`). `docker-entrypoint.sh` rewrites Apache's port from `$PORT` (default 80). `.vercelignore` keeps local uploads and secrets out of CLI deploys.
+Vercel builds the root `Dockerfile` (`php:8.3-apache`) with its Container Runtime, which is beta. `vercel.json` forces `"framework": "container"`, because `package.json` could otherwise make Vercel detect a Node app. The community `vercel-php` runtime was archived on 2026-10-29, so don't switch to it. The Dockerfile forces Apache onto `mpm_prefork` only (required by `mod_php`; two loaded MPMs crash Apache at start with `AH00534`). `docker-entrypoint.sh` rewrites Apache's port from `$PORT` (default 80). `.vercelignore` keeps local uploads and secrets out of CLI deploys.
 
 Env vars on Vercel: `DATABASE_URL` (Supabase transaction pooler), `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `APP_ENV=production`, and optionally `MAIL_*`/`APP_BASE_URL`; see `.env.example`. The Vercel function region must match the Supabase region (Singapore recommended), because each page makes several DB round trips. Push to `main` auto-deploys. The full runbook is in `docs/DEPLOY.md`: Supabase setup, migrating data and files from the old Railway MySQL (`database/tools/mysql-dump-to-postgres.sh`, `copy-uploads-to-storage.sh`), Vercel setup, and Railway shutdown. Read it before changing anything deploy-related. While the old Railway service is still connected to the repo, every push also deploys there.

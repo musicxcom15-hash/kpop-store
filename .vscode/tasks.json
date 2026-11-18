@@ -3,41 +3,42 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "ติดตั้ง dependencies (npm install)",
+      "label": "เปิดเว็บบนเครื่อง (docker compose up)",
       "type": "shell",
-      "command": "npm install",
+      "command": "docker compose up -d --build",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      },
-      "detail": "จำเป็นเฉพาะตอนจะรัน express server เท่านั้น (Live Server ไม่ต้องใช้)"
+      "detail": "หน้าร้าน http://localhost:8080 · Adminer http://localhost:8081"
     },
     {
-      "label": "npm: start (background)",
+      "label": "ปิดเว็บบนเครื่อง (docker compose down)",
       "type": "shell",
-      "command": "npm start",
+      "command": "docker compose down",
       "options": { "cwd": "${workspaceFolder}" },
-      "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      },
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "^$",
-          "file": 1,
-          "location": 2,
-          "message": 3
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*",
-          "endsPattern": "Server running on"
-        }
-      },
-      "detail": "รัน express ที่ http://localhost:3000 (ค้างไว้เบื้องหลัง)"
+      "problemMatcher": [],
+      "detail": "ข้อมูลในฐานข้อมูลยังอยู่"
+    },
+    {
+      "label": "ทดสอบตรรกะ (npm test)",
+      "type": "shell",
+      "command": "npm test",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "ทดสอบ API ทุก endpoint (ต้องเปิด Docker)",
+      "type": "shell",
+      "command": "node tests/e2e/api.mjs http://localhost:8080",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "smoke test ด้วย Chrome (ต้องเปิด Docker)",
+      "type": "shell",
+      "command": "node tests/e2e/smoke.mjs http://localhost:8080",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
     }
   ]
 }

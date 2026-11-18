@@ -7,8 +7,6 @@ database/
 .git/
 .github/
 package.json
-package-lock.json
-server.js
 README.md
 .env
 .env.example

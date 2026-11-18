@@ -1,7 +1,7 @@
 {
   "recommendations": [
-    // เปิดเว็บแบบ auto-reload เวลาเซฟไฟล์ (ติดตั้งไว้แล้ว)
-    "ritwickdey.liveserver",
+    // ดู container / log ของ Docker ใน VS Code
+    "ms-azuretools.vscode-docker",
     // ตัวเลือกเสริม: ส่อง DOM / แก้ CSS สดๆ ในตัว editor ได้เลย
     "ms-edgedevtools.vscode-edge-devtools"
   ]
