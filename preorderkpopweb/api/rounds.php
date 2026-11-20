@@ -6,17 +6,21 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ทุกคำสั่งในไฟล์นี้เป็นของแอดมินเท่านั้น
 require_admin();
 $in = body();
 
+/** รอบทั้งหมด เรียงตามวันเปิด (ส่งกลับไปให้หน้าแอดมินอัปเดตทันที) */
 function all_rounds(): array
 {
     return array_map('map_round', db()->query('SELECT * FROM rounds ORDER BY open_at')->fetchAll());
 }
 
+// เลือกงานตาม ?action=
 switch (action()) {
 
     /* ---------------------------------------------------------- */
+    // เพิ่มหรือแก้รอบ: มี id อยู่แล้ว = แก้ · ไม่มี = เพิ่มใหม่
     case 'save': {
         $id      = trim((string) ($in['id'] ?? ''));
         $name    = trim((string) ($in['name'] ?? ''));
@@ -26,10 +30,12 @@ switch (action()) {
         if ($name === '' || $openAt === '' || $closeAt === '') {
             fail('กรุณากรอกชื่อรอบและช่วงวันเปิด-ปิดให้ครบค่ะ', 200, ['rounds' => all_rounds()]);
         }
+        // วันที่รูปแบบ YYYY-MM-DD เทียบเป็นสตริงได้ตรง ๆ
         if ($closeAt < $openAt) {
             fail('วันปิดรอบต้องไม่มาก่อนวันเปิดรอบค่ะ', 200, ['rounds' => all_rounds()]);
         }
 
+        // ค่าที่ไม่อยู่ในรายการ ให้ใช้ค่าตั้งต้นแทน (ฐานข้อมูลมี CHECK กันอีกชั้น)
         $type = (string) ($in['type'] ?? 'korean-site');
         if (!in_array($type, ['korean-site', 'shipping'], true)) {
             $type = 'korean-site';
@@ -44,9 +50,11 @@ switch (action()) {
         $note        = (string) ($in['note'] ?? '');
 
         if ($id === '') {
+            // รอบใหม่: สร้าง id จากเวลา + ตัวสุ่ม
             $id = 'round-' . time() . '-' . bin2hex(random_bytes(3));
         }
 
+        // มีรอบนี้อยู่แล้วไหม → ตัดสินว่าจะ UPDATE หรือ INSERT
         $st = db()->prepare('SELECT id FROM rounds WHERE id = ?');
         $st->execute([$id]);
 
@@ -69,6 +77,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // ลบรอบ — ต้องไม่มีสินค้าผูกอยู่
     case 'delete': {
         $id = (string) ($in['id'] ?? '');
 
@@ -88,6 +97,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // action ที่ไม่รู้จัก
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

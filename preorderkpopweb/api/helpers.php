@@ -9,6 +9,7 @@
  *  - ตาราง ORDER_STATUS ฝั่งเซิร์ฟเวอร์ คัดมาจาก js/store.js ให้ตรงกันทุกค่า
  */
 
+// โหลดไฟล์ที่ทุก endpoint ต้องใช้: ค่าเชื่อมต่อฐานข้อมูล, ที่เก็บไฟล์, ตัวจัดการ session
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/storage.php';
 require_once __DIR__ . '/session.php';
@@ -24,6 +25,7 @@ require_once __DIR__ . '/session.php';
  */
 ini_set('serialize_precision', '-1');
 
+// ทุก endpoint ตอบเป็น JSON (ภาษาไทยเป็น UTF-8)
 header('Content-Type: application/json; charset=utf-8');
 // ข้อมูลผู้ใช้/ออเดอร์ห้ามถูกแคช
 header('Cache-Control: no-store');
@@ -40,12 +42,14 @@ header('Cache-Control: no-store');
  * บน production จึงตอบข้อความกลาง ๆ แล้วเก็บของจริงไว้ใน log (ดูได้ที่หน้า Logs ของ Vercel)
  */
 set_exception_handler(function (Throwable $e): void {
+    // บันทึกรายละเอียดจริงลง log ของเซิร์ฟเวอร์ (ผู้ใช้ไม่เห็น)
     error_log('[kpop-api] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
     // ตาราง/คอลัมน์หาย (42P01 / 42703 เช่นรัน schema.sql รุ่นเก่าทับตอน container ยังรัน)
     // — ลืมว่าเคยเช็คแล้ว คำขอถัดไปจะเติมให้เอง
     if ($e instanceof PDOException && in_array($e->getCode(), ['42P01', '42703'], true)) {
         @unlink(SCHEMA_FLAG_FILE);
     }
+    // ตอบ 500 พร้อม JSON — หน้าเว็บจะขึ้นแถบแดงพร้อมปุ่มลองใหม่
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -81,6 +85,7 @@ if (session_status() === PHP_SESSION_NONE) {
         'secure'   => (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
                       || (($_SERVER['HTTPS'] ?? '') !== ''),
     ]);
+    // เริ่ม session: อ่านแถวใน sessions ตามคุกกี้ PHPSESSID ของผู้ใช้
     session_start();
 }
 
@@ -92,6 +97,7 @@ if (session_status() === PHP_SESSION_NONE) {
 /*   canCancel       ลูกค้ากดยกเลิกเองได้หรือไม่                         */
 /*   canReuploadSlip ลูกค้าส่งสลิปใบใหม่ได้หรือไม่                       */
 /* ------------------------------------------------------------------ */
+// รหัสสถานะ => ข้อความไทย + กลุ่ม (ใช้กรองแท็บ) + flag ทั้ง 4 ตัว
 const ORDER_STATUS = [
     'PENDING_SLIP'    => ['text' => 'รอตรวจสอบชำระเงิน',              'group' => 'pending',    'revenue' => true,  'quota' => true,  'canCancel' => true,  'canReuploadSlip' => true],
     'PAID_WAIT_ROUND' => ['text' => 'ชำระเงินแล้ว รอปิดรอบ',          'group' => 'processing', 'revenue' => true,  'quota' => true,  'canCancel' => true,  'canReuploadSlip' => false],
@@ -140,10 +146,12 @@ function ok(array $extra = []): never
 /** อ่าน JSON body ที่ fetch ส่งมา */
 function body(): array
 {
+    // อ่าน body ดิบของคำขอ (หน้าเว็บส่ง JSON มาด้วย fetch)
     $raw = file_get_contents('php://input');
     if ($raw === false || $raw === '') {
         return [];
     }
+    // แปลงเป็น array — ถ้าไม่ใช่ JSON ที่ถูกต้อง ให้ถือว่าไม่มีข้อมูล ไม่ error
     $data = json_decode($raw, true);
     return is_array($data) ? $data : [];
 }
@@ -161,6 +169,7 @@ function action(): string
 /** คืนแถวผู้ใช้ที่ล็อกอินอยู่ หรือ null ถ้ายังไม่ได้ล็อกอิน */
 function current_user(): ?array
 {
+    // ยังไม่ได้ล็อกอิน (session ไม่มี user_id)
     if (empty($_SESSION['user_id'])) {
         return null;
     }
@@ -209,9 +218,11 @@ const MIN_PASSWORD_LENGTH = 6;
  */
 function random_temp_password(int $length = 10): string
 {
+    // ตัวอักษรที่ใช้สุ่ม (ไม่มี 0 O 1 l I ที่อ่านสับสน)
     $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     $out = '';
     for ($i = 0; $i < $length; $i++) {
+        // random_int ปลอดภัยพอสำหรับรหัสผ่าน (ไม่ใช่ rand ที่เดาได้)
         $out .= $chars[random_int(0, strlen($chars) - 1)];
     }
     return $out;
@@ -247,6 +258,7 @@ function now_stamp(): string
 /* NUMERIC มาเป็นสตริง ถ้าปล่อยไว้ JS จะเอาไปบวกกันแล้วได้สตริงต่อกัน     */
 /* ------------------------------------------------------------------ */
 
+/** แถวสินค้าจาก DB → รูปทรงที่หน้าเว็บใช้ (camelCase + แปลงตัวเลขเป็น int/float) */
 function map_product(array $r): array
 {
     return [
@@ -257,6 +269,7 @@ function map_product(array $r): array
         'serviceFee'    => (float) $r['service_fee'],
         'price'         => $r['price'] === null ? null : (float) $r['price'],
         'roundId'       => $r['round_id'],
+        // null = รับไม่จำกัด ต้องคงเป็น null ห้ามแปลงเป็น 0 (0 = เต็มแล้ว)
         'quotaPerRound' => $r['quota_per_round'] === null ? null : (int) $r['quota_per_round'],
         'image'         => $r['image'],
         'status'        => $r['status'],
@@ -281,6 +294,7 @@ const MAX_SIZE_LENGTH = 32;
 function parse_sizes(string $raw): array
 {
     $sizes = [];
+    // แยกด้วยคอมมา แล้วเก็บเฉพาะค่าที่ไม่ว่างและยังไม่ซ้ำ
     foreach (explode(',', $raw) as $s) {
         $s = trim($s);
         if ($s !== '' && !in_array($s, $sizes, true)) {
@@ -294,6 +308,7 @@ function parse_sizes(string $raw): array
 function is_valid_size(array $productRow, string $size): bool
 {
     $sizes = parse_sizes((string) ($productRow['sizes'] ?? ''));
+    // มีรายการไซซ์ → ต้องเป็นหนึ่งในนั้น · ไม่มีไซซ์ → ต้องเป็นค่าว่าง
     return $sizes ? in_array($size, $sizes, true) : $size === '';
 }
 
@@ -303,6 +318,7 @@ function is_valid_size(array $productRow, string $size): bool
  */
 const PRODUCT_CATEGORIES = ['album', 'lightstick', 'photocard', 'clothing', 'popup', 'merch'];
 
+/** แถวรอบพรีออเดอร์จาก DB → รูปทรงที่หน้าเว็บใช้ */
 function map_round(array $r): array
 {
     return [
@@ -343,6 +359,7 @@ function map_user(array $r): array
     ];
 }
 
+/** รายการสินค้าในออเดอร์ (snapshot ตอนสั่ง: ชื่อ ราคา รูป ไซซ์) → รูปทรงที่หน้าเว็บใช้ */
 function map_order_item(array $r): array
 {
     return [
@@ -377,8 +394,10 @@ function map_order(array $r, array $items = []): array
         'shippingFee'        => (float) $r['shipping_fee'],
         'total'              => (float) $r['total'],
         'statusCode'         => $code,
+        // ข้อความไทยของสถานะสร้างจากรหัสเสมอ ไม่ได้เก็บใน DB
         'status'             => ORDER_STATUS[$code]['text'] ?? $code,
         'roundId'            => $r['round_id'],
+        // เรทที่ล็อกไว้ตอนลูกค้าแนบสลิป
         'rateUsed'           => $r['rate_used'] === null ? null : rate_value($r['rate_used']),
         'rateLockedAt'       => stamp($r['rate_locked_at']),
         'slipImage'          => $r['slip_image'],
@@ -405,10 +424,12 @@ function map_order_for_quota(array $r, array $items = []): array
         'id'         => $r['id'],
         'statusCode' => $r['status_code'],
         'roundId'    => $r['round_id'],
+        // เหลือแค่รหัสสินค้ากับจำนวน — พอให้คำนวณโควตา ไม่มีไซซ์/ราคา
         'items'      => array_map(fn($i) => ['id' => $i['id'], 'qty' => $i['qty']], $items),
     ];
 }
 
+/** แถวแจ้งเตือนจาก DB → รูปทรงที่หน้าเว็บใช้ (is_read 0/1 → true/false) */
 function map_notification(array $r): array
 {
     return [
@@ -424,6 +445,7 @@ function map_notification(array $r): array
     ];
 }
 
+/** แถวตะกร้าจาก DB → รูปทรงที่หน้าเว็บใช้ (ไม่มีราคา ราคาคิดสดที่หน้าเว็บ) */
 function map_cart_item(array $r): array
 {
     return [
@@ -444,12 +466,14 @@ function fetch_items_by_order(array $orderIds): array
     if (!$orderIds) {
         return [];
     }
+    // สร้าง ?,?,? ตามจำนวน id เพื่อใช้กับ IN (...) แบบ prepared statement
     $ph = implode(',', array_fill(0, count($orderIds), '?'));
     $st = db()->prepare("SELECT * FROM order_items WHERE order_id IN ($ph) ORDER BY id");
     $st->execute($orderIds);
 
     $byOrder = [];
     foreach ($st->fetchAll() as $row) {
+        // จัดกลุ่มรายการสินค้าตามเลขออเดอร์
         $byOrder[$row['order_id']][] = map_order_item($row);
     }
     return $byOrder;
@@ -464,6 +488,7 @@ function fetch_order(string $orderId): ?array
     if (!$row) {
         return null;
     }
+    // ดึงรายการสินค้าของออเดอร์นี้มาประกอบ
     $items = fetch_items_by_order([$orderId]);
     return map_order($row, $items[$orderId] ?? []);
 }
@@ -477,6 +502,7 @@ function fetch_order(string $orderId): ?array
  */
 function remaining_quota(string $productId): ?int
 {
+    // อ่านเพดานโควตาและรอบปัจจุบันของสินค้า
     $st = db()->prepare('SELECT quota_per_round, round_id FROM products WHERE id = ?');
     $st->execute([$productId]);
     $p = $st->fetch();
@@ -484,9 +510,11 @@ function remaining_quota(string $productId): ?int
         return null;
     }
 
+    // นับเฉพาะออเดอร์ที่สถานะยังกินโควตา (ยกเลิก/คืนเงินแล้วไม่นับ)
     $codes = quota_consuming_codes();
     $ph = implode(',', array_fill(0, count($codes), '?'));
 
+    // รวมจำนวนที่สั่งไปแล้วของสินค้านี้ในรอบเดียวกัน (IS NOT DISTINCT FROM = เทียบเท่ากันได้แม้เป็น NULL)
     $sql = "SELECT COALESCE(SUM(oi.qty), 0)
               FROM order_items oi
               JOIN orders o ON o.id = oi.order_id
@@ -496,6 +524,7 @@ function remaining_quota(string $productId): ?int
     $st = db()->prepare($sql);
     $st->execute(array_merge([$productId, $p['round_id']], $codes));
 
+    // เหลือ = เพดาน − ที่สั่งไปแล้ว (ไม่ให้ติดลบ)
     return max(0, (int) $p['quota_per_round'] - (int) $st->fetchColumn());
 }
 
@@ -522,6 +551,7 @@ function round_state(?array $round): string
     if (($round['status'] ?? 'open') !== 'open') {
         return $round['status'];
     }
+    // เทียบวันนี้ (เวลาไทย) กับช่วงวันเปิด-ปิดรอบ — สตริง YYYY-MM-DD เทียบกันตรง ๆ ได้
     $today = date('Y-m-d');
     if ($today < $round['openAt'])  return 'upcoming';
     if ($today > $round['closeAt']) return 'closed';
@@ -574,21 +604,24 @@ function push_notification(string $userEmail, string $title, string $message, ?s
  */
 function ensure_schema_once(): void
 {
+    // container นี้เคยเช็คแล้ว ไม่ต้องทำซ้ำ
     if (is_file(SCHEMA_FLAG_FILE)) {
         return;
     }
+    // รันคำสั่งอัปเกรดทุกข้อ (ทุกข้อรันซ้ำได้ไม่พัง)
     foreach (SCHEMA_UPGRADES as $sql) {
         db()->exec($sql);
     }
+    // จำไว้ว่าทำแล้ว (@ = ถ้าเขียนไฟล์ไม่ได้ก็ไม่เป็นไร แค่จะเช็คซ้ำรอบหน้า)
     @touch(SCHEMA_FLAG_FILE);
 }
 
 /* ------------------------------------------------------------------ */
 /* อีเมล                                                               */
 /*                                                                     */
-/* Railway แพ็กเกจ Free/Hobby ปิด SMTP ("SMTP is only available on the */
-/* Pro plan and above") จึงส่งผ่าน HTTPS API ของบริการส่งอีเมลแทน      */
-/* ตั้งค่าด้วย environment variable (ใน Railway → Variables ของ web):    */
+/* ส่งผ่าน HTTPS API ของบริการส่งอีเมล ไม่พึ่ง SMTP                    */
+/* (โฮสต์ฟรีหลายเจ้าปิดพอร์ต SMTP ขาออก)                               */
+/* ตั้งค่าด้วย environment variable (Vercel → Settings → Environment):  */
 /*   MAIL_PROVIDER  = brevo | resend                                   */
 /*   MAIL_API_KEY   = API key ของบริการนั้น                             */
 /*   MAIL_FROM      = อีเมลผู้ส่งที่ยืนยันกับบริการแล้ว                  */
@@ -610,6 +643,7 @@ function mail_configured(): bool
  */
 function send_mail(string $toEmail, string $toName, string $subject, string $html, string $text): bool
 {
+    // ยังไม่ได้ตั้งค่าบริการอีเมล → ส่งจริงไม่ได้
     if (!mail_configured()) {
         if (!IS_PRODUCTION) {
             $entry = sprintf("=== %s\nTo: %s <%s>\nSubject: %s\n\n%s\n\n", date('Y-m-d H:i:s'), $toName, $toEmail, $subject, $text);
@@ -623,6 +657,7 @@ function send_mail(string $toEmail, string $toName, string $subject, string $htm
     $fromName  = (string) (getenv('MAIL_FROM_NAME') ?: 'KPOP STORE');
     $key       = (string) getenv('MAIL_API_KEY');
 
+    // แต่ละบริการใช้ URL, header และรูปแบบข้อมูลต่างกัน
     if (getenv('MAIL_PROVIDER') === 'brevo') {
         $url     = 'https://api.brevo.com/v3/smtp/email';
         $headers = ['api-key: ' . $key];
@@ -645,6 +680,7 @@ function send_mail(string $toEmail, string $toName, string $subject, string $htm
         ];
     }
 
+    // ยิง HTTPS POST ไปที่บริการส่งอีเมล (รอไม่เกิน 10 วินาที)
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
@@ -658,6 +694,7 @@ function send_mail(string $toEmail, string $toName, string $subject, string $htm
     $err    = curl_error($ch);
     curl_close($ch);
 
+    // 2xx = บริการรับอีเมลไปแล้ว
     if ($status >= 200 && $status < 300) {
         return true;
     }
@@ -674,6 +711,7 @@ function send_mail(string $toEmail, string $toName, string $subject, string $htm
  */
 function app_base_url(): string
 {
+    // ลำดับความสำคัญ: APP_BASE_URL → โดเมนของ Vercel → (เฉพาะเครื่องพัฒนา) Host ของคำขอ
     if ($u = getenv('APP_BASE_URL')) {
         return rtrim($u, '/');
     }

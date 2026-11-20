@@ -28,6 +28,7 @@
 
     // หน้าตาของแจ้งเตือนแต่ละประเภท — type มาจาก push_notification ใน api/helpers.php
     // ปลายทางตอนกดอยู่ที่ openNotification (ห้ามเดาประเภทจากหัวข้อภาษาไทย)
+    // ประเภทแจ้งเตือน → ไอคอน / สี / ข้อความปุ่ม
     const NOTIFICATION_KINDS = {
         admin_password_request: { icon: 'fa-key', color: '#ff3399', action: 'ไปรีเซ็ตรหัสผ่าน' },
         admin_new_order: { icon: 'fa-cart-plus', color: '#0d6efd', action: 'ตรวจสลิป' },
@@ -38,6 +39,7 @@
     };
     const NOTIFICATION_DEFAULT = { icon: 'fa-bell', color: '#6c757d', action: '' };
 
+    // ใส่ CSS ของรายการแจ้งเตือนลงหน้า (ครั้งเดียวต่อหน้า)
     function ensureNotificationStyle() {
         if (document.getElementById('kpopNotificationStyle')) return;
         const style = document.createElement('style');
@@ -60,6 +62,7 @@
             .replace(/'/g, "\\'"));
     }
 
+    // เพิ่มฟังก์ชันด้านหน้าจอเข้าไปใน KpopStore ตัวเดียวกับ store.js ทุกหน้าจึงเรียก KpopStore.xxx() ได้ทั้งหมด
     Object.assign(global.KpopStore, {
         esc: esc,
         escArg: escArg,
@@ -98,6 +101,7 @@
             window.location.href = 'index.html';
         },
 
+        // เปิดหน้าต่างแก้ข้อมูลส่วนตัว (สร้าง modal ครั้งแรกที่เปิด แล้วใช้ซ้ำ)
         openProfileModal() {
             const currentUser = this.getCurrentUser();
             if (!currentUser) {
@@ -156,6 +160,7 @@
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
         },
+        // กดบันทึกในหน้าต่างแก้ข้อมูลส่วนตัว
         async handleProfileSubmit(e) {
             e.preventDefault();
             const name = document.getElementById('profileName').value;
@@ -225,6 +230,7 @@
             document.getElementById('forgotEmail').value = prefillEmail || '';
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         },
+        // กดส่งในหน้าต่าง "ลืมรหัสผ่าน" — ขอลิงก์รีเซ็ตทางอีเมล
         async handleForgotPasswordSubmit(e) {
             e.preventDefault();
             const btn = document.getElementById('forgotSubmitBtn');
@@ -285,6 +291,7 @@
             document.getElementById('changePasswordForm').reset();
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         },
+        // กดบันทึกในหน้าต่างเปลี่ยนรหัสผ่าน (ตรวจรหัสใหม่ 2 ช่องให้ตรงกันก่อนส่ง)
         async handleChangePasswordSubmit(e) {
             e.preventDefault();
             const current = document.getElementById('cpCurrent').value;
@@ -323,6 +330,7 @@
             }
         },
 
+        // เปิดหน้าต่าง "วิธีการสั่งซื้อ"
         openHowToOrderModal() {
             let modalEl = document.getElementById('globalHowToOrderModal');
             if (!modalEl) {
@@ -600,6 +608,7 @@
             el.outerHTML = this.notificationBellHtml(user, el.dataset.variant || 'store');
         },
 
+        // กด "อ่านทั้งหมด" ในกระดิ่ง แล้ววาดกระดิ่งใหม่
         async markAllNotificationsRead() {
             const user = this.getCurrentUser();
             if (!user) return;
@@ -615,6 +624,7 @@
             bar.insertAdjacentHTML('afterbegin', this.notificationBellHtml(user, 'admin'));
         },
 
+        // HTML รายการแจ้งเตือน 10 ใบล่าสุด (ใบที่ยังไม่อ่านมีจุดชมพู)
         renderNotificationListHtml(userEmail) {
             const notis = this.getNotifications(userEmail);
             if (!notis || notis.length === 0) {

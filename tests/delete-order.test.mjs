@@ -1,3 +1,6 @@
+// ทดสอบการลบออเดอร์: หายจากระบบจริง · คืนโควตา · ยอดขาย/ใบสรุปรอบอัปเดตตาม · บันทึกไม่ลงต้องบอกว่าล้มเหลว
+// รันเดี่ยว: node tests/delete-order.test.mjs · รันทั้งหมด: npm test
+//
 import { loadStore, eq, report } from './harness.mjs';
 
 console.log('\n[1] ลบออเดอร์แล้วหายจากระบบจริง');

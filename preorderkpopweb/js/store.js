@@ -1,7 +1,12 @@
 /**
- * KPOP STORE - Centralized Data Store & Utilities (localStorage)
+ * KPOP STORE - ชั้นข้อมูลกลางของหน้าเว็บ (data layer)
+ *
+ * ทุกหน้าใช้ไฟล์นี้อ่าน/เขียนข้อมูล: ในเบราว์เซอร์คุยกับ PHP API · ในชุดทดสอบ (Node) ใช้ localStorage จำลอง
+ * ไฟล์นี้ไม่แตะหน้าจอ (DOM) เลย — การวาดหน้าจออยู่ใน ui.js และ js/pages/
  */
+// ห่อทั้งไฟล์ไว้ในฟังก์ชัน ตัวแปรข้างในจะไม่รั่วออกไปเป็นตัวแปร global (ยกเว้น KpopStore ที่ส่งออกท้ายไฟล์)
 (function (global) {
+    // ชื่อกล่องข้อมูลแต่ละชนิด (ใช้เป็นคีย์ของ CACHE และ localStorage)
     const STORAGE_KEYS = {
         PRODUCTS: 'kpop_products',
         USERS: 'kpop_users',
@@ -18,17 +23,20 @@
     // รูปแบบวันเวลาทั้งระบบใช้ 'YYYY-MM-DD HH:mm' เพื่อให้เทียบเป็นสตริงได้ตรง ๆ
     function pad2(n) { return String(n).padStart(2, '0'); }
 
+    // วันเวลาเป็น 'YYYY-MM-DD HH:mm' (ไม่ส่ง date = ตอนนี้)
     function formatStamp(date) {
         const d = date || new Date();
         return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
             ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
     }
 
+    // วันที่เป็น 'YYYY-MM-DD' (ไม่ส่ง date = วันนี้)
     function formatDay(date) {
         const d = date || new Date();
         return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
     }
 
+    // วันที่ห่างจากวันนี้ n วัน เช่น dayOffset(-3) = 3 วันก่อน (ใช้สร้างข้อมูลตัวอย่าง)
     function dayOffset(days) {
         const d = new Date();
         d.setDate(d.getDate() + days);
@@ -400,11 +408,13 @@
      *                              ทำให้ตรรกะธุรกิจถูกทดสอบด้วยโค้ดจริงชุดเดิมได้
      * ============================================================== */
 
+    // true = รันในเบราว์เซอร์ที่มี api.js · false = รันในชุดทดสอบ (ใช้ localStorage แทน)
     const HAS_API = typeof global.KpopApi !== 'undefined' && typeof global.fetch === 'function';
 
     // ข้อมูลทั้งหมดของหน้านี้ เก็บตาม STORAGE_KEYS เดิม
     const CACHE = Object.create(null);
 
+    // อ่านข้อมูลกล่อง key (ไม่มี = คืนค่าตั้งต้น)
     function getJSON(key, defaultVal) {
         if (HAS_API) {
             return (key in CACHE) ? CACHE[key] : defaultVal;
@@ -482,13 +492,14 @@
 
     // สถานะการโหลดข้อมูลรอบแรกของหน้า ให้ ui.js เอาไปแสดงแถบแจ้ง (store.js ไม่วาดหน้าจอเอง)
     //
-    // เซิร์ฟเวอร์บน Railway หลับเมื่อไม่มีคนใช้และตื่นช้าราว 10–20 วินาที ช่วงนั้น bootstrap.php
+    // เซิร์ฟเวอร์บน Vercel ปิดตัวเมื่อไม่มีคนใช้ (cold start) ครั้งแรกที่ตื่นอาจตอบช้า/ล้มเหลว ช่วงนั้น bootstrap.php
     // ตอบ "ระบบขัดข้องชั่วคราว" — เดิมหน้าเว็บวาดต่อด้วยข้อมูลว่างแบบเงียบ ๆ
     // ลูกค้าจึงเห็น "ยังไม่มีสินค้า" เหมือนข้อมูลหาย จึงลองซ้ำให้ครอบคลุมเวลาที่ DB ตื่น
     const LOAD_RETRY_DELAYS_MS = [2000, 4000, 6000, 8000];
     let loadStatus = { state: 'loading', message: '' };
     const loadListeners = [];
 
+    // เปลี่ยนสถานะการโหลด แล้วแจ้งทุกฟังก์ชันที่สมัครรับไว้ (ui.js ใช้วาดแถบเชื่อมต่อ)
     function setLoadStatus(state, message) {
         loadStatus = { state: state, message: message || '' };
         loadListeners.forEach(function (fn) {
@@ -496,6 +507,7 @@
         });
     }
 
+    // โหลดข้อมูลรอบแรก ถ้าพลาดลองใหม่ตามช่วงเวลาใน LOAD_RETRY_DELAYS_MS (รวมราว 20 วินาที)
     async function hydrateWithRetry() {
         let res = await hydrate();
         for (let i = 0; !res.success && i < LOAD_RETRY_DELAYS_MS.length; i++) {
@@ -536,6 +548,7 @@
 
     // ตัวนับสำหรับสร้าง id แจ้งเตือนที่ไม่ซ้ำกันแม้จะสร้างหลายใบในมิลลิวินาทีเดียว
     let notificationSeq = 0;
+    // id แจ้งเตือนในโหมด localStorage: n-<เวลา>-<ลำดับ>
     function nextNotificationId() {
         notificationSeq += 1;
         return 'n-' + Date.now() + '-' + notificationSeq;
@@ -629,6 +642,7 @@
         getProducts() {
             return getJSON(STORAGE_KEYS.PRODUCTS, DEFAULT_PRODUCTS);
         },
+        // หาสินค้าจาก id (ไม่เจอ = undefined)
         getProductById(id) {
             return this.getProducts().find(p => p.id === id);
         },
@@ -731,6 +745,7 @@
                 this.getStatusCode(orderOrCode) === 'SHIPPING';
         },
 
+        // ออเดอร์ที่ยังดำเนินการอยู่และมีสินค้านี้ (ใช้กันไม่ให้ลบสินค้าที่ยังมีคนรอของ)
         getActiveOrdersForProduct(productId) {
             return this.getOrders().filter(o =>
                 this.isOrderInProgress(o) &&
@@ -820,6 +835,7 @@
         getRounds() {
             return getJSON(STORAGE_KEYS.ROUNDS, DEFAULT_ROUNDS);
         },
+        // หารอบพรีออเดอร์จาก id
         getRoundById(id) {
             return this.getRounds().find(r => r.id === id) || null;
         },
@@ -843,6 +859,7 @@
             }
             return { success: true, rounds: rounds, message: '' };
         },
+        // ลบรอบ (เซิร์ฟเวอร์ปฏิเสธถ้ายังมีสินค้าผูกอยู่)
         async deleteRound(id) {
             if (HAS_API) {
                 const res = await apiWrite('rounds.php?action=delete', { id: id });
@@ -868,6 +885,7 @@
             if (round.closeAt && today > round.closeAt) return 'closed';
             return 'open';
         },
+        // รอบนี้เปิดรับคำสั่งซื้ออยู่ไหม
         isRoundOpen(roundOrId) {
             return this.getRoundState(roundOrId) === 'open';
         },
@@ -899,6 +917,7 @@
                 items: this._sortSummaryRows(Object.keys(byProduct).map(k => byProduct[k]))
             };
         },
+        // เรียงแถวใบสรุปยอด: สินค้าที่สั่งรวมมากสุดก่อน · ไซซ์ของสินค้าเดียวกันอยู่ติดกันตามลำดับที่แอดมินตั้ง
         _sortSummaryRows(rows) {
             const totals = {};
             rows.forEach(r => { totals[r.id] = (totals[r.id] || 0) + r.qty; });
@@ -982,6 +1001,7 @@
             const converted = Math.ceil(krw * rateValue);
             return { krw, rate: rateValue, converted, serviceFee, total: converted + serviceFee, legacy: false };
         },
+        // ราคาขายเป็นบาทต่อชิ้น (รวมค่าบริการแล้ว)
         getPriceTHB(productOrId, rate) {
             const breakdown = this.getPriceBreakdown(productOrId, rate);
             return breakdown ? breakdown.total : 0;
@@ -991,6 +1011,7 @@
         getUsers() {
             return getJSON(STORAGE_KEYS.USERS, DEFAULT_USERS);
         },
+        // หาผู้ใช้จากอีเมล (ไม่สนตัวพิมพ์)
         getUserByEmail(email) {
             return this.getUsers().find(u => u.email.toLowerCase() === (email || '').toLowerCase());
         },
@@ -1039,6 +1060,7 @@
 
             return { success: true, users: users, message: '' };
         },
+        // ลบบัญชีผู้ใช้ (ถ้าลบบัญชีตัวเอง จะถูกออกจากระบบด้วย)
         async deleteUser(userId) {
             if (HAS_API) {
                 const res = await apiWrite('users.php?action=delete', { id: userId });
@@ -1149,6 +1171,7 @@
             }
             return setJSON(STORAGE_KEYS.CURRENT_USER, null);
         },
+        // แก้ชื่อ เบอร์ ที่อยู่ ของผู้ที่ล็อกอินอยู่
         async updateProfile(updatedData) {
             let currentUser = this.getCurrentUser();
             if (!currentUser) return { success: false, message: 'กรุณาเข้าสู่ระบบก่อนค่ะ' };
@@ -1192,6 +1215,7 @@
             return { success: !!res.success, message: res.message || '', tempPassword: res.tempPassword };
         },
 
+        // เปลี่ยนรหัสผ่าน (เซิร์ฟเวอร์ตรวจรหัสเดิมก่อน)
         async changePassword(currentPassword, newPassword) {
             if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
             const res = await global.KpopApi.post('auth.php?action=change-password', { currentPassword, newPassword });
@@ -1204,6 +1228,7 @@
             const res = await global.KpopApi.post('auth.php?action=reset-token-status', { token });
             return { success: !!(res && res.success), message: (res && res.message) || '', code: res && res.code, email: res && res.email };
         },
+        // ตั้งรหัสใหม่จากลิงก์ในอีเมล — ถ้าลิงก์ใช้ไม่ได้ จะคืน code: 'invalid_link'
         async resetPasswordWithToken(token, newPassword) {
             if (!HAS_API) return { success: false, message: PASSWORD_NEEDS_SERVER_MESSAGE };
             const res = await global.KpopApi.post('auth.php?action=reset-with-token', { token, newPassword });
@@ -1228,6 +1253,7 @@
             const p = typeof productOrId === 'string' ? this.getProductById(productOrId) : productOrId;
             return p && Array.isArray(p.sizes) ? p.sizes : [];
         },
+        // ไซซ์นี้ใช้กับสินค้านี้ได้ไหม (สินค้าไม่มีไซซ์ ต้องเป็นค่าว่าง)
         isValidSize(productOrId, size) {
             const sizes = this.getProductSizes(productOrId);
             const s = String(size || '');
@@ -1250,6 +1276,7 @@
             const key = String(orderOrCode || '');
             return ORDER_STATUS[key] || ORDER_STATUS[guessStatusCode(key)];
         },
+        // รับได้ทั้งออเดอร์และรหัส → คืนรหัสสถานะ (ข้อมูลเก่าที่มีแต่ข้อความไทย จะเดารหัสให้)
         getStatusCode(orderOrCode) {
             if (orderOrCode && typeof orderOrCode === 'object') {
                 return ORDER_STATUS[orderOrCode.statusCode] ? orderOrCode.statusCode : guessStatusCode(orderOrCode.status);
@@ -1257,6 +1284,7 @@
             const key = String(orderOrCode || '');
             return ORDER_STATUS[key] ? key : guessStatusCode(key);
         },
+        // ฟังก์ชันชุดนี้อ่านค่าจากตาราง ORDER_STATUS: ข้อความไทย / กลุ่ม / นับโควตา / นับยอดขาย / ยกเลิกได้ / ส่งสลิปใหม่ได้
         getStatusText(orderOrCode) {
             return this.getStatusMeta(orderOrCode).text;
         },
@@ -1293,6 +1321,7 @@
         getOrders() {
             return getJSON(STORAGE_KEYS.ORDERS, DEFAULT_ORDERS);
         },
+        // หาออเดอร์จากเลขที่
         getOrderById(id) {
             return this.getOrders().find(o => o.id === id);
         },
@@ -1322,6 +1351,7 @@
 
             return { success: true, orders: remaining, message: '' };
         },
+        // สร้างคำสั่งซื้อ (ลูกค้าแนบสลิปแล้ว) — จุดล็อกเรทและราคา
         async addOrder(orderData) {
             if (HAS_API) {
                 // สลิปที่เพิ่งย่อมาเป็น data URL ต้องกลายเป็นไฟล์จริงก่อนบันทึกออเดอร์
@@ -1448,6 +1478,7 @@
 
             return { success: true, order: newOrder, message: '' };
         },
+        // ลูกค้ายกเลิกคำสั่งซื้อของตัวเอง (ได้เฉพาะสถานะที่ canCancel)
         async cancelOrderCustomer(orderId, cancelReason = 'ยกเลิกโดยลูกค้า') {
             if (HAS_API) {
                 const res = await apiWrite('orders.php?action=cancel',
@@ -1640,6 +1671,7 @@
             }
             return this.updateOrderStatus(orderId, 'PAID_WAIT_ROUND', undefined, adminNotes);
         },
+        // แอดมินปฏิเสธสลิป → สถานะ SLIP_REJECTED (ลูกค้าส่งสลิปใหม่ได้)
         async rejectPayment(orderId, reason = 'สลิปไม่ถูกต้อง หรือยอดเงินไม่ตรงกับสัญญาสั่งซื้อ') {
             if (HAS_API) {
                 const res = await apiWrite('orders.php?action=reject',
@@ -1681,6 +1713,7 @@
             return order;
         },
 
+        // แอดมินบันทึกว่าโอนเงินคืนลูกค้าแล้ว → สถานะ REFUNDED
         async markRefunded(orderId, note = '') {
             if (HAS_API) {
                 const res = await apiWrite('orders.php?action=refunded',
@@ -1797,9 +1830,11 @@
             const cart = getJSON(STORAGE_KEYS.CART, []);
             return Array.isArray(cart) ? cart : [];
         },
+        // จำนวนชิ้นรวมในตะกร้า (โชว์บนไอคอนตะกร้า)
         getCartCount() {
             return this.getCart().reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
         },
+        // บรรทัดในตะกร้านี้คือสินค้า+ไซซ์ที่ระบุไหม
         _isCartLine(entry, productId, size) {
             return String(entry.productId) === String(productId) && String(entry.size || '') === String(size || '');
         },
@@ -1809,6 +1844,7 @@
                 .filter(c => String(c.productId) === String(productId) && String(c.size || '') !== String(size || ''))
                 .reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
         },
+        // ใส่สินค้าลงตะกร้า — คืน { success, qty (จำนวนจริงหลังปรับตามโควตา), adjusted }
         async addToCart(productId, qty, size) {
             size = String(size || '');
             if (HAS_API) {
@@ -1859,6 +1895,7 @@
 
             return { success: true, qty: finalQty, adjusted: finalQty !== requested };
         },
+        // แก้จำนวนของบรรทัดในตะกร้า (ปรับลงให้ไม่เกินโควตาที่เหลือ)
         async updateCartQty(productId, qty, size) {
             size = String(size || '');
             if (HAS_API) {
@@ -1892,6 +1929,7 @@
 
             return { success: true, qty: finalQty, adjusted: finalQty !== requested };
         },
+        // ลบบรรทัดสินค้า+ไซซ์ออกจากตะกร้า
         async removeFromCart(productId, size) {
             size = String(size || '');
             if (HAS_API) {
@@ -1986,9 +2024,11 @@
             if (!userEmail) return notifications;
             return notifications.filter(n => n.userEmail.toLowerCase() === userEmail.toLowerCase());
         },
+        // จำนวนแจ้งเตือนที่ยังไม่อ่าน (ตัวเลขบนกระดิ่ง)
         getUnreadNotificationCount(userEmail) {
             return this.getNotifications(userEmail).filter(n => !n.read).length;
         },
+        // แอดมินส่งแจ้งเตือน (userEmail = 'ALL' คือส่งถึงทุกคน)
         async addNotification(noti) {
             if (HAS_API) {
                 // ส่ง 'ALL' ไปครั้งเดียวแล้วให้ฝั่งเซิร์ฟเวอร์ insert รวดเดียวใน transaction
@@ -2028,6 +2068,7 @@
             setJSON(STORAGE_KEYS.NOTIFICATIONS, notifications);
             if (HAS_API) await global.KpopApi.post('notifications.php?action=read-one', { id: id });
         },
+        // ทำเครื่องหมายว่าอ่านแจ้งเตือนทั้งหมดแล้ว
         async markNotificationsAsRead(userEmail) {
             if (HAS_API) {
                 // ฝั่งเซิร์ฟเวอร์ใช้อีเมลของ session เอง ไม่รับค่าที่ส่งมา
@@ -2071,6 +2112,7 @@
                 }
             }
 
+            // รอข้อมูลโหลดเสร็จก่อน แล้วค่อยรันโค้ดของหน้า (ถ้าโค้ดหน้าพัง ให้แค่บันทึก error ไม่ทำให้หน้าค้าง)
             const run = () => hydratePromise.then(() => {
                 try {
                     return fn();
@@ -2105,6 +2147,7 @@
     };
 
     // Attach to window
+    // ส่งออกเป็นตัวแปร global ให้ทุกหน้าเรียก KpopStore.xxx() ได้
     global.KpopStore = KpopStore;
 
 

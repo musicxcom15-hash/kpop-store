@@ -14,6 +14,7 @@
  * ไม่ย้าย: rates (เลิกใช้แล้ว), password_resets (ลิงก์หมดอายุใน 30 นาทีอยู่แล้ว)
  */
 
+// อ่านที่อยู่ MySQL ต้นทางจาก MYSQL_URL แล้วต่อด้วย PDO (utf8mb4 ให้ภาษาไทยถูกต้อง)
 $url = parse_url((string) getenv('MYSQL_URL'));
 if (!$url || !isset($url['host'], $url['path'])) {
     fwrite(STDERR, "ต้องตั้ง MYSQL_URL=mysql://user:pass@host:port/dbname\n");
@@ -68,10 +69,12 @@ function lit($v): string
     return "'" . str_replace("'", "''", $v) . "'";
 }
 
+// ตารางที่มีจริงในต้นทาง (dump รุ่นเก่าอาจไม่มีบางตาราง เช่น cart_items)
 $have = $src->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 $counts = [];
 $out = [];
 
+// อ่านทีละตาราง แล้วสร้างคำสั่ง INSERT ครั้งละ 200 แถว
 foreach (TABLES as $table => $columns) {
     if (!in_array($table, $have, true)) {
         $counts[$table] = 0;
@@ -88,6 +91,7 @@ foreach (TABLES as $table => $columns) {
         $values = array_map(function (array $row) use ($columns) {
             $cells = [];
             foreach ($columns as $col => $fallback) {
+                // ต้นทางไม่มีคอลัมน์นี้ (dump เก่า) → ใช้ค่าแทนที่กำหนดไว้ใน TABLES
                 $cells[] = lit(array_key_exists($col, $row) ? $row[$col] : $fallback);
             }
             return '(' . implode(', ', $cells) . ')';
@@ -96,6 +100,7 @@ foreach (TABLES as $table => $columns) {
     }
 }
 
+// จำนวนแถวต่อตาราง ใช้ทั้งในหัวไฟล์และในขั้นตรวจท้ายไฟล์
 $summary = implode(', ', array_map(fn($t, $n) => "$t=$n", array_keys($counts), $counts));
 
 echo "-- =====================================================================\n";
@@ -104,6 +109,7 @@ echo '-- สร้างเมื่อ ' . date('Y-m-d H:i:s') . " · $summary\
 echo "-- ไฟล์นี้มีข้อมูลลูกค้า — ห้าม commit ขึ้น git / ห้ามส่งต่อ\n";
 echo "-- ใช้: รัน database/schema.sql ก่อน แล้วค่อยรันไฟล์นี้ (Supabase SQL Editor ได้ทั้งไฟล์)\n";
 echo "-- =====================================================================\n\n";
+// ทั้งไฟล์อยู่ใน transaction เดียว — พลาดตรงไหนยกเลิกทั้งหมด
 echo "BEGIN;\n\n";
 echo "-- กันรันซ้ำทับข้อมูลที่มีอยู่แล้ว\n";
 echo "DO \$\$ BEGIN\n";
@@ -114,12 +120,14 @@ echo "END \$\$;\n";
 echo implode("\n", $out), "\n\n";
 
 echo "-- ให้แถวใหม่ได้ id ต่อจากของเดิม\n";
+// เลื่อนตัวนับ id อัตโนมัติให้ต่อจาก id สูงสุดที่นำเข้า
 foreach (IDENTITY_TABLES as $t) {
     echo "SELECT setval(pg_get_serial_sequence('$t', 'id'), COALESCE((SELECT MAX(id) FROM $t), 0) + 1, false);\n";
 }
 
 echo "\n-- ตรวจจำนวนแถวให้ตรงกับต้นทาง ไม่ตรง = ยกเลิกทั้งหมด\n";
 echo "DO \$\$ BEGIN\n";
+// ตรวจว่าจำนวนแถวในปลายทางเท่ากับต้นทางทุกตาราง ไม่เท่า = RAISE EXCEPTION ยกเลิกทั้งหมด
 foreach ($counts as $t => $n) {
     echo "    IF (SELECT COUNT(*) FROM $t) <> $n THEN RAISE EXCEPTION '$t: จำนวนแถวไม่ตรง (ต้นทาง $n)'; END IF;\n";
 }

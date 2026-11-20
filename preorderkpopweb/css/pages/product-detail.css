@@ -1,3 +1,4 @@
+/* ปุ่มหลักสีเข้มทรงแคปซูล (hover แล้วเป็นสีชมพูประจำร้าน) */
 .btn-dark-custom {
     background-color: #1a1a24;
     color: #ffffff !important;
@@ -25,6 +26,7 @@
     transform: translateY(0);
 }
 
+/* ปุ่มรองแบบขอบเข้ม พื้นโปร่ง */
 .btn-outline-dark-custom {
     border: 1.5px solid #1a1a24;
     color: #1a1a24 !important;
@@ -51,6 +53,7 @@
     transform: translateY(0);
 }
 
+/* ตัวเลขจำนวนสินค้าบนไอคอนตะกร้าใน navbar */
 .cart-badge {
     background-color: #ff3399;
     color: white;
@@ -62,18 +65,21 @@
     right: -8px;
 }
 
+/* กรอบรูปสินค้าขนาดใหญ่ */
 .product-image-container {
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
+/* รูปสินค้าหลัก */
 .product-main-img {
     width: 100%;
     object-fit: cover;
     aspect-ratio: 1 / 1;
 }
 
+/* ป้ายชื่อศิลปิน · หมวดหมู่ เหนือชื่อสินค้า */
 .artist-badge {
     background-color: #f0f0f0;
     color: #555;
@@ -85,12 +91,14 @@
     margin-bottom: 15px;
 }
 
+/* ราคาขายตัวใหญ่ */
 .price-large {
     font-size: 2rem;
     font-weight: 600;
     color: #ff3399;
 }
 
+/* กล่องข้อมูล (ราคารวม · รอบพรีออเดอร์ · เรท) */
 .info-box {
     background-color: white;
     border: 1px solid #eee;
@@ -99,6 +107,7 @@
     margin-bottom: 20px;
 }
 
+/* ช่องกรอกจำนวน */
 .qty-input {
     width: 80px;
     text-align: center;

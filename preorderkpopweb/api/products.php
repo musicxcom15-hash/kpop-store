@@ -9,6 +9,7 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ทุกคำสั่งในไฟล์นี้เป็นของแอดมินเท่านั้น
 require_admin();
 $in = body();
 
@@ -18,9 +19,11 @@ function all_products(): array
     return array_map('map_product', db()->query('SELECT * FROM products ORDER BY id')->fetchAll());
 }
 
+// เลือกงานตาม ?action=
 switch (action()) {
 
     /* ---------------------------------------------------------- */
+    // เพิ่มหรือแก้สินค้า: ตรวจข้อมูลทุกช่องก่อนบันทึก
     case 'save': {
         $id      = trim((string) ($in['id'] ?? ''));
         $artist  = trim((string) ($in['artist'] ?? ''));
@@ -34,6 +37,7 @@ switch (action()) {
             fail('กรุณาเลือกรอบพรีออเดอร์ที่มีอยู่จริงค่ะ', 200, ['products' => all_products()]);
         }
 
+        // ป้ายสถานะ: รับแค่ PRE-ORDER / OUT OF STOCK (ค่าอื่นกลายเป็น PRE-ORDER)
         $status = strtoupper(trim((string) ($in['status'] ?? 'PRE-ORDER')));
         if (!in_array($status, ['PRE-ORDER', 'OUT OF STOCK'], true)) {
             $status = 'PRE-ORDER';
@@ -71,6 +75,7 @@ switch (action()) {
         $quotaRaw = $in['quotaPerRound'] ?? null;
         $quota = ($quotaRaw === null || $quotaRaw === '') ? null : max(0, (int) $quotaRaw);
 
+        // ราคาวอนเป็นจำนวนเต็ม · ค่าบริการเป็นบาท · ไม่ให้ติดลบ
         $priceKRW   = max(0, (int) ($in['priceKRW'] ?? 0));
         $serviceFee = max(0, (float) ($in['serviceFee'] ?? 0));
         $priceRaw   = $in['price'] ?? null;
@@ -81,9 +86,11 @@ switch (action()) {
         $desc        = (string) ($in['desc'] ?? '');
 
         if ($id === '') {
+            // สินค้าใหม่: สร้าง id จากเวลา + ตัวสุ่ม
             $id = 'prod-' . time() . '-' . bin2hex(random_bytes(3));
         }
 
+        // มีสินค้านี้อยู่แล้วไหม → ตัดสินว่าจะ UPDATE หรือ INSERT
         $st = db()->prepare('SELECT id FROM products WHERE id = ?');
         $st->execute([$id]);
         $exists = (bool) $st->fetch();
@@ -111,6 +118,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // ลบสินค้า — ห้ามลบถ้ายังมีออเดอร์ที่ค้างอยู่
     case 'delete': {
         $id = (string) ($in['id'] ?? '');
 
@@ -143,6 +151,7 @@ switch (action()) {
             );
         }
 
+        // ลบได้ (สินค้าในตะกร้าของทุกคนถูกลบตามด้วย foreign key)
         $st = db()->prepare('DELETE FROM products WHERE id = ?');
         $st->execute([$id]);
 
@@ -150,6 +159,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // action ที่ไม่รู้จัก
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

@@ -1,3 +1,6 @@
+// หน้าสมัครสมาชิก (register.html)
+//
+// กดสมัคร: ตรวจรหัสผ่าน 2 ช่องให้ตรงกันและยาวพอ → สร้างบัญชี → พากลับหน้าที่ค้างไว้
 async function handleRegister(e) {
     e.preventDefault();
     const pass = document.getElementById('regPassword').value;

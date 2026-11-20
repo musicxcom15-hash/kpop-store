@@ -1,3 +1,6 @@
+// หน้ารายละเอียดสินค้า (product-detail.html?id=...) — ราคา รอบ นับถอยหลัง ไซซ์ จำนวน ปุ่มใส่ตะกร้า/สั่งซื้อทันที
+//
+// อ่าน id สินค้าจาก URL
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get('id');
 
@@ -65,6 +68,7 @@ const ROUND_STATE_TEXT = {
     shipped: ['success', 'ส่งครบแล้ว']
 };
 
+// แสดงข้อมูลรอบ (สถานะ ช่วงเปิดรับ กำหนดส่ง) และคำอธิบายการคิดราคา
 function renderRoundInfo(breakdown) {
     const [badge, label] = ROUND_STATE_TEXT[roundState] || ROUND_STATE_TEXT.closed;
     const stateEl = document.getElementById('display-round-state');
@@ -162,12 +166,14 @@ function renderSizePicker() {
     updateSizeButtons();
 }
 
+// กดปุ่มไซซ์: จำไซซ์ที่เลือก แล้วไฮไลต์ปุ่มนั้น
 function selectSize(size) {
     selectedSize = size;
     document.getElementById('sizePicker').classList.remove('needs-size');
     updateSizeButtons();
 }
 
+// ไฮไลต์ปุ่มไซซ์ที่เลือก และแสดงชื่อไซซ์ข้างหัวข้อ
 function updateSizeButtons() {
     document.querySelectorAll('#sizeOptions .size-option').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.size === selectedSize);
@@ -185,6 +191,7 @@ function ensureSizeChosen() {
     return false;
 }
 
+// กดเพิ่มลงตะกร้า: ต้องเลือกไซซ์ (ถ้ามี) และล็อกอินก่อน
 async function addCurrentToCart() {
     const input = document.getElementById('qtyInput');
     const qty = KpopStore.normalizeQty(input ? input.value : 1, quotaLeft);
@@ -288,6 +295,7 @@ function applyQtyLimit() {
     return wasAdjusted;
 }
 
+// กดสั่งซื้อทันที: ตรวจไซซ์ ล็อกอิน จำนวน แล้วไปหน้าชำระเงินพร้อมสินค้าชิ้นนี้
 function goToCheckout() {
     // ต้องอ่านค่าดิบไว้ก่อน applyQtyLimit() เพราะตัวนั้นเขียนทับค่าในช่องกรอก
     const input = document.getElementById('qtyInput');

@@ -1,3 +1,6 @@
+// ทดสอบรูปสินค้าและพื้นที่เก็บข้อมูล (ย่อรูป · นับพื้นที่ · บันทึกไม่ลงต้องแจ้ง)
+// รันเดี่ยว: node tests/product-image.test.mjs · รันทั้งหมด: npm test
+//
 import { loadStore, eq, report } from './harness.mjs';
 
 console.log('\n[1] compressSlipImage ยังมีอยู่และลายเซ็นเดิมไม่เปลี่ยน');

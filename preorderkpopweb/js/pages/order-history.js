@@ -1,3 +1,4 @@
+// หน้าประวัติคำสั่งซื้อ (order-history.html) — ข้อมูลลูกค้า รายการคำสั่งซื้อ รายละเอียด ยกเลิก และส่งสลิปใหม่
 KpopStore.ready(function () {
     renderCustomerProfile();
     renderCustomerOrders();
@@ -19,6 +20,7 @@ const FALLBACK_IMAGE = 'images/mapsoul7.jpg';
 const esc = KpopStore.esc;
 const escArg = KpopStore.escArg;
 
+// ตัวเลข → ข้อความเงินบาท
 function formatBaht(value) {
     const num = Number(value);
     return '฿' + (isFinite(num) ? num : 0).toLocaleString('th-TH');
@@ -32,19 +34,23 @@ function getStatusGroup(order) {
     return KpopStore.getStatusGroup(order);
 }
 
+// ลูกค้ายกเลิกออเดอร์นี้เองได้ไหม
 function canCancelOrder(order) {
     return KpopStore.canCancelOrder(order);
 }
 
+// ลูกค้าส่งสลิปใหม่ได้ไหม
 function canReuploadSlip(order) {
     return KpopStore.canReuploadSlip(order);
 }
 
+// รูปของรายการสินค้า: ใช้รูปปัจจุบันของสินค้าถ้ายังมี ไม่งั้นใช้รูปที่บันทึกไว้ตอนสั่ง
 function resolveItemImage(item, products) {
     const matched = (products || []).find(p => String(p.id) === String(item.id) || p.title === item.title);
     return (matched && matched.image) ? matched.image : (item.image || FALLBACK_IMAGE);
 }
 
+// ยอดสินค้า ค่าส่ง ยอดรวม (ออเดอร์เก่าที่ไม่มีตัวเลขเก็บไว้ คำนวณจากรายการให้)
 function calcOrderAmounts(o) {
     const items = Array.isArray(o.items) ? o.items : [];
     const subtotal = typeof o.subtotal === 'number'
@@ -55,6 +61,7 @@ function calcOrderAmounts(o) {
     return { subtotal, shippingFee, total };
 }
 
+// วาดข้อมูลส่วนตัวและรายการคำสั่งซื้อใหม่ (หลังยกเลิก/ส่งสลิปใหม่)
 function refreshOrderHistoryPage() {
     renderCustomerProfile();
     renderCustomerOrders();
@@ -104,8 +111,10 @@ function renderCustomerProfile() {
 
 /* ---------- Order list ---------- */
 
+// แท็บกรองที่เลือกอยู่ (all / pending / processing / shipped / cancelled ...)
 let currentOrderFilter = 'all';
 
+// กดแท็บกรอง: เปลี่ยนปุ่มที่เลือก แล้ววาดรายการใหม่
 function setOrderFilter(filter, btnEl) {
     currentOrderFilter = filter;
     const buttons = document.querySelectorAll('#orderFilterTabs .nav-link');
@@ -114,6 +123,7 @@ function setOrderFilter(filter, btnEl) {
     renderCustomerOrders();
 }
 
+// วาดการ์ดคำสั่งซื้อของลูกค้า (ใหม่สุดก่อน) ตามแท็บกรอง
 function renderCustomerOrders() {
     const container = document.getElementById('customerOrdersContainer');
     if (!container) return;
@@ -251,6 +261,7 @@ function renderRoundAndRateLine(o) {
             </div>`;
 }
 
+// คัดลอกเลขพัสดุลงคลิปบอร์ด
 function copyTrackingNumber(trackingNo) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(trackingNo).then(() => {
@@ -264,6 +275,7 @@ function copyTrackingNumber(trackingNo) {
     }
 }
 
+// ลูกค้ากดยกเลิก: ตรวจว่ายกเลิกได้ → ยืนยัน → ถามเหตุผล → บันทึก
 async function promptCustomerCancelOrder(orderId) {
     const order = KpopStore.getOrderById(orderId);
     if (!order) {
@@ -289,6 +301,7 @@ async function promptCustomerCancelOrder(orderId) {
     }
 }
 
+// ปิดหน้าต่างรายละเอียดคำสั่งซื้อ
 function hideDetailModal() {
     const modalEl = document.getElementById('customerOrderDetailModal');
     const modal = bootstrap.Modal.getInstance(modalEl);
@@ -446,6 +459,7 @@ function openSlipLightboxById(imgId) {
     if (img) openSlipLightbox(img.src);
 }
 
+// เปิดรูปสลิป/รูปสินค้าแบบเต็มจอ (สร้างหน้าต่างครั้งแรกแล้วใช้ซ้ำ)
 function openSlipLightbox(imgSrc) {
     if (!imgSrc) return;
     let modalEl = document.getElementById('slipLightboxModal');

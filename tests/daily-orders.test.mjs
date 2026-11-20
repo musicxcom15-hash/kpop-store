@@ -1,3 +1,6 @@
+// ทดสอบรายงานยอดสั่งรายวันของสินค้า (ไม่นับออเดอร์ที่ยกเลิก · สินค้าไม่มีออเดอร์ได้อาร์เรย์ว่าง)
+// รันเดี่ยว: node tests/daily-orders.test.mjs · รันทั้งหมด: npm test
+//
 import { loadStore, eq, report } from './harness.mjs';
 
 const mk = (id, day, qty, statusCode) => ({

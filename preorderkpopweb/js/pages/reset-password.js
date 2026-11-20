@@ -12,6 +12,7 @@ KpopStore.ready(async function () {
     document.getElementById('resetPasswordForm').classList.remove('d-none');
 });
 
+// ลิงก์ใช้ไม่ได้ (หมดอายุ/ใช้แล้ว/ผิด): ซ่อนฟอร์ม แสดงข้อความและทางขอลิงก์ใหม่
 function showInvalidLink(message) {
     document.getElementById('resetSubtitle').innerText = '';
     document.getElementById('resetInvalidText').innerText = message;
@@ -19,6 +20,7 @@ function showInvalidLink(message) {
     document.getElementById('resetPasswordForm').classList.add('d-none');
 }
 
+// กดตั้งรหัสใหม่: ตรวจ 2 ช่องให้ตรงกัน → ส่งพร้อม token → สำเร็จแล้วพาไปหน้าเข้าสู่ระบบ
 async function handleResetSubmit(e) {
     e.preventDefault();
     const next = document.getElementById('resetNew').value;

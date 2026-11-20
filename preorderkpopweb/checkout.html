@@ -2,6 +2,7 @@
 <html lang="th">
 
 <head>
+    <!-- ชำระเงิน + แนบสลิป (js/pages/checkout.js) — มาจากตะกร้า (?round=) หรือสั่งซื้อทันที (?id=&qty=&size=) -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ชำระเงิน | KPOP STORE</title>
@@ -19,6 +20,7 @@
 
 <body>
 
+    <!-- แถบเมนูด้านบน — ui.js เติมปุ่มบัญชี/ตะกร้า/กระดิ่งตามสถานะการล็อกอิน -->
     <nav class="navbar navbar-expand-lg sticky-top">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand d-flex align-items-center" href="index.html">
@@ -31,6 +33,7 @@
         </div>
     </nav>
 
+    <!-- เนื้อหาหลัก: ซ้าย = ข้อมูลโอนเงิน + แนบสลิป · ขวา = สรุปรายการและยอดชำระ -->
     <div class="container mt-5 mb-5">
         <h2 class="mb-4" style="font-weight: 600;">ดำเนินการสั่งซื้อ (Checkout)</h2>
 
@@ -144,6 +147,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- สคริปต์ — ลำดับห้ามสลับ: api.js (เรียก API) → store.js (ข้อมูล) → ui.js (navbar/modal) → js/pages/<หน้า>.js (โค้ดของหน้านี้) -->
     <script src="js/api.js"></script>
     <script src="js/store.js"></script>
     <script src="js/ui.js"></script>

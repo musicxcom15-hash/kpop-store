@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ตะกร้าผูกกับบัญชี — ต้องล็อกอินก่อนทุกคำสั่ง
 $user = require_login();
 $in   = body();
 
@@ -24,6 +25,7 @@ function cart_of(string $userId): array
 /** บังคับให้เป็นจำนวนเต็มบวก และไม่เกินเพดาน (ตรงกับ normalizeQty ฝั่ง JS) */
 function normalize_qty($value, ?int $max = null): int
 {
+    // ปัดเศษลงเป็นจำนวนเต็ม แล้วบังคับให้อย่างน้อย 1
     $n = (int) floor((float) $value);
     if ($n < 1) {
         $n = 1;
@@ -45,14 +47,17 @@ function other_sizes_qty(string $userId, string $productId, string $size): int
     return (int) $st->fetchColumn();
 }
 
+// เลือกงานตาม ?action=
 switch (action()) {
 
     /* ---------------------------------------------------------- */
+    // ใส่สินค้าลงตะกร้า (สินค้า+ไซซ์เดิมที่มีอยู่แล้ว → บวกจำนวนเพิ่ม)
     case 'add': {
         $productId = (string) ($in['productId'] ?? '');
         $size      = trim((string) ($in['size'] ?? ''));
         $addQty    = normalize_qty($in['qty'] ?? 1);
 
+        // ตรวจสินค้า: มีจริง · ไม่ได้ปิดขาย · ไซซ์ถูกต้อง · รอบเปิดอยู่ · โควตายังเหลือ
         $st = db()->prepare('SELECT * FROM products WHERE id = ?');
         $st->execute([$productId]);
         $product = $st->fetch();
@@ -100,6 +105,7 @@ switch (action()) {
              VALUES (?, ?, ?, ?, ?)
              ON CONFLICT (user_id, product_id, size) DO UPDATE SET qty = EXCLUDED.qty'
         );
+        // ยังไม่มีบรรทัดนี้ = เพิ่มใหม่ · มีแล้ว (ชน unique user+สินค้า+ไซซ์) = แก้จำนวนแทน (ON CONFLICT ด้านบน)
         $st->execute([$user['id'], $productId, $size, $finalQty, date('Y-m-d H:i:s')]);
 
         ok([
@@ -110,6 +116,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // แก้จำนวนของบรรทัดเดิมในตะกร้า (ปรับลงให้ไม่เกินโควตา)
     case 'update': {
         $productId = (string) ($in['productId'] ?? '');
         $size      = trim((string) ($in['size'] ?? ''));
@@ -125,6 +132,7 @@ switch (action()) {
             $remaining -= other_sizes_qty($user['id'], $productId, $size);
         }
         $requested = normalize_qty($in['qty'] ?? 1);
+        // ไม่เกินที่เหลือ แต่ต่ำสุด 1 (ถ้าเต็มแล้ว ลูกค้าต้องลบเอง ระบบไม่ลบให้)
         $finalQty  = $remaining !== null ? min($requested, max(1, $remaining)) : $requested;
 
         $st = db()->prepare('UPDATE cart_items SET qty = ? WHERE user_id = ? AND product_id = ? AND size = ?');
@@ -138,6 +146,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // ลบบรรทัดสินค้า+ไซซ์นั้นออกจากตะกร้า
     case 'remove': {
         $st = db()->prepare('DELETE FROM cart_items WHERE user_id = ? AND product_id = ? AND size = ?');
         $st->execute([$user['id'], (string) ($in['productId'] ?? ''), trim((string) ($in['size'] ?? ''))]);
@@ -158,6 +167,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // action ที่ไม่รู้จัก
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

@@ -19,21 +19,25 @@ class DbSessionHandler implements SessionHandlerInterface
     private ?string $loaded = null;
     private int $loadedAge = 0;
 
+    /** อายุ session เป็นวินาที (อย่างน้อย 1 นาที) */
     private function lifetime(): int
     {
         return max(60, (int) ini_get('session.gc_maxlifetime'));
     }
 
+    /** ไม่ต้องเปิดอะไร — ใช้การเชื่อมต่อฐานข้อมูลเดิมของคำขอ */
     public function open(string $path, string $name): bool
     {
         return true;
     }
 
+    /** ไม่มีอะไรต้องปิด */
     public function close(): bool
     {
         return true;
     }
 
+    /** อ่านข้อมูล session ตาม id ในคุกกี้ (เฉพาะที่ยังไม่หมดอายุ) */
     public function read(string $id): string|false
     {
         $st = db()->prepare('SELECT data, updated_at FROM sessions WHERE id = ? AND updated_at > ?');
@@ -45,6 +49,7 @@ class DbSessionHandler implements SessionHandlerInterface
         return $this->loaded ?? '';
     }
 
+    /** บันทึก session ตอนจบคำขอ (ข้ามได้ถ้าไม่จำเป็น — ดูเงื่อนไขด้านล่าง) */
     public function write(string $id, string $data): bool
     {
         // ไม่ได้ล็อกอินและไม่เคยมีแถว — ไม่ต้องสร้างแถวให้ทุกคนที่แวะมาดูหน้าร้าน
@@ -64,12 +69,14 @@ class DbSessionHandler implements SessionHandlerInterface
         return true;
     }
 
+    /** ลบ session ทิ้ง (ตอนออกจากระบบ / ตอนเปลี่ยน id หลังล็อกอิน) */
     public function destroy(string $id): bool
     {
         db()->prepare('DELETE FROM sessions WHERE id = ?')->execute([$id]);
         return true;
     }
 
+    /** PHP เรียกเป็นครั้งคราว: ลบ session ที่หมดอายุแล้วทิ้ง */
     public function gc(int $max_lifetime): int|false
     {
         $st = db()->prepare('DELETE FROM sessions WHERE updated_at < ?');

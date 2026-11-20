@@ -1,3 +1,5 @@
+// หน้าเข้าสู่ระบบ (login.html)
+//
 // ปุ่มสั่งซื้อ/เพิ่มลงตะกร้า และหน้าที่บังคับล็อกอิน ส่ง ?next= มาเพื่อให้เด้งกลับไปที่เดิม
 // ตัวกรอง path (กัน open redirect) อยู่ที่ KpopStore.getSafeNextUrl() ใน ui.js
 function getSafeNextUrl() {
@@ -12,6 +14,7 @@ KpopStore.ready(function () {
     if (next && link) link.href = 'register.html?next=' + encodeURIComponent(next);
 });
 
+// กดเข้าสู่ระบบ: ส่งอีเมล+รหัสผ่าน → สำเร็จแล้วพากลับหน้าที่ค้างไว้ (?next=) หรือหน้าแรก/หลังบ้าน
 async function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;

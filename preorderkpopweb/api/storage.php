@@ -20,11 +20,13 @@ require_once __DIR__ . '/config.php';
 
 const LOCAL_UPLOAD_DIR = __DIR__ . '/../uploads';
 
+/** ตั้งค่า Supabase Storage ครบหรือยัง (ไม่ครบ = เก็บไฟล์ในเครื่อง) */
 function storage_configured(): bool
 {
     return getenv('SUPABASE_URL') && getenv('SUPABASE_SECRET_KEY');
 }
 
+/** ชื่อ bucket ที่ใช้ (ค่าตั้งต้น uploads) */
 function storage_bucket(): string
 {
     return getenv('SUPABASE_STORAGE_BUCKET') ?: 'uploads';
@@ -63,6 +65,7 @@ function storage_put(string $name, string $binary, string $mime): string
         $headers[] = 'Authorization: Bearer ' . $key;
     }
 
+    // อัปโหลดด้วย HTTP POST ไปที่ Storage API ของ Supabase (รอไม่เกิน 20 วินาที)
     $ch = curl_init(rtrim(getenv('SUPABASE_URL'), '/') . '/storage/v1/object/' . storage_bucket() . '/' . rawurlencode($name));
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
@@ -76,6 +79,7 @@ function storage_put(string $name, string $binary, string $mime): string
     $error  = curl_error($ch);
     curl_close($ch);
 
+    // ไม่ใช่ 2xx = อัปโหลดไม่สำเร็จ
     if ($status < 200 || $status >= 300) {
         // รายละเอียดจาก Supabase (เช่น key ผิด / ไม่มี bucket) ลง log ไม่ส่งให้ผู้ใช้
         error_log("[kpop-storage] อัปโหลด $name ไม่สำเร็จ: HTTP $status $error " . substr((string) $body, 0, 300));

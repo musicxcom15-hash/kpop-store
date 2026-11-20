@@ -1,5 +1,9 @@
+// หน้าตะกร้า (cart.html) — แสดงสินค้าแยกกลุ่มตามรอบ แก้จำนวน/ลบ และไปชำระเงินทีละรอบ
+//
+// รูปสำรองเมื่อรูปสินค้าโหลดไม่ขึ้น
 const FALLBACK_IMAGE = 'images/mapsoul7.jpg';
 
+// สถานะรอบ → สีป้าย + ข้อความไทย
 const ROUND_STATE_META = {
     open: { badge: 'success', text: 'เปิดรับอยู่' },
     upcoming: { badge: 'secondary', text: 'ยังไม่เปิดรับ' },
@@ -20,10 +24,12 @@ KpopStore.ready(function () {
 const esc = KpopStore.esc;
 const escArg = KpopStore.escArg;
 
+// ตัวเลข → ข้อความเงินบาท เช่น ฿1,234
 function baht(value) {
     return '฿' + (Number(value) || 0).toLocaleString('th-TH');
 }
 
+// วาดตะกร้าทั้งหน้า: แถบเรท + กลุ่มสินค้าแยกตามรอบ (ตะกร้าว่าง = ข้อความชวนเลือกสินค้า)
 function renderCart() {
     const { rate, groups } = KpopStore.getCartGroupedByRound();
 
@@ -62,6 +68,7 @@ function renderCart() {
     KpopStore.renderNavbarAuth();
 }
 
+// HTML ของรอบหนึ่ง: รายการสินค้า + ยอดรวม + ค่าส่ง + ปุ่มชำระเงินรอบนี้ (กดได้เมื่อรอบเปิดและไม่มีรายการที่ต้องแก้)
 function renderRoundGroup(group) {
     const meta = ROUND_STATE_META[group.state] || ROUND_STATE_META.closed;
     const round = group.round;
@@ -112,6 +119,7 @@ function renderRoundGroup(group) {
             `;
 }
 
+// HTML ของสินค้าหนึ่งบรรทัด: รูป ชื่อ ไซซ์ ราคาแยกส่วน โควตาที่เหลือ ช่องจำนวน ปุ่มลบ
 function renderCartItem(item) {
     const p = item.product;
     const bd = item.breakdown;
@@ -160,6 +168,7 @@ function renderCartItem(item) {
             `;
 }
 
+// เปลี่ยนจำนวนในช่องจำนวน → บันทึก → วาดตะกร้าใหม่ (ถ้าเกินโควตา ระบบปรับลงและแจ้ง)
 async function changeQty(productId, size, value) {
     const res = await KpopStore.updateCartQty(productId, value, size);
     if (!res.success) {
@@ -173,6 +182,7 @@ async function changeQty(productId, size, value) {
     renderCart();
 }
 
+// ลบสินค้าบรรทัดนี้ออกจากตะกร้า แล้ววาดใหม่
 async function removeItem(productId, size) {
     await KpopStore.removeFromCart(productId, size);
     renderCart();

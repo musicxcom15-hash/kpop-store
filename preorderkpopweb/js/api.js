@@ -55,10 +55,12 @@
     global.KpopApi = {
         OFFLINE_MESSAGE: OFFLINE_MESSAGE,
 
+        // เรียก API แบบ GET เช่น get('bootstrap.php')
         get(path) {
             return request(path, { method: 'GET' });
         },
 
+        // เรียก API แบบ POST พร้อมข้อมูล (แปลงเป็น JSON ให้)
         post(path, payload) {
             return request(path, {
                 method: 'POST',

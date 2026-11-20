@@ -1,3 +1,6 @@
+// ทดสอบตารางสถานะคำสั่งซื้อ (ORDER_STATUS): ยกเลิก · อนุมัติ/ปฏิเสธสลิป · ส่งสลิปใหม่ · ล้างเลขพัสดุ · แปลงข้อมูลเก่า
+// รันเดี่ยว: node tests/order-status.test.mjs · รันทั้งหมด: npm test
+//
 import { loadStore, eq, report } from './harness.mjs';
 
 console.log('\n[1] migration: ออเดอร์เก่าที่มีแต่ข้อความไทย ต้องได้ statusCode');

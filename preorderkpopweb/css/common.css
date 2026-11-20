@@ -1,17 +1,20 @@
 /* สไตล์ที่ทุกหน้าฝั่งร้านค้าใช้เหมือนกัน (หน้าแอดมินมีชุดของตัวเองใน css/pages/admin.css)
  * โหลดหลัง css/responsive.css และก่อน css/pages/<หน้า>.css เพื่อให้หน้าแต่ละหน้าทับต่อได้ */
 
+/* พื้นหลังและฟอนต์ของทุกหน้าฝั่งร้านค้า (Kanit) */
 body {
     font-family: 'Kanit', sans-serif;
     background-color: #fcfcfc;
 }
 
+/* แถบเมนูด้านบน: พื้นขาว มีเงาบาง ๆ */
 .navbar {
     background-color: #ffffff;
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
     padding: 15px 0;
 }
 
+/* โลโก้/ชื่อร้าน KPOP STORE */
 .navbar-brand {
     font-weight: 600;
     font-size: 1.2rem;
@@ -20,6 +23,7 @@ body {
 }
 
 /* จำกัดไว้ใน .navbar — หน้าประวัติสั่งซื้อใช้ .nav-link กับแท็บกรองออเดอร์ด้วย ซึ่งต้องเป็นขนาดตัวอักษรปกติ */
+/* ลิงก์เมนูใน navbar (จำกัดเฉพาะใน .navbar ไม่ให้ไปกระทบแท็บอื่นในหน้า) */
 .navbar .nav-link {
     color: #555 !important;
     font-weight: 400;

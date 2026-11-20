@@ -35,6 +35,7 @@ define('CENTRAL_RATE', 0.028);
  */
 function db_config(): array
 {
+    // แยก URL เป็นส่วน ๆ: host, port, user, pass, path (= ชื่อฐานข้อมูล), query (= sslmode)
     $url = parse_url(DATABASE_URL);
     if ($url === false || !isset($url['host'])) {
         throw new PDOException('DATABASE_URL ไม่ถูกรูปแบบ (ต้องเป็น postgresql://user:pass@host:port/dbname)');
@@ -67,12 +68,14 @@ function db_config(): array
  */
 function db(): PDO
 {
+    // static = จำการเชื่อมต่อไว้ใช้ซ้ำตลอดคำขอนี้ ไม่ต่อใหม่ทุกครั้งที่เรียก db()
     static $pdo = null;
     if ($pdo instanceof PDO) {
         return $pdo;
     }
 
     try {
+        // ต่อฐานข้อมูลด้วยค่าจาก DATABASE_URL
         [$dsn, $user, $pass, $port] = db_config();
         $pdo = new PDO($dsn, $user, $pass, [
             // ให้ error เป็น exception ไม่ใช่ค่า false เงียบ ๆ

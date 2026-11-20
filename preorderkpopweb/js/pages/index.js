@@ -1,3 +1,5 @@
+// หน้าแรก (index.html) — แถบเรท ปุ่มกรองหมวด ช่องค้นหา และการ์ดสินค้าทั้งหมด
+//
 // ชื่อสินค้า/ศิลปินมาจากการพิมพ์ของแอดมิน ต้องล้างก่อนต่อเป็น HTML
 const esc = KpopStore.esc;
 
@@ -26,6 +28,7 @@ function renderCategoryChips() {
         return;
     }
 
+    // HTML ของปุ่มหมวดหนึ่งปุ่ม (ปุ่มที่เลือกอยู่เป็นสีเข้ม)
     const chip = (code, label, icon, count) => `
         <button type="button" class="btn btn-sm rounded-pill px-3 ${selectedCategory === code ? 'btn-dark' : 'btn-outline-secondary'}"
             onclick="selectCategory('${code}')">
@@ -39,12 +42,14 @@ function renderCategoryChips() {
         }).join('');
 }
 
+// กดปุ่มหมวด: จำหมวดที่เลือก แล้ววาดปุ่มกับรายการสินค้าใหม่
 function selectCategory(code) {
     selectedCategory = code;
     renderCategoryChips();
     renderCatalog();
 }
 
+// วาดการ์ดสินค้าตามหมวดและคำค้นที่เลือก (ราคา สถานะรอบ โควตา ปุ่มดูรายละเอียด)
 function renderCatalog() {
     const grid = document.getElementById('productsCatalogGrid');
     if (!grid) return;

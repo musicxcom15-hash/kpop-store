@@ -10,11 +10,14 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ข้อมูลที่หน้าเว็บส่งมา (JSON)
 $in = body();
 
+// เลือกงานตาม ?action=
 switch (action()) {
 
     /* ---------------------------------------------------------- */
+    // แอดมินส่งแจ้งเตือน (ข่าวสารทั่วไป ไม่มี type จึงกดแล้วไม่พาไปไหน)
     case 'send': {
         require_admin();
 
@@ -29,6 +32,7 @@ switch (action()) {
             fail('กรุณาเลือกผู้รับค่ะ');
         }
 
+        // ALL = ส่งถึงผู้ใช้ทุกคนในระบบ · ไม่งั้นส่งถึงอีเมลที่เลือก
         $recipients = $target === 'ALL'
             ? db()->query('SELECT email FROM users')->fetchAll(PDO::FETCH_COLUMN)
             : [$target];
@@ -38,6 +42,7 @@ switch (action()) {
         }
 
         $db = db();
+        // เพิ่มทุกใบใน transaction เดียว — สำเร็จทั้งหมดหรือไม่เพิ่มเลย
         $db->beginTransaction();
         try {
             $st = $db->prepare(
@@ -45,6 +50,7 @@ switch (action()) {
                  VALUES (?,?,?,?,0)'
             );
             $now = date('Y-m-d H:i:s');
+            // prepare ครั้งเดียว แล้ว execute ซ้ำทีละผู้รับ
             foreach ($recipients as $email) {
                 $st->execute([$email, $title, $message, $now]);
             }
@@ -54,10 +60,12 @@ switch (action()) {
             throw $e;
         }
 
+        // ตอบจำนวนคนที่ได้รับ
         ok(['sent' => count($recipients)]);
     }
 
     /* ---------------------------------------------------------- */
+    // ทำเครื่องหมายว่าอ่านแล้วทั้งกล่อง แล้วส่งรายการล่าสุดกลับไป
     case 'read': {
         $user = require_login();
 
@@ -74,6 +82,7 @@ switch (action()) {
 
     /* ---------------------------------------------------------- */
     /* กดแจ้งเตือนใบเดียว (ก่อนพาไปหน้าที่เกี่ยวข้อง) — WHERE ผูกอีเมลของ session ไว้ กดของคนอื่นไม่ได้ */
+    // (int) กันค่า id แปลก ๆ — ถ้าไม่ใช่ตัวเลขจะกลายเป็น 0 ซึ่งไม่ตรงแถวไหนเลย
     case 'read-one': {
         $user = require_login();
         $st = db()->prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND lower(user_email) = lower(?)');
@@ -82,6 +91,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // action ที่ไม่รู้จัก
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

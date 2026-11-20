@@ -17,6 +17,7 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ต้องล็อกอินก่อนอัปโหลด (กันคนนอกใช้ที่เก็บไฟล์ของร้าน)
 require_login();
 
 const MAX_UPLOAD_BYTE = 3 * 1024 * 1024;   // 3MB หลังย่อแล้ว เหลือเฟือ (base64 โตขึ้นอีก 1/3 ยังไม่ชนเพดาน 4.5MB ของ Vercel)
@@ -39,6 +40,7 @@ if (!preg_match('#^data:image/(jpeg|jpg|png|webp);base64,#i', $dataUrl, $m)) {
     fail('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WEBP ค่ะ');
 }
 
+// ตัดหัว data:image/...;base64, ออก แล้วถอดรหัส base64 เป็นไฟล์จริง
 $base64 = substr($dataUrl, strpos($dataUrl, ',') + 1);
 $binary = base64_decode($base64, true);
 
@@ -55,6 +57,7 @@ if ($info === false) {
     fail('ไฟล์นี้ไม่ใช่รูปภาพที่ถูกต้องค่ะ');
 }
 
+// นามสกุลไฟล์ตั้งจากชนิดรูปที่ตรวจได้จริง ไม่ใช้ชื่อไฟล์จากผู้ใช้
 $ext = match ($info[2]) {
     IMAGETYPE_JPEG => 'jpg',
     IMAGETYPE_PNG  => 'png',
@@ -65,6 +68,7 @@ if ($ext === null) {
     fail('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WEBP ค่ะ');
 }
 
+// ชื่อไฟล์: <ชนิด>-<วันเวลา>-<สุ่ม 24 หลัก>.<นามสกุล>
 $safeKind = preg_match('/^[a-z]+$/', $kind) ? $kind : 'img';
 $filename = sprintf('%s-%s-%s.%s', $safeKind, date('Ymd-His'), bin2hex(random_bytes(12)), $ext);
 

@@ -27,6 +27,7 @@
     box-shadow: 0 4px 12px rgba(255, 51, 153, 0.25);
 }
 
+/* การ์ดคำสั่งซื้อหนึ่งใบ */
 .order-card {
     background-color: white; border: 1px solid #eee; border-radius: 12px;
     padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);
@@ -40,6 +41,7 @@
 .badge-status-success { background-color: #d4edda; color: #155724; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
 
 /* ปุ่มหลักทรงแคปซูล */
+/* ปุ่มหลักสีเข้มทรงแคปซูล (hover แล้วเป็นสีชมพูประจำร้าน) */
 .btn-dark-custom {
     background-color: #1a1a24;
     color: #ffffff !important;
@@ -65,6 +67,7 @@
     transform: translateY(0);
 }
 
+/* ปุ่มรองแบบขอบเข้ม พื้นโปร่ง */
 .btn-outline-dark-custom {
     border: 1.5px solid #1a1a24;
     color: #1a1a24 !important;
@@ -93,6 +96,7 @@
 .btn-outline-custom:hover { background-color: #f8f9fa; color: #333; border-color: #ccc; }
 
 /* ป้ายจำนวนคำสั่งซื้อบน navbar (ฉีดโดย store.js) */
+/* ตัวเลขจำนวนสินค้าบนไอคอนตะกร้าใน navbar */
 .cart-badge {
     background-color: #ff3399;
     color: white;

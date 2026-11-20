@@ -1,3 +1,6 @@
+// หน้าหลังบ้าน (admin.html) — โค้ดทุกแท็บของแอดมิน
+//
+// เลขออเดอร์ที่กำลังเปิดดูในหน้าต่างตรวจสลิป
 let currentActiveSlipOrderId = null;
 
 // ใช้ตัวกลางจาก ui.js ตัวเดียวทั้งระบบ
@@ -5,10 +8,12 @@ let currentActiveSlipOrderId = null;
 const esc = KpopStore.esc;
 const escArg = KpopStore.escArg;
 
+// รอข้อมูลโหลดเสร็จ แล้วตรวจสิทธิ์ + วาดทุกแท็บ
 KpopStore.ready(function () {
     checkAdminAuth();
 });
 
+// ตรวจว่าเป็นแอดมินไหม — ไม่ใช่ให้แสดงกล่องแจ้งแทนหน้าหลังบ้าน (ด่านจริงอยู่ที่ PHP require_admin)
 function checkAdminAuth() {
     const user = KpopStore.getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -93,6 +98,7 @@ function populateStatusSelects() {
         .join('');
 }
 
+// สลับไปแท็บ/เมนูที่ระบุ (ใช้ตอนกดลิงก์ข้ามแท็บ หรือกดแจ้งเตือน)
 function switchTab(tabId) {
     const tabBtn = document.getElementById(tabId);
     if (tabBtn) {
@@ -112,6 +118,7 @@ function renderAdminDashboard() {
         .filter(o => KpopStore.countsAsRevenue(o))
         .reduce((sum, o) => sum + (o.total || 0), 0);
 
+    // จำนวนสลิปที่รอตรวจ (กลุ่ม pending) — โชว์ทั้งการ์ดและป้ายบนเมนู
     const pendingSlips = orders.filter(o => KpopStore.getStatusMeta(o).group === 'pending').length;
 
     document.getElementById('kpiTotalSales').innerText = '฿' + totalSales.toLocaleString();
@@ -278,6 +285,7 @@ function renderSlipsTable() {
             `).join('');
 }
 
+// เปิดหน้าต่างตรวจสลิปของออเดอร์นี้ (รูปสลิป ยอดเงิน รายการสินค้า)
 function inspectSlip(orderId) {
     const order = KpopStore.getOrderById(orderId);
     if (!order) return;
@@ -314,6 +322,7 @@ function inspectSlip(orderId) {
     modal.show();
 }
 
+// กด "อนุมัติ" ในหน้าต่างตรวจสลิป
 async function executeApprovePayment() {
     if (!currentActiveSlipOrderId) return;
 
@@ -337,6 +346,7 @@ async function executeApprovePayment() {
     alert('อนุมัติการชำระเงินเรียบร้อยแล้ว! ระบบได้ส่งการแจ้งเตือนไปยังลูกค้าเรียบร้อยแล้วค่ะ');
 }
 
+// กด "ปฏิเสธ" ในหน้าต่างตรวจสลิป (เหตุผลจากช่องหมายเหตุ ไม่กรอก = ข้อความมาตรฐาน)
 async function executeRejectPayment() {
     if (!currentActiveSlipOrderId) return;
     const notes = document.getElementById('slipDecisionNotes').value || 'สลิปโอนเงินไม่ถูกต้อง หรือยอดเงินไม่ตรงกับคำสั่งซื้อ';
@@ -424,6 +434,7 @@ async function removeOrder(orderId) {
     alert('ลบคำสั่งซื้อเรียบร้อยแล้วค่ะ');
 }
 
+// กรองตารางคำสั่งซื้อตามคำค้นและสถานะที่เลือก (ซ่อน/แสดงแถว ไม่โหลดใหม่)
 function filterOrdersTable() {
     const search = document.getElementById('orderSearchInput').value.toLowerCase();
     const statusFilter = document.getElementById('orderStatusFilter').value;
@@ -444,8 +455,10 @@ function filterOrdersTable() {
     });
 }
 
+// รูปหลักฐานการกดสั่งที่เลือกไว้ในหน้าต่างแก้คำสั่งซื้อ (ยังไม่บันทึก)
 let currentModalProofImg = null;
 
+// เปิดหน้าต่างแก้คำสั่งซื้อ: เติมสถานะ เลขพัสดุ หมายเหตุ หลักฐานการกดสั่ง
 function openOrderEditModal(orderId) {
     const order = KpopStore.getOrderById(orderId);
     if (!order) return;
@@ -474,6 +487,7 @@ function openOrderEditModal(orderId) {
     modal.show();
 }
 
+// ลบรูปหลักฐานการกดสั่งที่เลือกไว้ในหน้าต่าง (ยังไม่บันทึกจนกว่าจะกดบันทึก)
 function removeOrderProofImage() {
     currentModalProofImg = null;
     const container = document.getElementById('proofPreviewContainer');
@@ -481,6 +495,7 @@ function removeOrderProofImage() {
     container.classList.remove('d-flex');
 }
 
+// ปุ่ม "ร้านกดสั่งไม่สำเร็จ" → สถานะรอคืนเงิน
 async function markOrderPurchaseFailed() {
     const orderId = document.getElementById('editOrderIdHidden').value;
     const order = KpopStore.getOrderById(orderId);
@@ -505,6 +520,7 @@ async function markOrderPurchaseFailed() {
     alert('บันทึกเรียบร้อยแล้วค่ะ ออเดอร์นี้อยู่ในสถานะรอคืนเงิน');
 }
 
+// ปุ่ม "บันทึกว่าคืนเงินแล้ว" → สถานะคืนเงินเรียบร้อย
 async function markOrderRefunded() {
     const orderId = document.getElementById('editOrderIdHidden').value;
     const order = KpopStore.getOrderById(orderId);
@@ -525,6 +541,7 @@ async function markOrderRefunded() {
     alert('บันทึกการคืนเงินเรียบร้อยแล้วค่ะ');
 }
 
+// ปิดหน้าต่าง แล้ววาดทุกตารางที่เกี่ยวกับออเดอร์ใหม่ให้เห็นค่าล่าสุด
 function refreshOrderViews() {
     bootstrap.Modal.getInstance(document.getElementById('orderEditModal')).hide();
     renderAdminDashboard();
@@ -534,6 +551,7 @@ function refreshOrderViews() {
     renderProductsTable();
 }
 
+// กดบันทึกในหน้าต่างแก้คำสั่งซื้อ
 function saveOrderStatusChanges() {
     const orderId = document.getElementById('editOrderIdHidden').value;
     const status = document.getElementById('editOrderStatusSelect').value;
@@ -542,6 +560,7 @@ function saveOrderStatusChanges() {
     const proofNote = document.getElementById('editOrderProofNoteInput').value;
     const fileInput = document.getElementById('editOrderProofFileInput');
 
+    // บันทึกจริง (เรียกหลังย่อรูปหลักฐานเสร็จ หรือทันทีถ้าไม่มีรูปใหม่)
     const applyChanges = async (finalProofImg) => {
         // ค่าว่างจากฟอร์ม = ตั้งใจล้าง (เช่น พิมพ์เลขพัสดุผิดแล้วอยากลบทิ้ง)
         // store แยกกรณี undefined (ไม่ได้ส่งมา) กับ '' (ล้างค่า) ให้แล้ว
@@ -630,8 +649,10 @@ function renderProductsTable() {
 
 // รายงานคำสั่งซื้อแยกตามสินค้า — ตอบคำถาม "สินค้านี้มีใครสั่งไปบ้าง" แยกเป็นรายออเดอร์
 // (ต่างจาก "ใบสรุปรอบ" ที่รวมยอดของทุกสินค้าในรอบเดียวเข้าด้วยกัน)
+// สินค้าที่กำลังดูรายชื่อคำสั่งซื้ออยู่ในแท็บรายงาน (ใช้ตอนส่งออก Excel)
 let currentProductOrdersId = null;
 
+// เติมรายชื่อสินค้าลงช่องเลือกในแท็บรายงาน (คงค่าที่เลือกไว้เดิม)
 function populateReportProductSelect() {
     const select = document.getElementById('reportProductSelect');
     const selected = select.value;
@@ -640,6 +661,7 @@ function populateReportProductSelect() {
     if (selected) select.value = selected;
 }
 
+// แสดงรายชื่อคำสั่งซื้อทั้งหมดของสินค้าที่เลือก
 function showProductOrders(productId) {
     currentProductOrdersId = productId || null;
     const select = document.getElementById('reportProductSelect');
@@ -729,19 +751,23 @@ function exportProductOrdersExcel() {
 }
 
 // ---- รูปสินค้า ----
+// รูปสำรองเมื่อสินค้าไม่มีรูป หรือรูปโหลดไม่ขึ้น
 const PRODUCT_IMAGE_FALLBACK = 'images/mapsoul7.jpg';
 
+// แปลงจำนวนไบต์เป็นข้อความอ่านง่าย เช่น 1.25 MB
 function formatBytes(n) {
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
+// แสดงตัวอย่างรูปสินค้าในฟอร์ม พร้อมข้อความขนาดไฟล์
 function setProductImagePreview(src, sizeHint) {
     document.getElementById('pImagePreview').src = src || PRODUCT_IMAGE_FALLBACK;
     document.getElementById('pImageSizeHint').innerText = sizeHint || '';
 }
 
+// เลือกไฟล์รูปสินค้าจากเครื่อง → ย่อรูปในเบราว์เซอร์ → แสดงตัวอย่าง (อัปโหลดจริงตอนกดบันทึก)
 function handleProductImageUpload(input) {
     const file = input.files && input.files[0];
     if (!file) return;
@@ -768,6 +794,7 @@ function handleProductImageUpload(input) {
     });
 }
 
+// พิมพ์ URL รูปเอง → แสดงตัวอย่างตามลิงก์นั้น
 function onProductImageUrlInput() {
     const url = document.getElementById('pImage').value.trim();
     // พิมพ์ URL เองแปลว่าไม่ได้ใช้ไฟล์ที่เลือกไว้แล้ว
@@ -775,6 +802,7 @@ function onProductImageUrlInput() {
     setProductImagePreview(url, '');
 }
 
+// ล้างรูปสินค้า กลับไปใช้รูปสำรองของระบบ
 function clearProductImage() {
     document.getElementById('pImage').value = '';
     document.getElementById('pImageFile').value = '';
@@ -834,6 +862,7 @@ function populateCategorySelect(selected) {
         .join('');
 }
 
+// เปิดฟอร์มเพิ่มสินค้าใหม่ พร้อมค่าเริ่มต้น (หมวดอัลบั้ม ราคา ₩25,000 ค่าบริการ ฿170 โควตา 50)
 function openAddProductModal() {
     document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-plus me-2 text-pink"></i>เพิ่มสินค้าใหม่';
     document.getElementById('pId').value = '';
@@ -858,6 +887,7 @@ function openAddProductModal() {
     modal.show();
 }
 
+// เปิดฟอร์มแก้สินค้าเดิม: เติมทุกช่องจากข้อมูลสินค้า
 function openEditProductModal(productId) {
     const p = KpopStore.getProductById(productId);
     if (!p) return;
@@ -890,6 +920,7 @@ function openEditProductModal(productId) {
     modal.show();
 }
 
+// กดบันทึกฟอร์มสินค้า: รวบรวมค่าทุกช่อง → เตือนถ้าแก้ราคา/รอบของสินค้าที่มีคนสั่งแล้ว → บันทึก
 async function saveProductForm(e) {
     e.preventDefault();
     const id = document.getElementById('pId').value || ('prod-' + Date.now());
@@ -960,6 +991,7 @@ async function saveProductForm(e) {
     alert('บันทึกข้อมูลสินค้าเรียบร้อยแล้วค่ะ!');
 }
 
+// ลบสินค้า — เตือนถ้ายังมีออเดอร์ค้าง (เซิร์ฟเวอร์ปฏิเสธซ้ำอีกชั้น)
 async function deleteProduct(id) {
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบรายการสินค้านี้ออกจากระบบ?')) return;
 
@@ -979,6 +1011,7 @@ async function deleteProduct(id) {
 }
 
 // --- ROUNDS ---
+// สถานะรอบ → ข้อความไทย + สีป้าย
 const ROUND_STATE_LABEL = {
     upcoming: { text: 'ยังไม่เปิดรับ', badge: 'secondary' },
     open: { text: 'เปิดรับอยู่', badge: 'success' },
@@ -988,15 +1021,18 @@ const ROUND_STATE_LABEL = {
     shipped: { text: 'ส่งครบแล้ว', badge: 'success' }
 };
 
+// ข้อความไทยของสถานะรอบ
 function roundStateLabel(state) {
     return (ROUND_STATE_LABEL[state] || ROUND_STATE_LABEL.closed).text;
 }
 
+// ป้ายสีของสถานะรอบ (HTML)
 function renderRoundStateBadge(state) {
     const meta = ROUND_STATE_LABEL[state] || ROUND_STATE_LABEL.closed;
     return `<span class="badge bg-${meta.badge} rounded-pill" style="font-size:0.72rem;">${meta.text}</span>`;
 }
 
+// วาดตารางรอบพรีออเดอร์ พร้อมจำนวนสินค้าที่ผูกกับแต่ละรอบ
 function renderRoundsTable() {
     const rounds = KpopStore.getRounds();
     const products = KpopStore.getProducts();
@@ -1037,6 +1073,7 @@ function renderRoundsTable() {
     }).join('');
 }
 
+// เปิดฟอร์มเพิ่มรอบใหม่ (ค่าเริ่มต้น: เปิดวันนี้ ปิดอีก 14 วัน)
 function openAddRoundModal() {
     const today = new Date().toISOString().split('T')[0];
     const inTwoWeeks = new Date();
@@ -1055,6 +1092,7 @@ function openAddRoundModal() {
     new bootstrap.Modal(document.getElementById('roundFormModal')).show();
 }
 
+// เปิดฟอร์มแก้รอบเดิม
 function openEditRoundModal(roundId) {
     const r = KpopStore.getRoundById(roundId);
     if (!r) return;
@@ -1072,6 +1110,7 @@ function openEditRoundModal(roundId) {
     new bootstrap.Modal(document.getElementById('roundFormModal')).show();
 }
 
+// กดบันทึกฟอร์มรอบ (ตรวจว่าวันปิดไม่มาก่อนวันเปิด)
 async function saveRoundForm(e) {
     e.preventDefault();
     const openAt = document.getElementById('rOpenAt').value;
@@ -1106,6 +1145,7 @@ async function saveRoundForm(e) {
     alert('บันทึกรอบพรีออเดอร์เรียบร้อยแล้วค่ะ!');
 }
 
+// ลบรอบ — ห้ามถ้ายังมีสินค้าผูกอยู่
 async function deleteRound(roundId) {
     const attached = KpopStore.getProducts().filter(p => p.roundId === roundId);
     if (attached.length > 0) {
@@ -1165,6 +1205,7 @@ function showRoundSummary(roundId) {
     card.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ซ่อนการ์ดใบสรุปยอดของรอบ
 function closeRoundSummary() {
     document.getElementById('roundSummaryCard').style.display = 'none';
 }
@@ -1193,6 +1234,7 @@ function renderUsersTable() {
             `).join('');
 }
 
+// เติมรายชื่อผู้รับในแท็บแจ้งเตือน (ตัวเลือกแรก = ส่งถึงทุกคน)
 function populateNotificationUserSelect() {
     const users = KpopStore.getUsers();
     const select = document.getElementById('notiTargetUser');
@@ -1200,6 +1242,7 @@ function populateNotificationUserSelect() {
         users.map(u => `<option value="${esc(u.email)}">${esc(u.name)} (${esc(u.email)})</option>`).join('');
 }
 
+// เปิดฟอร์มเพิ่มผู้ใช้ใหม่ (ระบบสุ่มรหัสชั่วคราวให้หลังบันทึก)
 function openAddUserModal() {
     document.getElementById('userModalTitle').innerHTML = '<i class="fa-solid fa-user-plus me-2 text-success"></i>เพิ่มผู้ใช้งานใหม่';
     document.getElementById('uId').value = '';
@@ -1213,6 +1256,7 @@ function openAddUserModal() {
     modal.show();
 }
 
+// เปิดฟอร์มแก้ผู้ใช้เดิม (ไม่แตะรหัสผ่าน)
 function openEditUserModal(userId) {
     const u = KpopStore.getUsers().find(x => x.id === userId);
     if (!u) return;
@@ -1229,6 +1273,7 @@ function openEditUserModal(userId) {
     modal.show();
 }
 
+// กดบันทึกฟอร์มผู้ใช้ — ถ้าเป็นบัญชีใหม่ จะแสดงรหัสชั่วคราวให้แอดมินแจ้งลูกค้า
 async function saveUserForm(e) {
     e.preventDefault();
     const user = {
@@ -1271,6 +1316,7 @@ async function resetUserPassword(id) {
     prompt(`รหัสผ่านชั่วคราวของ ${u.name}\nโทรแจ้งลูกค้าที่ ${u.phone || '(ไม่มีเบอร์ในบัญชี)'} แล้วให้เปลี่ยนรหัสใหม่ที่เมนูบัญชี → เปลี่ยนรหัสผ่าน\n(ปิดหน้าต่างนี้แล้วจะดูซ้ำไม่ได้)`, result.tempPassword);
 }
 
+// ลบผู้ใช้ (ถามยืนยันก่อน)
 async function deleteUser(id) {
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานนี้?')) return;
 

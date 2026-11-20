@@ -1,3 +1,4 @@
+/* ปุ่มหลักสีเข้มทรงแคปซูล (hover แล้วเป็นสีชมพูประจำร้าน) */
 .btn-dark-custom {
     background-color: #1a1a24;
     color: white;
@@ -14,6 +15,7 @@
     color: white;
 }
 
+/* ปุ่มรองแบบขอบเข้ม พื้นโปร่ง */
 .btn-outline-dark-custom {
     border: 1px solid #1a1a24;
     color: #1a1a24;
@@ -24,6 +26,7 @@
     font-weight: 500;
 }
 
+/* ตัวเลขจำนวนสินค้าบนไอคอนตะกร้าใน navbar */
 .cart-badge {
     position: absolute;
     top: -6px;
@@ -36,6 +39,7 @@
     font-weight: 600;
 }
 
+/* กล่องของรอบพรีออเดอร์หนึ่งรอบในตะกร้า */
 .round-card {
     background: #fff;
     border: 1px solid #eee;
@@ -45,17 +49,20 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
 }
 
+/* รอบที่สั่งไม่ได้ (ปิดรับ/เกินโควตา/ไซซ์ไม่ถูกต้อง) ทำให้จางลง */
 .round-card.is-blocked {
     opacity: 0.75;
     background: #fafafa;
 }
 
+/* หัวกล่องรอบ: ชื่อรอบ สถานะ วันเปิด-ปิด */
 .round-head {
     padding: 16px 20px;
     border-bottom: 1px solid #f0f0f0;
     background: #fbfbfd;
 }
 
+/* รูปสินค้าในแต่ละบรรทัดของตะกร้า */
 .cart-item-img {
     width: 66px;
     height: 66px;
@@ -63,6 +70,7 @@
     border-radius: 8px;
 }
 
+/* ช่องกรอกจำนวน */
 .qty-input {
     width: 78px;
     text-align: center;
@@ -71,6 +79,7 @@
     padding: 6px;
 }
 
+/* แถบแจ้งเรทราคากลางด้านบนตะกร้า */
 .rate-banner {
     background: #fff8ec;
     border: 1px solid #ffe0a3;

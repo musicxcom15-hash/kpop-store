@@ -1,9 +1,11 @@
+/* สีหลักของหน้าหลังบ้าน (ใช้ซ้ำผ่าน var(--...)) */
 :root {
     --primary-pink: #ff3399;
     --dark-bg: #111827;
     --card-radius: 16px;
 }
 
+/* พื้นหลังหน้าหลังบ้าน */
 body {
     font-family: 'Kanit', sans-serif;
     background-color: #f4f6f9;
@@ -11,6 +13,7 @@ body {
 }
 
 /* Top Admin Navbar */
+/* แถบบนของหลังบ้าน (สีเข้ม) */
 .admin-navbar {
     background-color: #1a1a24;
     color: white;
@@ -24,6 +27,7 @@ body {
 }
 
 /* Admin Sidebar / Nav Tabs */
+/* เมนูแท็บด้านซ้าย */
 .admin-sidebar {
     background: white;
     border-radius: var(--card-radius);
@@ -31,6 +35,7 @@ body {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
 }
 
+/* ปุ่มแต่ละแท็บในเมนูซ้าย (hover/active เปลี่ยนสี) */
 .admin-sidebar .nav-link {
     color: #555;
     font-weight: 500;
@@ -55,6 +60,7 @@ body {
 }
 
 /* Metric KPI Cards */
+/* การ์ดตัวเลขสรุปในแท็บภาพรวม (ยอดขาย ออเดอร์ สลิปรอตรวจ สินค้า) */
 .kpi-card {
     background: white;
     border-radius: var(--card-radius);
@@ -68,6 +74,7 @@ body {
     transform: translateY(-3px);
 }
 
+/* กล่องไอคอนกลมในการ์ดตัวเลข */
 .kpi-icon-box {
     width: 52px;
     height: 52px;
@@ -79,6 +86,7 @@ body {
 }
 
 /* Tables & Content Cards */
+/* กล่องเนื้อหาสีขาวที่ใช้ทุกแท็บ */
 .admin-card {
     background: white;
     border-radius: var(--card-radius);
@@ -93,6 +101,7 @@ body {
     overflow: hidden;
 }
 
+/* หัวตารางและช่องในตารางของหลังบ้าน */
 .custom-table th {
     background-color: #f8f9fa;
     color: #555;
@@ -109,6 +118,7 @@ body {
     font-size: 0.92rem;
 }
 
+/* รูปสินค้าย่อในตารางสินค้า */
 .product-thumb {
     width: 50px;
     height: 50px;
@@ -117,6 +127,7 @@ body {
     border: 1px solid #eee;
 }
 
+/* รูปสลิปย่อ (กดแล้วขยาย) */
 .slip-preview-thumb {
     width: 60px;
     height: 60px;
@@ -132,6 +143,7 @@ body {
 }
 
 /* Status Badges */
+/* ป้ายสีของสถานะแต่ละกลุ่ม: รอตรวจ / กำลังดำเนินการ / จัดส่ง / สำเร็จ / ยกเลิก / คืนเงิน */
 .badge-status-pending {
     background-color: #fff3cd;
     color: #856404;
@@ -188,6 +200,7 @@ body {
     font-weight: 500;
 }
 
+/* ปุ่มสีชมพูประจำร้าน */
 .btn-pink {
     background-color: var(--primary-pink);
     color: white;
@@ -204,6 +217,7 @@ body {
 }
 
 /* Modal Slip Zoom */
+/* รูปสลิปในหน้าต่างตรวจสลิป */
 .slip-modal-img {
     max-width: 100%;
     max-height: 500px;
@@ -213,6 +227,7 @@ body {
 }
 
 /* Responsive Mobile Drawer */
+/* จอเล็กกว่าแท็บเล็ตแนวนอน: เมนูซ้ายกลายเป็นแถบเลื่อนแนวนอนด้านบน */
 @media (max-width: 991.98px) {
     .admin-sidebar {
         margin-bottom: 20px;
@@ -232,6 +247,7 @@ body {
 }
 
 /* แถวที่ถูกชี้มาจากการกดแจ้งเตือน (handleAdminNotification ใน js/pages/admin.js) */
+/* กะพริบแถวในตาราง ตอนกดแจ้งเตือนแล้วพามาที่รายการนั้น */
 @keyframes kpopRowFlash {
     0%, 35% { background-color: #ffd6eb; }
     100% { background-color: transparent; }

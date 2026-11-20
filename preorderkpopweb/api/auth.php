@@ -17,13 +17,16 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ข้อความล็อกอินไม่ผ่าน (ใช้ข้อความเดียวทั้งกรณีไม่มีอีเมลและรหัสผิด)
 const LOGIN_FAILED_MESSAGE = 'อีเมลหรือรหัสผ่านไม่ถูกต้องค่ะ';
+// ลิงก์รีเซ็ตรหัสผ่านใช้ได้กี่นาที
 const RESET_TOKEN_TTL_MINUTES = 30;
 const RESET_LINK_INVALID_MESSAGE = 'ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้อง หมดอายุ หรือถูกใช้ไปแล้วค่ะ กรุณาขอลิงก์ใหม่';
 
 /** แถว token ที่ยังใช้ได้ (ยังไม่หมดอายุและยังไม่ถูกใช้) หรือ null */
 function find_valid_reset(string $token): ?array
 {
+    // token ที่ระบบสร้างเป็นเลขฐานสิบหก 64 ตัวเสมอ — รูปแบบอื่นไม่ต้องถามฐานข้อมูล
     if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
         return null;
     }
@@ -31,6 +34,7 @@ function find_valid_reset(string $token): ?array
         'SELECT r.*, u.email, u.name FROM password_resets r JOIN users u ON u.id = r.user_id
          WHERE r.token_hash = ? AND r.used_at IS NULL AND r.expires_at > ?'
     );
+    // ฐานข้อมูลเก็บแค่ hash ของ token จึงต้อง hash ก่อนค้น · เทียบเวลาหมดอายุกับตอนนี้
     $st->execute([hash('sha256', $token), date('Y-m-d H:i:s')]);
     $row = $st->fetch();
     return $row ?: null;
@@ -39,13 +43,16 @@ function find_valid_reset(string $token): ?array
 /** ปิดบังอีเมลก่อนแสดงบนหน้ารีเซ็ต เช่น so***@gmail.com */
 function mask_email(string $email): string
 {
+    // แยกชื่อหน้า @ กับโดเมน แล้วโชว์แค่ 2 ตัวแรกของชื่อ ที่เหลือเป็น *
     [$local, $domain] = explode('@', $email, 2) + [1 => ''];
     return mb_substr($local, 0, 2) . str_repeat('*', max(3, mb_strlen($local) - 2)) . '@' . $domain;
 }
 
+// เลือกงานตาม ?action= ใน URL (เช่น auth.php?action=login)
 switch (action()) {
 
     /* ---------------------------------------------------------- */
+    // เข้าสู่ระบบ: รับอีเมล + รหัสผ่าน
     case 'login': {
         $in    = body();
         $email = trim((string) ($in['email'] ?? ''));
@@ -55,22 +62,26 @@ switch (action()) {
             fail('กรุณากรอกอีเมลและรหัสผ่านค่ะ');
         }
 
+        // หาบัญชีจากอีเมล (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
         $st = db()->prepare('SELECT * FROM users WHERE lower(email) = lower(?)');
         $st->execute([$email]);
         $row = $st->fetch();
 
+        // ไม่มีบัญชี หรือรหัสไม่ตรงกับ hash → ตอบข้อความเดียวกัน
         if (!$row || !password_verify($pass, $row['password_hash'])) {
             fail(LOGIN_FAILED_MESSAGE);
         }
 
         // กัน session fixation: ออกไอดี session ใหม่หลังยืนยันตัวตนผ่าน
         session_regenerate_id(true);
+        // จำว่า session นี้คือผู้ใช้คนไหน (ถูกเก็บลงตาราง sessions ตอนจบคำขอ)
         $_SESSION['user_id'] = $row['id'];
 
         ok(['user' => map_user($row)]);
     }
 
     /* ---------------------------------------------------------- */
+    // สมัครสมาชิก: ตรวจข้อมูล → สร้างบัญชีลูกค้า → ล็อกอินให้ทันที
     case 'register': {
         $in      = body();
         $name    = trim((string) ($in['name'] ?? ''));
@@ -82,6 +93,7 @@ switch (action()) {
         if ($name === '' || $email === '' || $pass === '') {
             fail('กรุณากรอกชื่อ อีเมล และรหัสผ่านให้ครบค่ะ');
         }
+        // ตรวจรูปแบบอีเมลด้วยตัวตรวจของ PHP
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             fail('รูปแบบอีเมลไม่ถูกต้องค่ะ');
         }
@@ -97,6 +109,7 @@ switch (action()) {
             fail("อีเมล {$email} มีบัญชีอยู่ในระบบแล้วค่ะ\nกรุณาเข้าสู่ระบบด้วยอีเมลนี้แทน");
         }
 
+        // id ผู้ใช้: u-<เวลา>-<สุ่ม 6 หลัก> ไม่ชนกันแม้สมัครวินาทีเดียวกัน
         $id = 'u-' . time() . '-' . bin2hex(random_bytes(3));
         $st = db()->prepare(
             'INSERT INTO users (id, name, email, password_hash, phone, address, role, created_at)
@@ -106,6 +119,7 @@ switch (action()) {
         try {
             $st->execute([
                 $id, $name, $email,
+                // เก็บรหัสผ่านเป็น bcrypt hash เท่านั้น ไม่เก็บรหัสจริง
                 password_hash($pass, PASSWORD_BCRYPT),
                 $phone, $address, 'customer', date('Y-m-d'),
             ]);
@@ -127,6 +141,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // ออกจากระบบ: ล้างข้อมูล session แล้วลบแถว session ทิ้ง
     case 'logout': {
         $_SESSION = [];
         session_destroy();
@@ -134,6 +149,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // แก้ข้อมูลส่วนตัว (ชื่อ เบอร์ ที่อยู่) ของผู้ที่ล็อกอินอยู่
     case 'profile': {
         $user = require_login();
         $in   = body();
@@ -157,6 +173,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // เปลี่ยนรหัสผ่าน (ต้องล็อกอินและรู้รหัสเดิม)
     case 'change-password': {
         $user    = require_login();
         $in      = body();
@@ -175,11 +192,13 @@ switch (action()) {
         }
 
         $st = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+        // บันทึก hash ของรหัสใหม่
         $st->execute([password_hash($new, PASSWORD_BCRYPT), $user['id']]);
         ok();
     }
 
     /* ---------------------------------------------------------- */
+    // ลืมรหัสผ่าน: สร้างลิงก์รีเซ็ตแล้วส่งอีเมล (ไม่ต้องล็อกอิน)
     case 'forgot': {
         $email = trim((string) (body()['email'] ?? ''));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -194,6 +213,7 @@ switch (action()) {
         $st = db()->prepare('SELECT * FROM users WHERE lower(email) = lower(?)');
         $st->execute([$email]);
         $target = $st->fetch();
+        // ไม่มีบัญชีนี้ — ตอบเหมือนสำเร็จ ไม่บอกว่าไม่มี
         if (!$target) {
             ok(['message' => $reply]);
         }
@@ -208,13 +228,17 @@ switch (action()) {
             ok(['message' => $reply]);
         }
 
+        // token สุ่ม 256 บิต — ตัวจริงอยู่ในลิงก์ที่ส่งทางอีเมลเท่านั้น ฐานข้อมูลเก็บแค่ hash
         $token = bin2hex(random_bytes(32));
         $st = db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)');
         $st->execute([$target['id'], hash('sha256', $token),
             date('Y-m-d H:i:s', time() + RESET_TOKEN_TTL_MINUTES * 60), date('Y-m-d H:i:s')]);
 
+        // ประกอบลิงก์จาก URL ที่ตั้งไว้ (ไม่ใช้ Host ของคำขอ กันลิงก์ปลอม)
         $link = app_base_url() . '/reset-password.html?token=' . $token;
+        // ชื่อมาจากผู้ใช้ ต้อง escape ก่อนใส่ใน HTML ของอีเมล
         $name = htmlspecialchars($target['name'], ENT_QUOTES, 'UTF-8');
+        // ส่งอีเมล 2 แบบในฉบับเดียว: HTML (มีปุ่ม) และข้อความล้วน
         $sent = send_mail($target['email'], $target['name'], 'ตั้งรหัสผ่านใหม่ — KPOP STORE',
             "<div style=\"font-family:Tahoma,sans-serif;font-size:15px;line-height:1.6;color:#222\">
                 <p>สวัสดีค่ะ {$name}</p>
@@ -241,6 +265,7 @@ switch (action()) {
 
     /* ---------------------------------------------------------- */
     /* หน้า reset-password.html เช็คก่อนว่าลิงก์ยังใช้ได้ไหม จะได้บอกตั้งแต่เปิดหน้า ไม่ใช่หลังกรอกรหัสเสร็จ */
+    // ตอบอีเมลแบบปิดบังบางส่วน ให้หน้าเว็บโชว์ว่ากำลังตั้งรหัสให้บัญชีไหน
     case 'reset-token-status': {
         $reset = find_valid_reset((string) (body()['token'] ?? ''));
         if (!$reset) {
@@ -250,6 +275,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // ตั้งรหัสใหม่จากลิงก์ในอีเมล
     case 'reset-with-token': {
         $in    = body();
         $reset = find_valid_reset((string) ($in['token'] ?? ''));
@@ -262,6 +288,7 @@ switch (action()) {
         }
 
         $db = db();
+        // ทำ 3 อย่างใน transaction เดียว: เปลี่ยนรหัส, ปิดลิงก์ทั้งหมด, แจ้งเตือนเจ้าของบัญชี
         $db->beginTransaction();
         try {
             $st = $db->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
@@ -273,6 +300,7 @@ switch (action()) {
                 'รหัสผ่านของบัญชีนี้ถูกตั้งใหม่ผ่านลิงก์ทางอีเมล ถ้าคุณไม่ได้ทำเอง กรุณาติดต่อร้านทันที');
             $db->commit();
         } catch (Throwable $e) {
+            // ขั้นไหนพลาดให้ยกเลิกทั้งหมด ไม่ให้เหลือสภาพครึ่ง ๆ กลาง ๆ
             $db->rollBack();
             throw $e;
         }
@@ -281,6 +309,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // action ที่ไม่รู้จัก
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

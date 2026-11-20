@@ -44,6 +44,7 @@ KpopStore.ready(function () {
     renderCheckoutAddress();
 });
 
+// ชำระทั้งรอบจากตะกร้า: เอาสินค้าทุกบรรทัดของรอบนั้นมาเป็นรายการสั่งซื้อ
 function loadFromCart() {
     fromCart = true;
     const group = KpopStore.getCartGroupedByRound(shippingFee).groups
@@ -63,6 +64,7 @@ function loadFromCart() {
     checkoutItems = group.items.map(i => ({ product: i.product, qty: i.qty, size: i.size }));
 }
 
+// สั่งซื้อทันทีชิ้นเดียว (?id=&qty=&size=): ตรวจสินค้า ไซซ์ รอบ และโควตาก่อน
 function loadSingleProduct() {
     const product = productId ? KpopStore.getProductById(productId) : null;
     if (!product) {
@@ -106,6 +108,7 @@ function loadSingleProduct() {
     checkoutItems = [{ product, qty, size: sizeParam }];
 }
 
+// ปิดปุ่มยืนยันสั่งซื้อพร้อมบอกเหตุผล
 function blockSubmit(reason) {
     const btn = document.getElementById('submitOrderBtn');
     if (!btn) return;
@@ -114,6 +117,7 @@ function blockSubmit(reason) {
     btn.innerHTML = `<i class="fa-solid fa-ban me-2"></i> ${reason}`;
 }
 
+// วาดสรุปรายการ ราคาแยกส่วน ค่าส่ง และยอดที่ต้องโอน
 function renderCheckoutSummary() {
     subtotalAmount = 0;
 
@@ -158,6 +162,7 @@ function renderCheckoutSummary() {
             `;
 }
 
+// แสดงชื่อ เบอร์ ที่อยู่จัดส่งจากบัญชีของลูกค้า
 function renderCheckoutAddress() {
     // หน้านี้บังคับล็อกอินตั้งแต่ DOMContentLoaded แล้ว จึงมี currentUser เสมอ
     const currentUser = KpopStore.getCurrentUser();
@@ -175,6 +180,7 @@ function renderCheckoutAddress() {
     }
 }
 
+// เลือกไฟล์สลิปแล้วแสดงตัวอย่างรูปให้ตรวจก่อนส่ง
 function previewCheckoutSlip(input) {
     const previewBox = document.getElementById('slipPreviewBox');
     const previewImg = document.getElementById('slipPreviewImg');
@@ -190,6 +196,7 @@ function previewCheckoutSlip(input) {
     }
 }
 
+// กดยืนยันสั่งซื้อ: ตรวจซ้ำทุกเงื่อนไข (ล็อกอิน รอบ สินค้า โควตา เรท สลิป เงื่อนไข) → ย่อรูปสลิป → บันทึกออเดอร์
 function submitCheckoutOrder() {
     if (checkoutItems.length === 0) return;
 
@@ -266,6 +273,7 @@ function submitCheckoutOrder() {
     // ผ่าน requireLogin() มาแล้วจึงมี currentUser เสมอ
     const currentUser = KpopStore.getCurrentUser();
 
+    // หลังย่อรูปสลิปเสร็จ: ส่งออเดอร์ไปบันทึกที่เซิร์ฟเวอร์
     const proceedWithSlip = async (slipDataUrl) => {
         const orderData = {
             customerName: currentUser.name,

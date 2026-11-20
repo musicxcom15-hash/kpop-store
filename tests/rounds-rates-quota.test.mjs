@@ -1,3 +1,6 @@
+// ทดสอบราคา รอบ และโควตา: วอน × เรท + ค่าบริการ · สถานะรอบตามวันที่ · โควตาคืนเมื่อยกเลิก · ตะกร้าแยกรอบ · เรทล็อกตอนสั่ง
+// รันเดี่ยว: node tests/rounds-rates-quota.test.mjs · รันทั้งหมด: npm test
+//
 import { loadStore, eq, report } from './harness.mjs';
 
 const day = o => { const d = new Date(); d.setDate(d.getDate() + o); return d.toISOString().split('T')[0]; };

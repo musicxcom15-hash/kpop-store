@@ -2,6 +2,7 @@
 <html lang="th">
 
 <head>
+    <!-- หลังบ้านสำหรับแอดมิน 8 แท็บ — โค้ดทั้งหมดอยู่ใน js/pages/admin.js (ไม่ใช่แอดมิน = แสดงกล่องแจ้งแทน) -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบผู้ดูแลระบบ (Admin) | KPOP STORE</title>
@@ -119,6 +120,7 @@
             <div class="col-lg-9 col-xl-10">
                 <div class="tab-content" id="adminTabContent">
 
+                    <!-- แท็บภาพรวม: การ์ดตัวเลข เรท รอบที่เปิด ยอดสั่งรายวัน ออเดอร์ล่าสุด สัดส่วนสถานะ — renderAdminDashboard() -->
                     <!-- ================= TAB 1: DASHBOARD OVERVIEW ================= -->
                     <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel">
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -263,6 +265,7 @@
                         </div>
                     </div>
 
+                    <!-- แท็บตรวจสลิป: ออเดอร์ที่รอตรวจ กดแล้วเปิดหน้าต่างอนุมัติ/ปฏิเสธ — renderSlipsTable() / inspectSlip() -->
                     <!-- ================= TAB 2: SLIP VERIFICATION ================= -->
                     <div class="tab-pane fade" id="tab-slips" role="tabpanel">
                         <div class="admin-card">
@@ -296,6 +299,7 @@
                         </div>
                     </div>
 
+                    <!-- แท็บคำสั่งซื้อทั้งหมด: ค้นหา กรองสถานะ แก้สถานะ/เลขพัสดุ — renderOrdersTable() / openOrderEditModal() -->
                     <!-- ================= TAB 3: ORDER MANAGEMENT ================= -->
                     <div class="tab-pane fade" id="tab-orders" role="tabpanel">
                         <div class="admin-card">
@@ -341,6 +345,7 @@
                         </div>
                     </div>
 
+                    <!-- แท็บจัดการสินค้า: ตารางสินค้า + ปุ่มเพิ่ม/แก้/ลบ — renderProductsTable() / saveProductForm() -->
                     <!-- ================= TAB 4: PRODUCT MANAGEMENT ================= -->
                     <div class="tab-pane fade" id="tab-products" role="tabpanel">
                         <div class="admin-card">
@@ -380,6 +385,7 @@
 
                     </div>
 
+                    <!-- แท็บรายงาน: เลือกสินค้าแล้วดูรายชื่อคนสั่ง + ส่งออก Excel — showProductOrders() / exportProductOrdersExcel() -->
                     <!-- ================= TAB: ORDER REPORT BY PRODUCT ================= -->
                     <div class="tab-pane fade" id="tab-report" role="tabpanel">
                         <div class="admin-card">
@@ -409,6 +415,7 @@
                         </div>
                     </div>
 
+                    <!-- แท็บรอบพรีออเดอร์: ตารางรอบ + ใบสรุปยอดที่ต้องกดสั่ง — renderRoundsTable() / showRoundSummary() -->
                     <!-- ================= TAB: PRE-ORDER ROUNDS ================= -->
                     <div class="tab-pane fade" id="tab-rounds" role="tabpanel">
                         <div class="admin-card">
@@ -453,6 +460,7 @@
                         </div>
                     </div>
 
+                    <!-- แท็บผู้ใช้: ตารางบัญชี + เพิ่ม/แก้/รีเซ็ตรหัส/ลบ — renderUsersTable() -->
                     <!-- ================= TAB 5: USER MANAGEMENT ================= -->
                     <div class="tab-pane fade" id="tab-users" role="tabpanel">
                         <div class="admin-card">
@@ -488,6 +496,7 @@
                         </div>
                     </div>
 
+                    <!-- แท็บแจ้งเตือนลูกค้า: ส่งข้อความถึงคนเดียวหรือทุกคน — sendBroadcastNotification() -->
                     <!-- ================= TAB 6: NOTIFICATIONS DISPATCHER ================= -->
                     <div class="tab-pane fade" id="tab-notifications" role="tabpanel">
                         <div class="admin-card">
@@ -534,6 +543,7 @@
 
     <!-- ================= MODALS ================= -->
 
+    <!-- หน้าต่างตรวจสลิป (เปิดจากแท็บตรวจสลิป) -->
     <!-- Slip Inspection Modal -->
     <div class="modal fade" id="slipModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -590,6 +600,7 @@
         </div>
     </div>
 
+    <!-- หน้าต่างแก้คำสั่งซื้อ: สถานะ เลขพัสดุ หมายเหตุ หลักฐานการกดสั่ง คืนเงิน -->
     <!-- Edit Order Status Modal -->
     <div class="modal fade" id="orderEditModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -671,6 +682,7 @@
         </div>
     </div>
 
+    <!-- ฟอร์มเพิ่ม/แก้สินค้า (ฟอร์มเดียวใช้ทั้งสองกรณี — ช่อง pId ว่าง = เพิ่มใหม่) -->
     <!-- Product Modal (Add/Edit) -->
     <div class="modal fade" id="productFormModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -808,6 +820,7 @@
         </div>
     </div>
 
+    <!-- ฟอร์มเพิ่ม/แก้รอบพรีออเดอร์ -->
     <!-- Round Modal (Add/Edit) -->
     <div class="modal fade" id="roundFormModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -871,6 +884,7 @@
         </div>
     </div>
 
+    <!-- ฟอร์มเพิ่ม/แก้ผู้ใช้ -->
     <!-- User Modal (Add/Edit) -->
     <div class="modal fade" id="userFormModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -918,6 +932,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- สคริปต์ — ลำดับห้ามสลับ: api.js (เรียก API) → store.js (ข้อมูล) → ui.js (navbar/modal) → js/pages/<หน้า>.js (โค้ดของหน้านี้) -->
     <script src="js/api.js"></script>
     <script src="js/store.js"></script>
     <script src="js/ui.js"></script>

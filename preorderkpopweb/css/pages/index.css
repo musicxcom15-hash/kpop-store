@@ -1,4 +1,5 @@
 /* ปุ่มสีเข้มทรงแคปซูล (เข้าสู่ระบบ) */
+/* ปุ่มหลักสีเข้มทรงแคปซูล (hover แล้วเป็นสีชมพูประจำร้าน) */
 .btn-dark-custom {
     background-color: #1a1a24;
     color: #ffffff !important;
@@ -27,6 +28,7 @@
 }
 
 /* ปุ่มขอบสีเข้มทรงแคปซูล (สมัครสมาชิก) */
+/* ปุ่มรองแบบขอบเข้ม พื้นโปร่ง */
 .btn-outline-dark-custom {
     border: 1.5px solid #1a1a24;
     color: #1a1a24 !important;
@@ -54,6 +56,7 @@
 }
 
 /* ป้าย Pre-order และป้ายตะกร้าสินค้า */
+/* ป้ายสถานะสีชมพูมุมการ์ดสินค้า (PRE-ORDER / OUT OF STOCK) */
 .badge-pink {
     background-color: #ff3399;
     color: white;
@@ -68,6 +71,7 @@
     z-index: 10;
 }
 
+/* ตัวเลขจำนวนสินค้าบนไอคอนตะกร้าใน navbar */
 .cart-badge {
     background-color: #ff3399;
     color: white;
@@ -80,6 +84,7 @@
 }
 
 /* การ์ดสินค้า */
+/* การ์ดสินค้าในหน้าแรก (ลอยขึ้นเล็กน้อยตอน hover) */
 .product-card {
     border: none;
     border-radius: 16px;
@@ -92,6 +97,7 @@
     transform: translateY(-5px);
 }
 
+/* รูปสินค้าในการ์ด: สี่เหลี่ยมจัตุรัส ครอบให้เต็มกรอบ */
 .product-img {
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
@@ -99,6 +105,7 @@
     object-fit: cover;
 }
 
+/* บรรทัดชื่อศิลปิน · หมวดหมู่ */
 .artist-name {
     font-size: 0.7rem;
     color: #999;
@@ -107,6 +114,7 @@
     letter-spacing: 0.5px;
 }
 
+/* ชื่อสินค้า (ยาวเกินตัดเหลือ 2 บรรทัด) */
 .product-title {
     font-size: 0.95rem;
     font-weight: 500;
@@ -120,6 +128,7 @@
     overflow: hidden;
 }
 
+/* ราคาขายตัวหนา */
 .price {
     font-size: 1.1rem;
     font-weight: 600;

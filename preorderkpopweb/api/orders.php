@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/helpers.php';
 
+// ข้อมูลที่หน้าเว็บส่งมา (JSON)
 $in = body();
 
 /** ราคาต่อชิ้นของสินค้า ณ เรทที่กำหนด (ตรงกับ getPriceBreakdown ฝั่ง JS) */
@@ -28,6 +29,7 @@ function price_breakdown(array $product, float $rate): array
         return ['krw' => null, 'serviceFee' => 0.0, 'total' => (float) ($product['price'] ?? 0)];
     }
 
+    // วอน × เรท แล้วปัดเศษสตางค์ขึ้นเสมอ (ร้านไม่ขาดทุนจากเศษ) + ค่าบริการหิ้ว
     $converted = ceil($krw * $rate);
     return ['krw' => $krw, 'serviceFee' => $serviceFee, 'total' => $converted + $serviceFee];
 }
@@ -41,6 +43,7 @@ function money(float $n): string
 /** เขียนสถานะ + ฟิลด์อื่น ๆ ลงออเดอร์ (คู่กับ _writeOrderStatus ฝั่ง JS) */
 function write_order_status(string $orderId, string $statusCode, array $fields = []): ?array
 {
+    // คีย์ที่หน้าเว็บส่งมาได้ => ชื่อคอลัมน์จริง (คีย์อื่นถูกทิ้ง กันการแก้คอลัมน์ที่ไม่ควรแก้)
     $allowed = [
         'trackingNumber'     => 'tracking_number',
         'adminNotes'         => 'admin_notes',
@@ -51,6 +54,7 @@ function write_order_status(string $orderId, string $statusCode, array $fields =
         'refundNote'         => 'refund_note',
     ];
 
+    // ประกอบคำสั่ง UPDATE เฉพาะคอลัมน์ที่ส่งมา (ค่าทั้งหมดยังผ่าน ? ของ prepared statement)
     $sets = ['status_code = ?'];
     $args = [$statusCode];
 
@@ -89,6 +93,7 @@ function require_own_order(array $order, array $user, string $message): void
     }
 }
 
+// เลือกงานตาม ?action=
 switch (action()) {
 
     /* ================================================================
@@ -97,6 +102,7 @@ switch (action()) {
     case 'create': {
         $user = require_login();
 
+        // หน้าเว็บส่งมาแค่ [{id, qty, size}] — ราคาคิดใหม่ที่เซิร์ฟเวอร์ทั้งหมด
         $items = $in['items'] ?? [];
         if (!is_array($items) || !$items) {
             fail('ไม่มีรายการสินค้าในคำสั่งซื้อค่ะ');
@@ -114,6 +120,7 @@ switch (action()) {
         $nowSql = date('Y-m-d H:i:s');
 
         $db = db();
+        // ทุกขั้นตั้งแต่ตรวจโควตาถึงบันทึกออเดอร์อยู่ใน transaction เดียว
         $db->beginTransaction();
 
         try {
@@ -122,9 +129,11 @@ switch (action()) {
             // จำนวนรวมต่อสินค้า (ทุกไซซ์) — โควตานับรวม ไม่ใช่นับแยกบรรทัด
             $qtyByProduct = [];
 
+            // ตรวจทีละรายการ: มีสินค้าจริง · ยังเปิดขาย · ไซซ์ถูกต้อง · รอบเปิดอยู่ · โควตาพอ
             foreach ($items as $raw) {
                 $productId = (string) ($raw['id'] ?? '');
                 $size = trim((string) ($raw['size'] ?? ''));
+                // จำนวนต้องเป็นจำนวนเต็ม ≥ 1 (กันค่าติดลบ/ทศนิยมที่แก้มาจากเบราว์เซอร์)
                 $qty = max(1, (int) floor((float) ($raw['qty'] ?? 1)));
 
                 // ล็อกแถวสินค้าไว้จนจบ transaction กันสองคนแย่งโควตาชิ้นสุดท้ายพร้อมกัน
@@ -143,6 +152,7 @@ switch (action()) {
                         : 'สินค้า "' . $product['title'] . '" ไม่มีไซซ์ ' . $size . ' แล้วค่ะ กรุณาเลือกใหม่ในตะกร้า');
                 }
 
+                // รอบของสินค้าต้องเปิดรับอยู่ ณ วินาทีที่กดยืนยัน
                 $round = fetch_round($product['round_id']);
                 if (round_state($round) !== 'open') {
                     throw new RuntimeException(
@@ -186,10 +196,12 @@ switch (action()) {
                 $roundId ??= $product['round_id'];
             }
 
+            // ค่าส่งในไทยต่อรอบ (ค่าตั้งต้น 50 บาท)
             $shippingFee = isset($in['shippingFee']) && is_numeric($in['shippingFee']) && $in['shippingFee'] >= 0
                 ? (float) $in['shippingFee']
                 : 50.0;
 
+            // ยอดรวม = Σ(ราคาต่อชิ้น × จำนวน) + ค่าส่ง
             $subtotal = 0.0;
             foreach ($resolved as $r) {
                 $subtotal += $r['price'] * $r['qty'];
@@ -245,6 +257,7 @@ switch (action()) {
                 ]);
             }
 
+            // แจ้งเตือน 2 ฝั่ง: กล่องร้าน (กดแล้วไปที่สลิป) และกล่องลูกค้า (กดแล้วไปที่ออเดอร์)
             $customerName = (string) ($in['customerName'] ?? $user['name']);
             push_notification(
                 SHOP_EMAIL,
@@ -261,12 +274,15 @@ switch (action()) {
                 $orderId
             );
 
+            // ทุกอย่างผ่าน → ยืนยันการบันทึก แล้วส่งออเดอร์ที่สร้างกลับไป
             $db->commit();
             ok(['order' => fetch_order($orderId)]);
 
+        // เงื่อนไขธุรกิจไม่ผ่าน (โควตาเต็ม รอบปิด ฯลฯ) → ยกเลิกทั้งหมดแล้วบอกเหตุผลลูกค้า
         } catch (RuntimeException $e) {
             $db->rollBack();
             fail($e->getMessage());
+        // ข้อผิดพลาดอื่น (เช่น ฐานข้อมูล) → ยกเลิกทั้งหมดแล้วส่งต่อให้ตัวจัดการ error กลาง
         } catch (Throwable $e) {
             $db->rollBack();
             throw $e;
@@ -282,6 +298,7 @@ switch (action()) {
 
         require_own_order($order, $user, 'ยกเลิกได้เฉพาะคำสั่งซื้อของตัวเองค่ะ');
 
+        // ยกเลิกได้หรือไม่ ตัดสินจาก flag canCancel ของสถานะปัจจุบัน
         $meta = ORDER_STATUS[$order['statusCode']];
         if (!$meta['canCancel']) {
             fail($meta['group'] === 'cancelled'
@@ -344,6 +361,7 @@ switch (action()) {
             }
         }
 
+        // เปลี่ยนเป็นสลิปใบใหม่ แล้วกลับไปสถานะรอตรวจสลิป
         $st = db()->prepare('UPDATE orders SET slip_image = ? WHERE id = ?');
         $st->execute([$slip, $order['id']]);
 
@@ -368,6 +386,7 @@ switch (action()) {
         $order = must_find_order((string) ($in['orderId'] ?? ''));
 
         $code = (string) ($in['statusCode'] ?? '');
+        // รับเฉพาะรหัสสถานะที่มีในตาราง
         if (!isset(ORDER_STATUS[$code])) {
             fail('สถานะที่ส่งมาไม่ถูกต้อง');
         }
@@ -396,6 +415,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // แอดมินอนุมัติสลิป
     case 'approve': {
         require_admin();
         $order = must_find_order((string) ($in['orderId'] ?? ''));
@@ -414,6 +434,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // แอดมินปฏิเสธสลิป (ลูกค้าส่งสลิปใหม่ได้ ถ้ารอบยังเปิด)
     case 'reject': {
         require_admin();
         $order = must_find_order((string) ($in['orderId'] ?? ''));
@@ -443,6 +464,7 @@ switch (action()) {
 
         $reason = trim((string) ($in['reason'] ?? ''))
             ?: 'สินค้าหมดจากเว็บ Official ก่อนร้านกดสั่งสำเร็จ';
+        // ยอดที่ต้องคืน = ยอดรวมทั้งออเดอร์
         $amount = money((float) $order['total']);
 
         $updated = write_order_status($order['id'], 'REFUND_PENDING', [
@@ -456,6 +478,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // แอดมินโอนเงินคืนแล้ว — บันทึกเวลาและหมายเหตุการคืนเงิน
     case 'refunded': {
         require_admin();
         $order = must_find_order((string) ($in['orderId'] ?? ''));
@@ -479,6 +502,7 @@ switch (action()) {
     case 'delete': {
         require_admin();
         $orderId = (string) ($in['orderId'] ?? '');
+        // ต้องมีออเดอร์นี้จริงก่อนลบ
         must_find_order($orderId);
 
         $st = db()->prepare('DELETE FROM orders WHERE id = ?');
@@ -488,6 +512,7 @@ switch (action()) {
     }
 
     /* ---------------------------------------------------------- */
+    // action ที่ไม่รู้จัก
     default:
         fail('ไม่รู้จักคำสั่งนี้', 400);
 }

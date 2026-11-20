@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/../../preorderkpopweb/api/storage.php';
 
+// เว็บเดิมที่ยังเปิดอยู่ (ดึงไฟล์จากที่นี่)
 $old = rtrim((string) getenv('OLD_SITE_URL'), '/');
 if (!storage_configured() || $old === '' || !getenv('DATABASE_URL')) {
     fwrite(STDERR, "ต้องตั้ง DATABASE_URL, SUPABASE_URL, SUPABASE_SECRET_KEY และ OLD_SITE_URL\n");
@@ -29,6 +30,7 @@ const IMAGE_COLUMNS = [
     ['order_items', 'image'],
 ];
 
+/** เรียก URL แล้วคืน [สถานะ HTTP, เนื้อหา, ชนิดไฟล์] ($headOnly = ถามแค่ว่ามีไฟล์ไหม ไม่ดาวน์โหลด) */
 function http_get(string $url, bool $headOnly = false): array
 {
     $ch = curl_init($url);
@@ -46,6 +48,7 @@ function http_get(string $url, bool $headOnly = false): array
 }
 
 // path ไม่ซ้ำทั้งหมดที่ยังชี้ไปโฟลเดอร์ uploads/ เดิม
+// รวบรวม path ที่ยังชี้ไป uploads/ เดิมจากทุกคอลัมน์รูป (ไม่ซ้ำกัน)
 $paths = [];
 foreach (IMAGE_COLUMNS as [$table, $col]) {
     foreach (db()->query("SELECT DISTINCT $col FROM $table WHERE $col LIKE 'uploads/%'")->fetchAll(PDO::FETCH_COLUMN) as $p) {
@@ -65,6 +68,7 @@ foreach ($paths as $path) {
         continue;
     }
 
+    // มีไฟล์นี้ใน Storage แล้วไหม (รันซ้ำจะไม่อัปโหลดซ้ำ) — ไม่มีค่อยดึงจากเว็บเดิมแล้วอัปโหลด
     $url = storage_public_url($name);
     [$exists] = http_get($url, true);
     if ($exists !== 200) {
@@ -82,6 +86,7 @@ foreach ($paths as $path) {
         }
     }
 
+    // แก้ทุกแถวที่ใช้ path นี้ให้ชี้ URL ใหม่ใน Storage
     foreach (IMAGE_COLUMNS as [$table, $col]) {
         db()->prepare("UPDATE $table SET $col = ? WHERE $col = ?")->execute([$url, $path]);
     }
@@ -90,6 +95,7 @@ foreach ($paths as $path) {
 }
 
 echo "\nย้ายเสร็จ $moved / " . count($paths) . " ไฟล์\n";
+// มีไฟล์ที่ย้ายไม่ได้ = จบด้วย exit 2 ให้สคริปต์ที่เรียกรู้ว่าไม่ครบ
 if ($missing) {
     echo "ย้ายไม่ได้ (path เดิมยังอยู่ในฐานข้อมูล รูปจะแตก):\n  " . implode("\n  ", $missing) . "\n";
     exit(2);
