@@ -970,6 +970,40 @@
             });
         },
 
+        // สรุปรายได้ทั้งร้านแยกรายวัน (เก่า→ใหม่) — นับตามวันที่สั่ง เฉพาะสถานะที่ flag revenue เป็น true
+        // แยกเงินที่ยืนยันแล้วออกจากเงินที่สลิปยังรอตรวจ (group pending) เพราะสลิปอาจถูกปฏิเสธได้
+        // ยอดที่ยืนยันแล้วแตกเป็น ค่าสินค้า (ต้องจ่ายต่อให้เกาหลี) + ค่าบริการ (รายได้ร้าน) + ค่าส่ง
+        // ราคา/ค่าบริการอ่านจาก snapshot ในออเดอร์ ไม่ใช่สินค้าปัจจุบัน ออเดอร์เก่าจึงไม่เพี้ยนเมื่อแก้ราคา
+        getDailyRevenue() {
+            const byDay = {};
+            this.getOrders().forEach(o => {
+                const meta = this.getStatusMeta(o);
+                if (!meta.revenue) return;
+                const day = String(o.date || '').slice(0, 10);
+                if (!day) return;
+                const d = byDay[day] || (byDay[day] = {
+                    day: day, orders: 0, items: 0, total: 0, goods: 0, serviceFee: 0, shipping: 0,
+                    pendingOrders: 0, pendingTotal: 0
+                });
+                const total = Number(o.total) || 0;
+                if (meta.group === 'pending') {
+                    d.pendingOrders += 1;
+                    d.pendingTotal += total;
+                    return;
+                }
+                const items = o.items || [];
+                const fee = items.reduce((s, i) => s + (Number(i.serviceFee) || 0) * (Number(i.qty) || 0), 0);
+                const shipping = Number(o.shippingFee) || 0;
+                d.orders += 1;
+                d.items += items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+                d.total += total;
+                d.serviceFee += fee;
+                d.shipping += shipping;
+                d.goods += total - fee - shipping;
+            });
+            return Object.keys(byDay).sort().map(k => byDay[k]);
+        },
+
         // --- Exchange rate ---
         // เรทกลางคงที่ของร้าน ไม่มีประวัติ ไม่มีหน้าแอดมินให้ตั้งใหม่แล้ว (แก้ได้ที่ CENTRAL_RATE ด้านบนไฟล์นี้)
         getCurrentRate() {

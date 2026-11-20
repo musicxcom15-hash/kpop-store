@@ -179,7 +179,70 @@ function renderAdminDashboard() {
                     </div>
                 `).join('');
 
+    renderDailyRevenue();
     renderDailyProductOrders();
+}
+
+// วันที่ย้อนหลัง n วัน (นับวันนี้เป็นวันที่ 1) ในรูป YYYY-MM-DD ตามเวลาเครื่อง
+function dayKeyDaysAgo(n) {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// เงินบาท ทศนิยมไม่เกิน 2 ตำแหน่ง (ค่าสินค้าที่แปลงจากวอนอาจมีเศษสตางค์)
+function baht(n) {
+    return '฿' + (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+// สรุปรายได้รายวันทั้งร้าน: การ์ดยอดรวมของช่วงที่เลือก + วันนี้ แล้วตารางรายวัน (ล่าสุดก่อน)
+function renderDailyRevenue() {
+    const all = KpopStore.getDailyRevenue();
+    const range = Number(document.getElementById('revenueRangeSelect').value);
+    const rows = range > 0 ? all.filter(d => d.day >= dayKeyDaysAgo(range - 1)) : all;
+
+    const sum = rows.reduce((s, d) => {
+        ['orders', 'total', 'goods', 'serviceFee', 'shipping', 'pendingOrders', 'pendingTotal'].forEach(k => { s[k] += d[k]; });
+        return s;
+    }, { orders: 0, total: 0, goods: 0, serviceFee: 0, shipping: 0, pendingOrders: 0, pendingTotal: 0 });
+    const today = all.find(d => d.day === dayKeyDaysAgo(0));
+
+    const tile = (label, value, sub, css) => `
+                <div class="col-6 col-lg">
+                    <div class="border rounded-3 p-2 h-100">
+                        <div class="text-muted" style="font-size:0.78rem;">${label}</div>
+                        <div class="fw-bold fs-5 ${css || ''}">${value}</div>
+                        ${sub ? `<div class="text-muted" style="font-size:0.75rem;">${sub}</div>` : ''}
+                    </div>
+                </div>`;
+    document.getElementById('revenueSummary').innerHTML =
+        tile('วันนี้', baht(today ? today.total : 0), `${today ? today.orders : 0} ออเดอร์`, 'text-success') +
+        tile('ยอดรับเงินในช่วงนี้', baht(sum.total), `${sum.orders} ออเดอร์`) +
+        tile('ค่าสินค้า (จ่ายต่อเกาหลี)', baht(sum.goods)) +
+        tile('ค่าบริการ (รายได้ร้าน)', baht(sum.serviceFee), '', 'text-success') +
+        tile('รอตรวจสลิป', baht(sum.pendingTotal), `${sum.pendingOrders} ออเดอร์ · ยังไม่นับ`, 'text-warning');
+
+    const tbody = document.getElementById('revenueTable');
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-muted text-center">ไม่มียอดในช่วงนี้</td></tr>';
+        return;
+    }
+    const maxTotal = Math.max.apply(null, rows.map(d => d.total)) || 1;
+    tbody.innerHTML = rows.slice().reverse().map(d => `
+                <tr>
+                    <td class="fw-bold">${esc(d.day)}</td>
+                    <td>${d.orders}</td>
+                    <td>${d.items}</td>
+                    <td>
+                        <div class="fw-bold text-danger">${baht(d.total)}</div>
+                        <div class="progress" style="height:6px;"><div class="progress-bar bg-success" style="width:${(d.total / maxTotal) * 100}%"></div></div>
+                    </td>
+                    <td>${baht(d.goods)}</td>
+                    <td class="text-success fw-bold">${baht(d.serviceFee)}</td>
+                    <td>${baht(d.shipping)}</td>
+                    <td class="${d.pendingOrders ? 'text-warning fw-bold' : 'text-muted'}">${d.pendingOrders ? `${baht(d.pendingTotal)} (${d.pendingOrders})` : '-'}</td>
+                </tr>
+            `).join('');
 }
 
 // ยอดสั่งรายวันของสินค้าที่เลือก — dropdown สร้างใหม่เฉพาะตอนยังว่าง/สินค้าเปลี่ยน เพื่อไม่ทิ้งค่าที่แอดมินเลือกไว้
