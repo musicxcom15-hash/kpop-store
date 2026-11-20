@@ -30,6 +30,13 @@ define('IS_PRODUCTION', getenv('APP_ENV') === 'production');
 define('CENTRAL_RATE', 0.028);
 
 /**
+ * ค่าส่งในไทยต่อออเดอร์ (บาท) — เซิร์ฟเวอร์ใช้ค่านี้เสมอ ไม่รับค่าจากเบราว์เซอร์
+ * (เดิมรับ shippingFee จาก request ลูกค้าจึงแก้เป็น 0 เพื่อไม่จ่ายค่าส่งได้)
+ * หน้าเว็บแสดง 50 บาทเหมือนกัน (shippingFee ใน js/pages/checkout.js, getCartGroupedByRound ใน js/store.js) — แก้ต้องแก้ด้วย
+ */
+define('SHIPPING_FEE', 50.0);
+
+/**
  * แยก DATABASE_URL เป็น [dsn, user, password, port]
  * รหัสผ่านที่มีอักขระพิเศษต้อง URL-encode มาใน URL (Supabase ให้มาแบบนั้นอยู่แล้ว) จึงต้อง decode กลับ
  */

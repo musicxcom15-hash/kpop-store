@@ -131,9 +131,10 @@ try {
     check('ไซซ์ที่ไม่มี → ปฏิเสธ', r.success === false);
 
     // ---------- ออเดอร์ ----------
-    r = await cust.post('orders.php?action=create', { items: [{ id: ids.product, size: 'M', qty: 1 }, { id: ids.product, size: 'L', qty: 1 }], slipImage: 'images/placeholder-slip.svg', shippingFee: 50 });
+    r = await cust.post('orders.php?action=create', { items: [{ id: ids.product, size: 'M', qty: 1 }, { id: ids.product, size: 'L', qty: 1 }], slipImage: 'images/placeholder-slip.svg', shippingFee: 0 });
     check('สร้างออเดอร์ 2 ไซซ์', r.success === true && r.order.items.length === 2, r.message);
     const o1 = r.order; ids.orders.push(o1 && o1.id);
+    check('ส่งค่าส่ง 0 มา → เซิร์ฟเวอร์ยังคิด 50', o1 && o1.shippingFee === 50, o1 && String(o1.shippingFee));
     check('ยอดเงินคิดจากเซิร์ฟเวอร์: (ceil(30000×0.028)+200)×2+50 = 2130', o1 && o1.total === 2130, o1 && String(o1.total));
     r = await cust.post('cart.php?action=clear-round', { roundId: ids.round });
     check('ล้างตะกร้าเฉพาะรอบ (DELETE ... USING)', r.success === true && !r.cart.some(c => c.productId === ids.product));

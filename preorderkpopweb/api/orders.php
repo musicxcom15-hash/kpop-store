@@ -205,10 +205,8 @@ switch (action()) {
                 $roundId ??= $product['round_id'];
             }
 
-            // ค่าส่งในไทยต่อรอบ (ค่าตั้งต้น 50 บาท)
-            $shippingFee = isset($in['shippingFee']) && is_numeric($in['shippingFee']) && $in['shippingFee'] >= 0
-                ? (float) $in['shippingFee']
-                : 50.0;
+            // ค่าส่งในไทยต่อออเดอร์ — ค่าคงที่ของร้าน ไม่เชื่อค่าที่เบราว์เซอร์ส่งมา (เงินต้องตรวจฝั่งเซิร์ฟเวอร์)
+            $shippingFee = SHIPPING_FEE;
 
             // ยอดรวม = Σ(ราคาต่อชิ้น × จำนวน) + ค่าส่ง
             $subtotal = 0.0;
