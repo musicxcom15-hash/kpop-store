@@ -23,7 +23,8 @@ const FILES = [
     'admin-product.test.mjs',
     'auth-gate.test.mjs',
     'product-category.test.mjs',
-    'product-sizes.test.mjs'
+    'product-sizes.test.mjs',
+    'contact.test.mjs'
 ];
 
 const failed = [];

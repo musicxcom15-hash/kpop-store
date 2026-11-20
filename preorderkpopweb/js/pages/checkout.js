@@ -173,6 +173,12 @@ function renderCheckoutAddress() {
                             <h5 class="m-0 fw-bold" style="font-size: 1.1rem;"><i class="fa-solid fa-location-dot me-2 text-danger"></i>ที่อยู่สำหรับจัดส่ง</h5>
                             <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="KpopStore.openProfileModal()"><i class="fa-solid fa-user-pen me-1"></i> แก้ไขที่อยู่ / ข้อมูลติดต่อ</button>
                         </div>
+                        ${KpopStore.isContactComplete(currentUser) ? '' : `
+                        <div class="alert alert-danger py-2 px-3 mb-3" style="font-size: 0.88rem;">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                            เบอร์โทรศัพท์หรือที่อยู่จัดส่งยังไม่ครบถ้วน ร้านจะติดต่อและส่งสินค้าไม่ได้
+                            — กรุณากด <strong>แก้ไขที่อยู่ / ข้อมูลติดต่อ</strong> ก่อนสั่งซื้อค่ะ
+                        </div>`}
                         <p class="mb-1" style="font-weight: 500;">ชื่อผู้รับ: ${currentUser.name}</p>
                         <p class="text-muted mb-1" style="font-size: 0.95rem;">เบอร์โทรศัพท์: ${currentUser.phone || 'ยังไม่ได้ระบุ'}</p>
                         <p class="text-muted mb-0" style="font-size: 0.95rem;">${currentUser.address || 'ยังไม่ได้ระบุที่อยู่ (คลิกปุ่มแก้ไขที่อยู่ด้านบน)'}</p>
@@ -202,6 +208,13 @@ function submitCheckoutOrder() {
 
     // เช็คซ้ำตอนกดยืนยัน เผื่อ session หมดไประหว่างกรอกฟอร์ม (เช่น ล็อกเอาต์อีกแท็บ)
     if (!requireLogin()) return;
+
+    // ร้านต้องติดต่อและส่งของได้จริง — เบอร์/ที่อยู่ไม่ครบให้แก้ก่อน (เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น)
+    if (!KpopStore.isContactComplete(KpopStore.getCurrentUser())) {
+        alert('กรุณาแก้ไขเบอร์โทรศัพท์และที่อยู่จัดส่งให้ถูกต้องครบถ้วนก่อนสั่งซื้อค่ะ');
+        KpopStore.openProfileModal();
+        return;
+    }
 
     // รอบต้องยังเปิดอยู่ ณ วินาทีที่กดยืนยัน ไม่ใช่แค่ตอนเปิดหน้า
     if (!KpopStore.isRoundOpen(checkoutItems[0].product.roundId)) {
@@ -302,6 +315,8 @@ function submitCheckoutOrder() {
             btn.innerHTML = 'ยืนยันการสั่งซื้อและแจ้งชำระเงิน';
             alert('บันทึกคำสั่งซื้อไม่สำเร็จค่ะ\n\n' + result.message +
                 '\n\nยังไม่มีการบันทึกคำสั่งซื้อนี้ กรุณาลองใหม่อีกครั้ง');
+            // เซิร์ฟเวอร์บอกว่าเบอร์/ที่อยู่ไม่ครบ → เปิดหน้าต่างแก้ข้อมูลส่วนตัวให้เลย
+            if (result.code === 'contact_incomplete') KpopStore.openProfileModal();
             return;
         }
 

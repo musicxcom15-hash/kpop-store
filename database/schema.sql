@@ -57,7 +57,15 @@ CREATE TABLE users (
     email         VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     phone         VARCHAR(30),
+    -- ที่อยู่เต็มสำหรับจ่าหน้าพัสดุ (ระบบประกอบจากช่องด้านล่าง) — บัญชีเก่าอาจมีแค่ช่องนี้
     address       TEXT,
+    -- ที่อยู่แบบแยกช่อง ตำบล/อำเภอ/จังหวัด/รหัสไปรษณีย์ตรวจกับ preorderkpopweb/data/thai-address.json
+    -- postcode ว่าง = ยังไม่ได้กรอกแบบแยกช่อง → ต้องกรอกก่อนสั่งซื้อ
+    address_line  VARCHAR(200) NOT NULL DEFAULT '',
+    subdistrict   VARCHAR(100) NOT NULL DEFAULT '',
+    district      VARCHAR(100) NOT NULL DEFAULT '',
+    province      VARCHAR(100) NOT NULL DEFAULT '',
+    postcode      VARCHAR(5)   NOT NULL DEFAULT '',
     role          VARCHAR(20)  NOT NULL DEFAULT 'customer'
                   CHECK (role IN ('admin', 'customer')),
     created_at    DATE         NOT NULL

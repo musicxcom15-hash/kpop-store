@@ -63,6 +63,22 @@
     }
 
     // เพิ่มฟังก์ชันด้านหน้าจอเข้าไปใน KpopStore ตัวเดียวกับ store.js ทุกหน้าจึงเรียก KpopStore.xxx() ได้ทั้งหมด
+    // ข้อมูลตำบล/อำเภอ/จังหวัด/รหัสไปรษณีย์ (data/thai-address.json ~270KB) — โหลดครั้งเดียวตอนมีฟอร์มที่อยู่บนหน้า
+    //   p = จังหวัด · a = [อำเภอ, ลำดับจังหวัด] · z = { รหัสไปรษณีย์: [[ตำบล, ลำดับอำเภอ], ...] }
+    let thaiAddressPromise = null;
+    function loadThaiAddress() {
+        if (!thaiAddressPromise) {
+            thaiAddressPromise = fetch('data/thai-address.json').then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            }).catch(function (e) {
+                thaiAddressPromise = null;   // โหลดพลาด ให้ลองใหม่รอบหน้า
+                throw e;
+            });
+        }
+        return thaiAddressPromise;
+    }
+
     Object.assign(global.KpopStore, {
         esc: esc,
         escArg: escArg,
@@ -101,6 +117,124 @@
             window.location.href = 'index.html';
         },
 
+        // --- ช่องที่อยู่แบบแยก (หน้าสมัคร · หน้าต่างข้อมูลส่วนตัว · ฟอร์มผู้ใช้หลังบ้าน) ---
+        // กรอกรหัสไปรษณีย์ → เลือกตำบล/แขวง → อำเภอ/จังหวัดขึ้นเอง ทำให้ได้ที่อยู่ที่มีอยู่จริงและเข้ากันเสมอ
+        // เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น (validate_address ใน api/helpers.php)
+        addressFieldsHtml(prefix) {
+            return `
+                <div class="mb-2">
+                    <label class="form-label fw-bold" style="font-size: 0.88rem;" for="${prefix}Line">บ้านเลขที่ หมู่บ้าน/อาคาร ซอย ถนน</label>
+                    <input type="text" id="${prefix}Line" class="form-control" maxlength="200" placeholder="เช่น 123/45 หมู่บ้านตัวอย่าง ซ.สุขุมวิท 1 ถ.สุขุมวิท">
+                </div>
+                <div class="row g-2">
+                    <div class="col-5">
+                        <label class="form-label fw-bold" style="font-size: 0.88rem;" for="${prefix}Postcode">รหัสไปรษณีย์</label>
+                        <input type="text" id="${prefix}Postcode" class="form-control" inputmode="numeric" maxlength="5" placeholder="5 หลัก">
+                    </div>
+                    <div class="col-7">
+                        <label class="form-label fw-bold" style="font-size: 0.88rem;" for="${prefix}Sub">ตำบล / แขวง</label>
+                        <select id="${prefix}Sub" class="form-select" disabled><option value="">กรอกรหัสไปรษณีย์ก่อน</option></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted" style="font-size: 0.82rem;">อำเภอ / เขต</label>
+                        <input type="text" id="${prefix}District" class="form-control bg-light" readonly tabindex="-1">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted" style="font-size: 0.82rem;">จังหวัด</label>
+                        <input type="text" id="${prefix}Province" class="form-control bg-light" readonly tabindex="-1">
+                    </div>
+                </div>
+                <div id="${prefix}Hint" class="form-text" style="font-size: 0.8rem;"></div>
+            `;
+        },
+
+        // ผูกการทำงานให้ช่องที่อยู่ แล้วเติมค่าเดิม (values = ข้อมูลผู้ใช้ หรือ {} สำหรับฟอร์มว่าง)
+        async bindAddressFields(prefix, values) {
+            const v = values || {};
+            const $ = id => document.getElementById(prefix + id);
+            const hint = $('Hint');
+            $('Line').value = v.addressLine || '';
+            $('Postcode').value = v.postcode || '';
+            $('District').value = v.district || '';
+            $('Province').value = v.province || '';
+            // บัญชีเก่ามีแต่ที่อยู่แบบพิมพ์ยาว — โชว์ไว้ให้ลอกมากรอกใหม่แบบแยกช่อง
+            hint.innerHTML = (!v.postcode && v.address)
+                ? `<span class="text-danger"><i class="fa-solid fa-circle-exclamation me-1"></i>กรุณากรอกที่อยู่ใหม่แบบแยกช่อง</span> · ที่อยู่เดิม: ${esc(v.address)}`
+                : '';
+
+            let db;
+            try {
+                db = await loadThaiAddress();
+            } catch (e) {
+                hint.innerHTML = '<span class="text-danger">โหลดข้อมูลที่อยู่ไม่สำเร็จ กรุณารีเฟรชหน้าแล้วลองใหม่ค่ะ</span>';
+                return;
+            }
+
+            const sub = $('Sub');
+            // เลือกตำบลแล้ว อำเภอ/จังหวัดขึ้นเอง
+            const choose = () => {
+                const row = (db.z[$('Postcode').value.trim()] || [])[Number(sub.value)];
+                if (sub.value === '' || !row) {
+                    $('District').value = '';
+                    $('Province').value = '';
+                    return;
+                }
+                const amphoe = db.a[row[1]];
+                $('District').value = amphoe[0];
+                $('Province').value = db.p[amphoe[1]];
+            };
+            // เติมตัวเลือกตำบลตามรหัสไปรษณีย์ (value = ลำดับในรายการของรหัสนั้น)
+            const fill = (selectedName, selectedDistrict) => {
+                const code = $('Postcode').value.trim();
+                const list = /^\d{5}$/.test(code) ? (db.z[code] || []) : [];
+                $('District').value = '';
+                $('Province').value = '';
+                if (!list.length) {
+                    sub.disabled = true;
+                    sub.innerHTML = `<option value="">${code.length === 5 ? 'ไม่พบรหัสไปรษณีย์นี้' : 'กรอกรหัสไปรษณีย์ก่อน'}</option>`;
+                    return;
+                }
+                sub.disabled = false;
+                sub.innerHTML = '<option value="">-- เลือกตำบล / แขวง --</option>' + list.map((row, i) =>
+                    `<option value="${i}">${esc(row[0])} (${esc(db.a[row[1]][0])})</option>`).join('');
+                // ค่าเดิม หรือมีตัวเลือกเดียวก็เลือกให้เลย
+                let pick = list.findIndex(row => row[0] === selectedName && (!selectedDistrict || db.a[row[1]][0] === selectedDistrict));
+                if (pick < 0 && list.length === 1) pick = 0;
+                if (pick >= 0) {
+                    sub.value = String(pick);
+                    choose();
+                }
+            };
+
+            $('Postcode').oninput = () => {
+                // รับเฉพาะตัวเลข
+                $('Postcode').value = $('Postcode').value.replace(/\D/g, '').slice(0, 5);
+                fill();
+            };
+            sub.onchange = choose;
+            fill(v.subdistrict, v.district);
+        },
+
+        // อ่านค่าช่องที่อยู่ คืน { fields, error } — error = ข้อความบอกผู้ใช้ (ว่าง = ครบถ้วน)
+        // optional = true: ปล่อยว่างทั้งหมดได้ (ฟอร์มหลังบ้าน) แต่ถ้ากรอกต้องครบ
+        readAddressFields(prefix, optional) {
+            const $ = id => document.getElementById(prefix + id);
+            const sel = $('Sub');
+            const fields = {
+                addressLine: $('Line').value.trim(),
+                postcode: $('Postcode').value.trim(),
+                // ข้อความตัวเลือกเป็น "ตำบล (อำเภอ)" — ตัดส่วนอำเภอในวงเล็บออก
+                subdistrict: sel.value === '' ? '' : sel.options[sel.selectedIndex].text.replace(/ \([^()]*\)$/, ''),
+                district: $('District').value,
+                province: $('Province').value
+            };
+            if (optional && !fields.addressLine && !fields.postcode) return { fields, error: '' };
+            if (fields.addressLine.length < 5) return { fields, error: 'กรุณากรอกบ้านเลขที่ หมู่บ้าน ซอย ถนน ให้ครบค่ะ' };
+            if (!/^\d{5}$/.test(fields.postcode)) return { fields, error: 'กรุณากรอกรหัสไปรษณีย์ 5 หลักค่ะ' };
+            if (!fields.subdistrict || !fields.district) return { fields, error: 'กรุณาเลือกตำบล / แขวง ค่ะ' };
+            return { fields, error: '' };
+        },
+
         // เปิดหน้าต่างแก้ข้อมูลส่วนตัว (สร้าง modal ครั้งแรกที่เปิด แล้วใช้ซ้ำ)
         openProfileModal() {
             const currentUser = this.getCurrentUser();
@@ -132,11 +266,12 @@
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label fw-bold" style="font-size: 0.88rem;">เบอร์โทรศัพท์ติดต่อ</label>
-                                            <input type="tel" id="profilePhone" class="form-control" placeholder="08X-XXX-XXXX" required>
+                                            <input type="tel" id="profilePhone" class="form-control" inputmode="tel" placeholder="08X-XXX-XXXX" required>
+                                            <div class="form-text" style="font-size: 0.8rem;">มือถือ 10 หลัก หรือเบอร์บ้าน 9 หลัก — ร้านใช้ติดต่อเรื่องคำสั่งซื้อและการจัดส่ง</div>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label fw-bold" style="font-size: 0.88rem;">ที่อยู่จัดส่งพัสดุ (ปัจจุบัน / ย้ายที่อยู่ใหม่)</label>
-                                            <textarea id="profileAddress" class="form-control" rows="3" placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล/แขวง, อำเภอ/เขต, จังหวัด, รหัสไปรษณีย์" required></textarea>
+                                            <div class="fw-bold mb-2" style="font-size: 0.95rem;"><i class="fa-solid fa-location-dot me-1 text-danger"></i>ที่อยู่จัดส่งพัสดุ</div>
+                                            ${this.addressFieldsHtml('profileAddr')}
                                         </div>
                                         <div class="d-flex justify-content-end gap-2 mt-4">
                                             <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
@@ -155,7 +290,7 @@
             document.getElementById('profileEmail').value = currentUser.email || '';
             document.getElementById('profileName').value = currentUser.name || '';
             document.getElementById('profilePhone').value = currentUser.phone || '';
-            document.getElementById('profileAddress').value = currentUser.address || '';
+            this.bindAddressFields('profileAddr', currentUser);
 
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
@@ -164,10 +299,19 @@
         async handleProfileSubmit(e) {
             e.preventDefault();
             const name = document.getElementById('profileName').value;
-            const phone = document.getElementById('profilePhone').value;
-            const address = document.getElementById('profileAddress').value;
+            // ตรวจก่อนส่ง (เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น)
+            const phone = this.normalizePhone(document.getElementById('profilePhone').value);
+            if (!phone) {
+                alert('เบอร์โทรศัพท์ไม่ถูกต้องค่ะ\nกรุณากรอกเบอร์มือถือ 10 หลัก (เช่น 081-234-5678) หรือเบอร์บ้าน 9 หลัก');
+                return;
+            }
+            const addr = this.readAddressFields('profileAddr');
+            if (addr.error) {
+                alert(addr.error);
+                return;
+            }
 
-            const res = await this.updateProfile({ name, phone, address });
+            const res = await this.updateProfile(Object.assign({ name, phone }, addr.fields));
             if (!res.success) {
                 alert('บันทึกไม่สำเร็จค่ะ\n\n' + res.message);
                 return;

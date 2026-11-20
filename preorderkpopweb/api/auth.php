@@ -87,8 +87,6 @@ switch (action()) {
         $name    = trim((string) ($in['name'] ?? ''));
         $email   = trim((string) ($in['email'] ?? ''));
         $pass    = (string) ($in['password'] ?? '');
-        $phone   = trim((string) ($in['phone'] ?? ''));
-        $address = trim((string) ($in['address'] ?? ''));
 
         if ($name === '' || $email === '' || $pass === '') {
             fail('กรุณากรอกชื่อ อีเมล และรหัสผ่านให้ครบค่ะ');
@@ -100,6 +98,8 @@ switch (action()) {
         if (strlen($pass) < MIN_PASSWORD_LENGTH) {
             fail('รหัสผ่านต้องยาวอย่างน้อย ' . MIN_PASSWORD_LENGTH . ' ตัวอักษรค่ะ');
         }
+        // เบอร์โทรและที่อยู่ต้องถูกต้องตั้งแต่สมัคร — ร้านต้องติดต่อและส่งของได้จริง
+        $contact = contact_from_input($in, true);
 
         // อีเมลคือคีย์ที่ผูกออเดอร์กับเจ้าของ ถ้าปล่อยให้ซ้ำได้
         // การสมัครด้วยอีเมลแอดมินจะกลายเป็นการยึดบัญชี
@@ -112,8 +112,9 @@ switch (action()) {
         // id ผู้ใช้: u-<เวลา>-<สุ่ม 6 หลัก> ไม่ชนกันแม้สมัครวินาทีเดียวกัน
         $id = 'u-' . time() . '-' . bin2hex(random_bytes(3));
         $st = db()->prepare(
-            'INSERT INTO users (id, name, email, password_hash, phone, address, role, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO users (id, name, email, password_hash, phone, address, role, created_at,
+                                address_line, subdistrict, district, province, postcode)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
         try {
@@ -121,7 +122,8 @@ switch (action()) {
                 $id, $name, $email,
                 // เก็บรหัสผ่านเป็น bcrypt hash เท่านั้น ไม่เก็บรหัสจริง
                 password_hash($pass, PASSWORD_BCRYPT),
-                $phone, $address, 'customer', date('Y-m-d'),
+                $contact['phone'], $contact['address'], 'customer', date('Y-m-d'),
+                $contact['addressLine'], $contact['subdistrict'], $contact['district'], $contact['province'], $contact['postcode'],
             ]);
         } catch (PDOException $e) {
             // ชนกับ UNIQUE ตอนมีคนสมัครอีเมลเดียวกันพร้อมกัน (23505 = unique_violation)
@@ -155,17 +157,23 @@ switch (action()) {
         $in   = body();
 
         $name    = trim((string) ($in['name'] ?? ''));
-        $phone   = trim((string) ($in['phone'] ?? ''));
-        $address = trim((string) ($in['address'] ?? ''));
 
         if ($name === '') {
             fail('กรุณากรอกชื่อ-นามสกุลผู้รับพัสดุค่ะ');
         }
+        // เบอร์โทรและที่อยู่ต้องถูกต้องครบทุกครั้งที่บันทึก
+        $contact = contact_from_input($in, true);
 
         // แก้ได้เฉพาะข้อมูลติดต่อของตัวเอง — อีเมลกับ role เปลี่ยนที่นี่ไม่ได้
         // ไม่งั้นลูกค้าจะยกระดับตัวเองเป็นแอดมินได้ด้วยการยิง endpoint นี้
-        $st = db()->prepare('UPDATE users SET name = ?, phone = ?, address = ? WHERE id = ?');
-        $st->execute([$name, $phone, $address, $user['id']]);
+        $st = db()->prepare(
+            'UPDATE users SET name = ?, phone = ?, address = ?,
+                              address_line = ?, subdistrict = ?, district = ?, province = ?, postcode = ?
+             WHERE id = ?'
+        );
+        $st->execute([$name, $contact['phone'], $contact['address'],
+            $contact['addressLine'], $contact['subdistrict'], $contact['district'], $contact['province'], $contact['postcode'],
+            $user['id']]);
 
         $st = db()->prepare('SELECT * FROM users WHERE id = ?');
         $st->execute([$user['id']]);

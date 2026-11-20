@@ -1031,6 +1031,9 @@
                 };
             }
 
+            // ประกอบที่อยู่เต็มจากช่องแยก (เหมือน compose_address ฝั่ง PHP)
+            if (user.postcode && user.subdistrict) user = { ...user, address: this.composeAddress(user) };
+
             const users = this.getUsers();
             const email = String(user.email || '').toLowerCase();
 
@@ -1144,7 +1147,12 @@
                     name: user.name,
                     email: user.email,
                     phone: user.phone,
-                    address: user.address,
+                    // ที่อยู่แบบแยกช่อง — เซิร์ฟเวอร์ตรวจกับฐานข้อมูลที่อยู่ไทยแล้วประกอบที่อยู่เต็มให้เอง
+                    addressLine: user.addressLine,
+                    subdistrict: user.subdistrict,
+                    district: user.district,
+                    province: user.province,
+                    postcode: user.postcode,
                     password: password
                 });
                 return res.success
@@ -1180,7 +1188,11 @@
                 const res = await apiWrite('auth.php?action=profile', {
                     name: updatedData.name,
                     phone: updatedData.phone,
-                    address: updatedData.address
+                    addressLine: updatedData.addressLine,
+                    subdistrict: updatedData.subdistrict,
+                    district: updatedData.district,
+                    province: updatedData.province,
+                    postcode: updatedData.postcode
                 });
                 return res.success
                     ? { success: true, user: res.user, message: '' }
@@ -1259,6 +1271,32 @@
             const s = String(size || '');
             return sizes.length ? sizes.includes(s) : s === '';
         },
+        // --- เบอร์โทรและที่อยู่ (ต้องตรงกับ normalize_thai_phone / compose_address ใน api/helpers.php) ---
+        // เบอร์ไทยรูปแบบมาตรฐาน หรือ null ถ้าเป็นไปไม่ได้: มือถือ 10 หลัก 06/08/09 · เบอร์บ้าน 9 หลัก 02–07
+        normalizePhone(raw) {
+            let d = String(raw || '').replace(/[\s\-().]/g, '');
+            const intl = d.match(/^\+?66(\d{8,9})$/);
+            if (intl) d = '0' + intl[1];
+            if (!/^0\d{8,9}$/.test(d)) return null;
+            // เลขหลังเลข 0 เหมือนกันหมด หรือเรียงลำดับ = กรอกเล่น
+            if (new Set(d.slice(1)).size === 1 || d === '0123456789' || d === '0987654321') return null;
+            if (d.length === 10) {
+                return /^0[689]/.test(d) ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : null;
+            }
+            if (!/^0[2-7]/.test(d)) return null;
+            return d[1] === '2' ? `02-${d.slice(2, 5)}-${d.slice(5)}` : `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+        },
+        // ที่อยู่เต็มสำหรับจ่าหน้าพัสดุ (กรุงเทพฯ ใช้ แขวง/เขต · จังหวัดอื่นใช้ ต./อ./จ.)
+        composeAddress(a) {
+            return a.province === 'กรุงเทพมหานคร'
+                ? `${a.addressLine} แขวง${a.subdistrict} เขต${a.district} กรุงเทพมหานคร ${a.postcode}`
+                : `${a.addressLine} ต.${a.subdistrict} อ.${a.district} จ.${a.province} ${a.postcode}`;
+        },
+        // บัญชีนี้มีเบอร์ถูกต้อง + ที่อยู่แบบแยกช่องแล้วหรือยัง (บัญชีเก่ามีแต่ที่อยู่แบบพิมพ์ยาว → ต้องแก้ก่อนสั่งซื้อ)
+        isContactComplete(user) {
+            return !!user && this.normalizePhone(user.phone) !== null && !!user.postcode;
+        },
+
         // ชื่อสินค้าพร้อมไซซ์ เช่น "Hoodie · ไซซ์ M" (ข้อความล้วน ผู้เรียกต้อง esc เองก่อนใส่ HTML)
         formatItemName(title, size) {
             return size ? `${title} · ไซซ์ ${size}` : String(title || '');
@@ -1371,9 +1409,10 @@
                     slipImage: up.path
                 });
 
+                // code (เช่น contact_incomplete) ให้หน้าชำระเงินรู้ว่าต้องเปิดหน้าต่างแก้ข้อมูลส่วนตัว
                 return res.success
                     ? { success: true, order: res.order, message: '' }
-                    : { success: false, order: null, message: res.message || 'บันทึกคำสั่งซื้อไม่สำเร็จ' };
+                    : { success: false, order: null, message: res.message || 'บันทึกคำสั่งซื้อไม่สำเร็จ', code: res.code || '' };
             }
 
             const orders = this.getOrders();

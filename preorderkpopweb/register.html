@@ -73,12 +73,14 @@
 
                     <div class="mb-3">
                         <label class="form-label" style="font-size: 0.9rem; font-weight: 500;">เบอร์โทรศัพท์</label>
-                        <input type="tel" id="regPhone" class="form-control" placeholder="08X-XXX-XXXX" required>
+                        <input type="tel" id="regPhone" class="form-control" inputmode="tel" placeholder="08X-XXX-XXXX" required>
+                        <div class="form-text" style="font-size: 0.8rem;">มือถือ 10 หลัก หรือเบอร์บ้าน 9 หลัก — ร้านใช้ติดต่อเรื่องคำสั่งซื้อและการจัดส่ง</div>
                     </div>
 
+                    <!-- ที่อยู่จัดส่งแบบแยกช่อง — register.js ใส่ช่องให้ด้วย KpopStore.addressFieldsHtml() (ui.js) -->
                     <div class="mb-3">
-                        <label class="form-label" style="font-size: 0.9rem; font-weight: 500;">ที่อยู่สำหรับจัดส่งสินค้า</label>
-                        <textarea id="regAddress" class="form-control" rows="3" placeholder="บ้านเลขที่, หมู่บ้าน, ซอย, ถนน, ตำบล/แขวง, อำเภอ/เขต, จังหวัด, รหัสไปรษณีย์" required></textarea>
+                        <div class="form-label" style="font-size: 0.9rem; font-weight: 500;">ที่อยู่สำหรับจัดส่งสินค้า</div>
+                        <div id="regAddressFields"></div>
                     </div>
                     
                     <div class="row">

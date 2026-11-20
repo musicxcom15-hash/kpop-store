@@ -113,6 +113,15 @@ switch (action()) {
             fail('กรุณาแนบสลิปการโอนเงินค่ะ');
         }
 
+        // ร้านต้องติดต่อลูกค้าและส่งของได้จริง: ใช้ชื่อ เบอร์ ที่อยู่จากข้อมูลส่วนตัวที่ผ่านการตรวจแล้วเท่านั้น
+        // (ไม่ใช้ค่าที่หน้าเว็บส่งมา) บัญชีเก่าที่ยังไม่มีที่อยู่แบบแยกช่อง ต้องแก้ข้อมูลส่วนตัวก่อน
+        // code ให้หน้าเว็บรู้ว่าต้องเปิดหน้าต่างแก้ข้อมูลส่วนตัว (ห้ามตัดสินจากข้อความไทย)
+        if (!contact_complete($user)) {
+            fail('กรุณาแก้ไขเบอร์โทรศัพท์และที่อยู่จัดส่งในข้อมูลส่วนตัวให้ถูกต้องครบถ้วนก่อนสั่งซื้อค่ะ',
+                 200, ['code' => 'contact_incomplete']);
+        }
+        $shipPhone = normalize_thai_phone((string) $user['phone']);
+
         // === จุดล็อกราคา ===
         // เรียกตอนลูกค้าแนบสลิปแล้ว จึงเป็นจุดที่ "แช่แข็ง" เรทและราคาบาท
         $rate = current_rate();
@@ -233,9 +242,9 @@ switch (action()) {
             $st->execute([
                 $orderId,
                 $user['email'],
-                (string) ($in['customerName'] ?? $user['name']),
-                (string) ($in['phone'] ?? $user['phone']),
-                (string) ($in['address'] ?? $user['address']),
+                $user['name'],
+                $shipPhone,
+                $user['address'],
                 $nowSql,
                 $subtotal, $shippingFee, $total,
                 'PENDING_SLIP',
@@ -258,7 +267,7 @@ switch (action()) {
             }
 
             // แจ้งเตือน 2 ฝั่ง: กล่องร้าน (กดแล้วไปที่สลิป) และกล่องลูกค้า (กดแล้วไปที่ออเดอร์)
-            $customerName = (string) ($in['customerName'] ?? $user['name']);
+            $customerName = $user['name'];
             push_notification(
                 SHOP_EMAIL,
                 "มีคำสั่งซื้อใหม่ #{$orderId}",

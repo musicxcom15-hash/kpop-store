@@ -62,10 +62,17 @@ set_exception_handler(function (Throwable $e): void {
 // ตอนต้นทุกคำขอ — เติมตาราง/คอลัมน์ใหม่ให้ DB ที่สร้างไว้ก่อน (ทำจริงครั้งเดียวต่อ container)
 // เปลี่ยนชื่อไฟล์ (pg1, pg2, ...) ทุกครั้งที่เพิ่มของใน ensure_schema_once() เพื่อให้ container ที่เคยเช็คแล้วเช็คใหม่
 // ทำก่อน session_start() เพราะ session ก็อ่านจากฐานข้อมูล (ตาราง sessions)
-define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-pg1');
+define('SCHEMA_FLAG_FILE', sys_get_temp_dir() . '/kpop-schema-pg2');
 // คำสั่งอัปเกรดโครงสร้าง (เรียงตามเวลาที่เพิ่ม) เช่น 'ALTER TABLE products ADD COLUMN IF NOT EXISTS x TEXT'
 // ต้องประกาศก่อนบรรทัด ensure_schema_once() ด้านล่าง — const ระดับไฟล์ของ PHP มีตัวตนเมื่อรันมาถึงบรรทัดนั้นเท่านั้น
-const SCHEMA_UPGRADES = [];
+const SCHEMA_UPGRADES = [
+    // pg2: ที่อยู่แบบแยกช่อง (บัญชีเดิมได้ค่าว่าง → ระบบให้กรอกใหม่ก่อนสั่งซื้อครั้งถัดไป)
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS address_line VARCHAR(200) NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS subdistrict  VARCHAR(100) NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS district     VARCHAR(100) NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS province     VARCHAR(100) NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS postcode     VARCHAR(5)   NOT NULL DEFAULT ''",
+];
 ensure_schema_once();
 
 /**
@@ -229,6 +236,147 @@ function random_temp_password(int $length = 10): string
 }
 
 /* ------------------------------------------------------------------ */
+/* เบอร์โทรศัพท์และที่อยู่จัดส่ง                                          */
+/*                                                                     */
+/* ตรวจได้แค่ "รูปแบบเป็นไปได้จริง" — เบอร์ต้องเป็นรูปแบบเบอร์ไทย          */
+/* ที่อยู่ต้องเป็นตำบล/อำเภอ/จังหวัด/รหัสไปรษณีย์ที่มีอยู่จริงและเข้ากัน   */
+/* ยืนยันไม่ได้ว่าเบอร์เป็นของลูกค้าคนนั้นจริง (ต้องใช้ SMS OTP — ไม่ได้ทำ) */
+/* หรือบ้านเลขที่มีอยู่จริง                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ตรวจและจัดรูปเบอร์โทรไทย คืนเบอร์รูปแบบมาตรฐาน หรือ null ถ้าเป็นเบอร์ที่เป็นไปไม่ได้
+ *   มือถือ 10 หลัก ขึ้นต้น 06 / 08 / 09        → 081-234-5678
+ *   บ้าน/สำนักงาน 9 หลัก ขึ้นต้น 02–07          → 02-123-4567 (กรุงเทพฯ) / 053-123-456
+ * รับ +66 / 66 นำหน้าได้ และไม่สนช่องว่าง - ( ) . ที่ผู้ใช้พิมพ์มา
+ * ตรงกับ KpopStore.normalizePhone() ใน js/store.js
+ */
+function normalize_thai_phone(string $raw): ?string
+{
+    // เหลือแต่ตัวเลข (และ + นำหน้า)
+    $d = preg_replace('/[\s\-().]/', '', $raw);
+    // +66812345678 / 66812345678 → 0812345678
+    if (preg_match('/^\+?66(\d{8,9})$/', $d, $m)) {
+        $d = '0' . $m[1];
+    }
+    if (!preg_match('/^0\d{8,9}$/', $d)) {
+        return null;
+    }
+    // เลขหลังเลข 0 เหมือนกันหมด (0000000000, 0888888888) หรือเรียงลำดับ = กรอกเล่น
+    if (strlen(count_chars(substr($d, 1), 3)) === 1 || in_array($d, ['0123456789', '0987654321', '012345678'], true)) {
+        return null;
+    }
+    if (strlen($d) === 10) {
+        // มือถือ: ขึ้นต้น 06 08 09 เท่านั้น
+        return preg_match('/^0[689]/', $d) ? substr($d, 0, 3) . '-' . substr($d, 3, 3) . '-' . substr($d, 6) : null;
+    }
+    // 9 หลัก = เบอร์บ้าน: 02 (กรุงเทพฯ) หรือ 03–07 (ต่างจังหวัด)
+    if (!preg_match('/^0[2-7]/', $d)) {
+        return null;
+    }
+    return $d[1] === '2'
+        ? '02-' . substr($d, 2, 3) . '-' . substr($d, 5)
+        : substr($d, 0, 3) . '-' . substr($d, 3, 3) . '-' . substr($d, 6);
+}
+
+/**
+ * ข้อมูลตำบล/อำเภอ/จังหวัด/รหัสไปรษณีย์ทั้งประเทศ (ไฟล์เดียวกับที่หน้าเว็บใช้ทำช่องเลือก)
+ *   p = รายชื่อจังหวัด · a = [อำเภอ, ลำดับจังหวัด] · z = { รหัสไปรษณีย์: [[ตำบล, ลำดับอำเภอ], ...] }
+ * โหลดครั้งเดียวต่อคำขอ และโหลดเฉพาะ endpoint ที่ตรวจที่อยู่
+ */
+function thai_address_db(): array
+{
+    static $db = null;
+    return $db ??= json_decode(file_get_contents(__DIR__ . '/../data/thai-address.json'), true);
+}
+
+/**
+ * ตรวจที่อยู่แบบแยกช่อง คืน [ข้อมูลที่อยู่ที่ตรวจแล้ว, null] หรือ [null, ข้อความบอกผู้ใช้]
+ * อำเภอและจังหวัดเอามาจากฐานข้อมูลตามตำบล+รหัสไปรษณีย์ ไม่เชื่อค่าที่หน้าเว็บส่งมา
+ */
+function validate_address(array $in): array
+{
+    // บ้านเลขที่ หมู่บ้าน ซอย ถนน — ยุบช่องว่างซ้อนให้เหลือช่องเดียว
+    $line     = trim(preg_replace('/\s+/u', ' ', (string) ($in['addressLine'] ?? '')));
+    $sub      = trim((string) ($in['subdistrict'] ?? ''));
+    $district = trim((string) ($in['district'] ?? ''));
+    $postcode = trim((string) ($in['postcode'] ?? ''));
+
+    if (mb_strlen($line) < 5) {
+        return [null, 'กรุณากรอกบ้านเลขที่ หมู่บ้าน ซอย ถนน ให้ครบค่ะ'];
+    }
+    if (mb_strlen($line) > 200) {
+        return [null, 'ที่อยู่ยาวเกินไปค่ะ'];
+    }
+    if (!preg_match('/^\d{5}$/', $postcode)) {
+        return [null, 'รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลักค่ะ'];
+    }
+
+    $db = thai_address_db();
+    if (!isset($db['z'][$postcode])) {
+        return [null, 'ไม่พบรหัสไปรษณีย์ ' . $postcode . ' ในประเทศไทยค่ะ'];
+    }
+    foreach ($db['z'][$postcode] as [$tambon, $ai]) {
+        [$amphoe, $pi] = $db['a'][$ai];
+        // ตำบลชื่อซ้ำในรหัสไปรษณีย์เดียวกัน (คนละอำเภอ) มีได้ — ถ้าหน้าเว็บส่งอำเภอมาด้วยต้องตรงกัน
+        if ($tambon === $sub && ($district === '' || $district === $amphoe)) {
+            return [[
+                'addressLine' => $line,
+                'subdistrict' => $tambon,
+                'district'    => $amphoe,
+                'province'    => $db['p'][$pi],
+                'postcode'    => $postcode,
+            ], null];
+        }
+    }
+    return [null, 'กรุณาเลือกตำบล/แขวงให้ตรงกับรหัสไปรษณีย์ ' . $postcode . ' ค่ะ'];
+}
+
+/** ประกอบที่อยู่เต็มสำหรับจ่าหน้าพัสดุ (กรุงเทพฯ ใช้ แขวง/เขต · จังหวัดอื่นใช้ ต./อ./จ.) */
+function compose_address(array $a): string
+{
+    return $a['province'] === 'กรุงเทพมหานคร'
+        ? "{$a['addressLine']} แขวง{$a['subdistrict']} เขต{$a['district']} กรุงเทพมหานคร {$a['postcode']}"
+        : "{$a['addressLine']} ต.{$a['subdistrict']} อ.{$a['district']} จ.{$a['province']} {$a['postcode']}";
+}
+
+/**
+ * อ่านเบอร์โทร + ที่อยู่จากข้อมูลที่หน้าเว็บส่งมา ตรวจแล้วคืนค่าที่พร้อมบันทึก (ไม่ผ่าน = fail() จบคำขอ)
+ * $required = true: ต้องกรอกครบ (สมัคร / แก้ข้อมูลส่วนตัว)
+ * $required = false: เว้นว่างได้ แต่ถ้ากรอกต้องถูกต้อง (แอดมินสร้าง/แก้บัญชี)
+ * คืน ['phone', 'address' (ข้อความเต็ม), 'addressLine', 'subdistrict', 'district', 'province', 'postcode']
+ */
+function contact_from_input(array $in, bool $required): array
+{
+    $rawPhone = trim((string) ($in['phone'] ?? ''));
+    $phone = '';
+    if ($rawPhone !== '' || $required) {
+        $phone = normalize_thai_phone($rawPhone);
+        if ($phone === null) {
+            fail('เบอร์โทรศัพท์ไม่ถูกต้องค่ะ กรุณากรอกเบอร์มือถือ 10 หลัก (เช่น 081-234-5678) หรือเบอร์บ้าน 9 หลัก');
+        }
+    }
+
+    $empty = ['addressLine' => '', 'subdistrict' => '', 'district' => '', 'province' => '', 'postcode' => ''];
+    $touched = trim((string) ($in['addressLine'] ?? '')) !== '' || trim((string) ($in['postcode'] ?? '')) !== '';
+    if (!$touched && !$required) {
+        return ['phone' => $phone, 'address' => ''] + $empty;
+    }
+    [$addr, $error] = validate_address($in);
+    if ($error !== null) {
+        fail($error);
+    }
+    return ['phone' => $phone, 'address' => compose_address($addr)] + $addr;
+}
+
+/** บัญชีนี้มีเบอร์โทรและที่อยู่แบบแยกช่องที่ใช้จัดส่งได้หรือยัง (บัญชีเก่ามีแต่ที่อยู่แบบพิมพ์ยาว) */
+function contact_complete(array $userRow): bool
+{
+    return normalize_thai_phone((string) ($userRow['phone'] ?? '')) !== null
+        && ($userRow['postcode'] ?? '') !== '';
+}
+
+/* ------------------------------------------------------------------ */
 /* รูปแบบวันเวลา                                                       */
 /*                                                                     */
 /* ทั้งระบบฝั่ง JS ใช้ 'YYYY-MM-DD HH:mm' แล้วเทียบกันเป็น "สตริง" ตรง ๆ  */
@@ -353,7 +501,13 @@ function map_user(array $r): array
         'name'      => $r['name'],
         'email'     => $r['email'],
         'phone'     => $r['phone'],
-        'address'   => $r['address'],
+        // ที่อยู่เต็ม (จ่าหน้าพัสดุ) + แยกช่องไว้เติมกลับในฟอร์ม · ?? เผื่อ DB ก่อนมีคอลัมน์ (ensure_schema_once เติมให้)
+        'address'     => $r['address'],
+        'addressLine' => $r['address_line'] ?? '',
+        'subdistrict' => $r['subdistrict'] ?? '',
+        'district'    => $r['district'] ?? '',
+        'province'    => $r['province'] ?? '',
+        'postcode'    => $r['postcode'] ?? '',
         'role'      => $r['role'],
         'createdAt' => $r['created_at'],
     ];

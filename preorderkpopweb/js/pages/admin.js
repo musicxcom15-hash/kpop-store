@@ -1249,7 +1249,8 @@ function openAddUserModal() {
     document.getElementById('uName').value = '';
     document.getElementById('uEmail').value = '';
     document.getElementById('uPhone').value = '';
-    document.getElementById('uAddress').value = '';
+    document.getElementById('uAddressFields').innerHTML = KpopStore.addressFieldsHtml('uAddr');
+    KpopStore.bindAddressFields('uAddr', {});
     document.getElementById('uRole').value = 'customer';
 
     const modal = new bootstrap.Modal(document.getElementById('userFormModal'));
@@ -1266,7 +1267,8 @@ function openEditUserModal(userId) {
     document.getElementById('uName').value = u.name;
     document.getElementById('uEmail').value = u.email;
     document.getElementById('uPhone').value = u.phone || '';
-    document.getElementById('uAddress').value = u.address || '';
+    document.getElementById('uAddressFields').innerHTML = KpopStore.addressFieldsHtml('uAddr');
+    KpopStore.bindAddressFields('uAddr', u);
     document.getElementById('uRole').value = u.role || 'customer';
 
     const modal = new bootstrap.Modal(document.getElementById('userFormModal'));
@@ -1276,14 +1278,25 @@ function openEditUserModal(userId) {
 // กดบันทึกฟอร์มผู้ใช้ — ถ้าเป็นบัญชีใหม่ จะแสดงรหัสชั่วคราวให้แอดมินแจ้งลูกค้า
 async function saveUserForm(e) {
     e.preventDefault();
-    const user = {
+    // เบอร์/ที่อยู่เว้นว่างได้ (ลูกค้ากรอกเองทีหลัง) แต่ถ้ากรอกต้องถูกต้อง — เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น
+    const rawPhone = document.getElementById('uPhone').value.trim();
+    const phone = rawPhone ? KpopStore.normalizePhone(rawPhone) : '';
+    if (phone === null) {
+        alert('เบอร์โทรศัพท์ไม่ถูกต้องค่ะ\nกรุณากรอกเบอร์มือถือ 10 หลัก หรือเบอร์บ้าน 9 หลัก (หรือเว้นว่างไว้)');
+        return;
+    }
+    const addr = KpopStore.readAddressFields('uAddr', true);
+    if (addr.error) {
+        alert(addr.error + '\n(หรือเว้นว่างทั้งหมดไว้ให้ลูกค้ากรอกเอง)');
+        return;
+    }
+    const user = Object.assign({
         id: document.getElementById('uId').value || ('u-' + Date.now()),
         name: document.getElementById('uName').value,
         email: document.getElementById('uEmail').value,
-        phone: document.getElementById('uPhone').value,
-        address: document.getElementById('uAddress').value,
+        phone: phone,
         role: document.getElementById('uRole').value
-    };
+    }, addr.fields);
 
     const result = await KpopStore.saveUser(user);
     if (!result.success) {

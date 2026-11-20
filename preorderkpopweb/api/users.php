@@ -28,8 +28,6 @@ switch (action()) {
         $id      = trim((string) ($in['id'] ?? ''));
         $name    = trim((string) ($in['name'] ?? ''));
         $email   = trim((string) ($in['email'] ?? ''));
-        $phone   = trim((string) ($in['phone'] ?? ''));
-        $address = trim((string) ($in['address'] ?? ''));
         $role    = (string) ($in['role'] ?? 'customer');
 
         if ($name === '' || $email === '') {
@@ -42,6 +40,8 @@ switch (action()) {
         if (!in_array($role, ['admin', 'customer'], true)) {
             $role = 'customer';
         }
+        // แอดมินเว้นเบอร์/ที่อยู่ว่างได้ (ลูกค้ากรอกเองทีหลัง) แต่ถ้ากรอกต้องถูกต้อง
+        $contact = contact_from_input($in, false);
 
         // อีเมลซ้ำกับ "คนอื่น" ไม่ได้ (แก้ของตัวเองโดยไม่เปลี่ยนอีเมลต้องผ่าน)
         $st = db()->prepare('SELECT id FROM users WHERE lower(email) = lower(?) AND id <> ?');
@@ -60,10 +60,21 @@ switch (action()) {
 
         if ($exists) {
             // ไม่แตะ password_hash ตอนแก้ไข — แอดมินไม่ควรเผลอรีเซ็ตรหัสลูกค้าจากการแก้ที่อยู่
-            $st = db()->prepare(
-                'UPDATE users SET name = ?, email = ?, phone = ?, address = ?, role = ? WHERE id = ?'
-            );
-            $st->execute([$name, $email, $phone, $address, $role, $id]);
+            // ช่องที่เว้นว่าง = คงของเดิมไว้ (ไม่ลบที่อยู่ที่ลูกค้ากรอกไว้เพราะแอดมินไม่ได้แตะ)
+            $sets = ['name = ?', 'email = ?', 'role = ?'];
+            $args = [$name, $email, $role];
+            if ($contact['phone'] !== '') {
+                $sets[] = 'phone = ?';
+                $args[] = $contact['phone'];
+            }
+            if ($contact['postcode'] !== '') {
+                array_push($sets, 'address = ?', 'address_line = ?', 'subdistrict = ?', 'district = ?', 'province = ?', 'postcode = ?');
+                array_push($args, $contact['address'], $contact['addressLine'], $contact['subdistrict'],
+                    $contact['district'], $contact['province'], $contact['postcode']);
+            }
+            $args[] = $id;
+            $st = db()->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?');
+            $st->execute($args);
 
             ok(['users' => all_users(), 'id' => $id]);
         }
@@ -75,13 +86,15 @@ switch (action()) {
         // บัญชีใหม่ได้รหัสชั่วคราวแบบสุ่ม แอดมินเห็นครั้งเดียวเพื่อแจ้งลูกค้า
         $temp = random_temp_password();
         $st = db()->prepare(
-            'INSERT INTO users (id, name, email, password_hash, phone, address, role, created_at)
-             VALUES (?,?,?,?,?,?,?,?)'
+            'INSERT INTO users (id, name, email, password_hash, phone, address, role, created_at,
+                                address_line, subdistrict, district, province, postcode)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
         );
         $st->execute([
             $id, $name, $email,
             password_hash($temp, PASSWORD_BCRYPT),
-            $phone, $address, $role, date('Y-m-d'),
+            $contact['phone'], $contact['address'], $role, date('Y-m-d'),
+            $contact['addressLine'], $contact['subdistrict'], $contact['district'], $contact['province'], $contact['postcode'],
         ]);
 
         ok([

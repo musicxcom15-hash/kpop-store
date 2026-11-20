@@ -45,6 +45,9 @@ class Client {
 const day = n => { const d = new Date(Date.now() + n * 86400000 + 7 * 3600000); return d.toISOString().slice(0, 10); };
 const stamp = Date.now();
 const MIXED_EMAIL = `Api.Test.${stamp}@Example.COM`;
+// ที่อยู่แบบแยกช่องที่มีอยู่จริง (ต้องตรงกับ preorderkpopweb/data/thai-address.json)
+const BKK = { addressLine: '99/1 ถ.ทดสอบ', subdistrict: 'คลองเตย', district: 'คลองเตย', postcode: '10110' };
+const CNX = { addressLine: '9 ถ.นิมมานเหมินท์', subdistrict: 'สุเทพ', postcode: '50200' };
 const ids = { round: `round-apitest-${stamp}`, product: `prod-apitest-${stamp}`, orders: [], users: [] };
 
 const admin = new Client();
@@ -57,16 +60,34 @@ try {
     check('สินค้ามี sizes เป็น array และไม่มี sourceUrl', anon.products.every(p => Array.isArray(p.sizes) && !('sourceUrl' in p)));
 
     // ---------- สมัคร / ล็อกอิน: อีเมลไม่สนตัวพิมพ์ ----------
-    let r = await cust.post('auth.php?action=register', { name: 'ทดสอบ API', email: MIXED_EMAIL, password: 'secret1', phone: '0800000000', address: 'กทม.' });
+    // ---------- ตรวจเบอร์โทรและที่อยู่ตอนสมัคร ----------
+    const reg = extra => new Client().post('auth.php?action=register', { name: 'ทดสอบ', email: `bad.${stamp}@example.com`, password: 'secret1', phone: '0812345678', ...BKK, ...extra });
+    let r = await reg({ phone: '12345' });
+    check('สมัคร: เบอร์มั่ว → ปฏิเสธ', r.success === false && /เบอร์โทรศัพท์/.test(r.message), r.message);
+    r = await reg({ phone: '0000000000' });
+    check('สมัคร: เบอร์เลขซ้ำทั้งหมด → ปฏิเสธ', r.success === false, r.message);
+    r = await reg({ postcode: '99999' });
+    check('สมัคร: รหัสไปรษณีย์ที่ไม่มีจริง → ปฏิเสธ', r.success === false && /รหัสไปรษณีย์/.test(r.message), r.message);
+    r = await reg({ subdistrict: 'สุเทพ' });
+    check('สมัคร: ตำบลไม่ตรงกับรหัสไปรษณีย์ → ปฏิเสธ', r.success === false && /ตำบล/.test(r.message), r.message);
+    r = await reg({ addressLine: '' });
+    check('สมัคร: ไม่กรอกบ้านเลขที่ → ปฏิเสธ', r.success === false, r.message);
+
+    r = await cust.post('auth.php?action=register', { name: 'ทดสอบ API', email: MIXED_EMAIL, password: 'secret1', phone: '+66 81 234 5678', ...BKK });
+    check('สมัคร: เบอร์ถูกจัดรูปแบบ + ประกอบที่อยู่เต็มให้', r.success === true && r.user.phone === '081-234-5678'
+        && r.user.address === '99/1 ถ.ทดสอบ แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110' && r.user.province === 'กรุงเทพมหานคร', JSON.stringify(r.user || r.message));
     check('สมัครด้วยอีเมลตัวพิมพ์ผสม', r.success === true, r.message);
     ids.users.push(r.user && r.user.id);
-    r = await new Client().post('auth.php?action=register', { name: 'ซ้ำ', email: MIXED_EMAIL.toLowerCase(), password: 'secret1' });
+    r = await new Client().post('auth.php?action=register', { name: 'ซ้ำ', email: MIXED_EMAIL.toLowerCase(), password: 'secret1', phone: '0812345678', ...BKK });
     check('สมัครซ้ำด้วยอีเมลเดียวกันแต่ตัวเล็ก → ถูกปฏิเสธ', r.success === false);
     await cust.post('auth.php?action=logout');
     r = await cust.post('auth.php?action=login', { email: MIXED_EMAIL.toUpperCase(), password: 'secret1' });
     check('ล็อกอินด้วยอีเมลตัวใหญ่ทั้งหมดได้', r.success === true, r.message);
-    r = await cust.post('auth.php?action=profile', { name: 'ทดสอบ API (แก้แล้ว)', phone: '0811111111', address: 'เชียงใหม่' });
-    check('แก้โปรไฟล์', r.success === true, r.message);
+    r = await cust.post('auth.php?action=profile', { name: 'ทดสอบ API (แก้แล้ว)', phone: '053-123-456', ...CNX });
+    check('แก้โปรไฟล์: อำเภอ/จังหวัดมาจากฐานข้อมูล (ไม่ได้ส่งไป)', r.success === true && r.user.district === 'เมืองเชียงใหม่'
+        && r.user.address === '9 ถ.นิมมานเหมินท์ ต.สุเทพ อ.เมืองเชียงใหม่ จ.เชียงใหม่ 50200' && r.user.phone === '053-123-456', JSON.stringify(r.user || r.message));
+    r = await cust.post('auth.php?action=profile', { name: 'ทดสอบ API', phone: '0812345678', addressLine: '', postcode: '' });
+    check('แก้โปรไฟล์: ลบที่อยู่ทิ้ง → ปฏิเสธ', r.success === false, r.message);
 
     // ---------- รหัสผ่าน ----------
     const anonC = new Client();
@@ -159,6 +180,13 @@ try {
     r = await admin.post('users.php?action=save', { name: 'ผู้ใช้ทดสอบ', email: `api.new.${stamp}@example.com`, phone: '', address: '', role: 'customer' });
     check('แอดมินสร้างผู้ใช้ (ได้รหัสชั่วคราว)', r.success === true && !!r.defaultPassword, r.message);
     ids.users.push(r.id);
+    // บัญชีที่ยังไม่มีเบอร์/ที่อยู่ สั่งซื้อไม่ได้ — เซิร์ฟเวอร์ตอบ code ให้หน้าเว็บเปิดหน้าต่างแก้ข้อมูล
+    const fresh = new Client();
+    await fresh.post('auth.php?action=login', { email: `api.new.${stamp}@example.com`, password: r.defaultPassword });
+    const blocked = await fresh.post('orders.php?action=create', { items: [{ id: ids.product, size: 'S', qty: 1 }], slipImage: 'images/placeholder-slip.svg' });
+    check('ไม่มีเบอร์/ที่อยู่ → สั่งซื้อไม่ได้ (code contact_incomplete)', blocked.success === false && blocked.code === 'contact_incomplete', JSON.stringify(blocked));
+    r = await admin.post('users.php?action=save', { name: 'มั่ว', email: `api.bad.${stamp}@example.com`, phone: '999', role: 'customer' });
+    check('แอดมินกรอกเบอร์มั่ว → ปฏิเสธ', r.success === false, r.message);
     r = await admin.post('users.php?action=save', { name: 'ชน', email: MIXED_EMAIL.toLowerCase(), phone: '', address: '', role: 'customer' });
     check('สร้างผู้ใช้ด้วยอีเมลซ้ำ (ต่างตัวพิมพ์) → ปฏิเสธ', r.success === false);
     r = await admin.post('users.php?action=reset-password', { id: ids.users[0] });
